@@ -1,5 +1,7 @@
 using RuntimeRoguelike;
 using RuntimeRoguelike.Configs;
+using RuntimeRoguelike.Ecs;
+using RuntimeRoguelike.UI.Mvp;
 using UnityEngine;
 using Zenject;
 
@@ -38,10 +40,20 @@ namespace DI
             Container.Bind<MapGenerator>().AsSingle();
             Container.Bind<HazardGenerator>().AsSingle();
             Container.Bind<TilemapWorldRenderer>().AsSingle();
-            Container.Bind<EnemyFactory>().AsSingle();
-            Container.Bind<DifficultyService>().AsSingle();
+            Container.Bind<PathfindingService>().AsSingle();
+            Container.Bind<EcsEntityFactory>().AsSingle();
+            Container.Bind<RunInitializer>().AsSingle();
+            Container.Bind<IInputService>().To<UnityInputService>().AsSingle();
+            Container.Bind<EcsCommandService>().AsSingle();
+            Container.Bind<EntityViewFactory>().AsSingle();
+            Container.Bind<EntityViewPool>().AsSingle();
+            Container.Bind<EntityViewRegistry>().AsSingle();
+            Container.Bind<HudModel>().AsSingle();
+            Container.Bind<HudPresenter>().AsSingle();
+            Container.Bind<PerkSelectionModel>().AsSingle();
+            Container.Bind<PerkSelectionPresenter>().AsSingle();
 
-            Container.BindInterfacesAndSelfTo<RunController>().AsSingle();
+            Container.BindInterfacesAndSelfTo<EcsBootstrapper>().AsSingle();
         }
 
         private void BindConfig<T>(T config) where T : ScriptableObject

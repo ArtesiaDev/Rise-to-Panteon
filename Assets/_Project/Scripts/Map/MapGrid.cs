@@ -1,4 +1,5 @@
 using UnityEngine;
+using RuntimeRoguelike.Ecs;
 
 namespace RuntimeRoguelike
 {
@@ -31,6 +32,11 @@ namespace RuntimeRoguelike
             return InBounds(cell.x, cell.y);
         }
 
+        public bool InBounds(Int2 cell)
+        {
+            return InBounds(cell.X, cell.Y);
+        }
+
         public MapCell Get(int x, int y)
         {
             if (!InBounds(x, y))
@@ -54,6 +60,11 @@ namespace RuntimeRoguelike
             return Get(cell.x, cell.y);
         }
 
+        public MapCell Get(Int2 cell)
+        {
+            return Get(cell.X, cell.Y);
+        }
+
         public void Set(int x, int y, CellType type)
         {
             if (!InBounds(x, y))
@@ -67,6 +78,11 @@ namespace RuntimeRoguelike
         public void Set(Vector2Int cell, CellType type)
         {
             Set(cell.x, cell.y, type);
+        }
+
+        public void Set(Int2 cell, CellType type)
+        {
+            Set(cell.X, cell.Y, type);
         }
 
         public void SetObstacle(int x, int y, ObstacleType type)
@@ -84,6 +100,11 @@ namespace RuntimeRoguelike
             SetObstacle(cell.x, cell.y, type);
         }
 
+        public void SetObstacle(Int2 cell, ObstacleType type)
+        {
+            SetObstacle(cell.X, cell.Y, type);
+        }
+
         public void SetHazard(int x, int y, HazardType type)
         {
             if (!InBounds(x, y))
@@ -97,6 +118,11 @@ namespace RuntimeRoguelike
         public void SetHazard(Vector2Int cell, HazardType type)
         {
             SetHazard(cell.x, cell.y, type);
+        }
+
+        public void SetHazard(Int2 cell, HazardType type)
+        {
+            SetHazard(cell.X, cell.Y, type);
         }
 
         public bool IsWalkable(int x, int y)
@@ -113,6 +139,11 @@ namespace RuntimeRoguelike
         public bool IsWalkable(Vector2Int cell)
         {
             return IsWalkable(cell.x, cell.y);
+        }
+
+        public bool IsWalkable(Int2 cell)
+        {
+            return IsWalkable(cell.X, cell.Y);
         }
 
         public void FillBase(CellType type)

@@ -1,5 +1,6 @@
 using RuntimeRoguelike.Configs;
 using UnityEngine;
+using RuntimeRoguelike.Ecs;
 
 namespace RuntimeRoguelike
 {
@@ -22,6 +23,11 @@ namespace RuntimeRoguelike
         public Vector3 CellToWorld(Vector2Int cell)
         {
             return new Vector3((cell.x + 0.5f) * CellSize, (cell.y + 0.5f) * CellSize, 0f);
+        }
+
+        public Vector3 CellToWorld(Float2 cell)
+        {
+            return new Vector3((cell.X + 0.5f) * CellSize, (cell.Y + 0.5f) * CellSize, 0f);
         }
     }
 }

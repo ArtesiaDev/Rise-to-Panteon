@@ -1,4 +1,5 @@
 using UnityEngine;
+using RuntimeRoguelike.Ecs;
 
 namespace RuntimeRoguelike
 {
@@ -18,6 +19,11 @@ namespace RuntimeRoguelike
         public bool IsOccupied(Vector2Int cell)
         {
             return IsOccupied(cell.x, cell.y);
+        }
+
+        public bool IsOccupied(Int2 cell)
+        {
+            return IsOccupied(cell.X, cell.Y);
         }
 
         public bool IsOccupied(int x, int y)
@@ -47,6 +53,11 @@ namespace RuntimeRoguelike
             return true;
         }
 
+        public bool TryOccupy(Int2 cell)
+        {
+            return TryOccupy(new Vector2Int(cell.X, cell.Y));
+        }
+
         public void Occupy(Vector2Int cell)
         {
             if (InBounds(cell.x, cell.y))
@@ -55,12 +66,22 @@ namespace RuntimeRoguelike
             }
         }
 
+        public void Occupy(Int2 cell)
+        {
+            Occupy(new Vector2Int(cell.X, cell.Y));
+        }
+
         public void Release(Vector2Int cell)
         {
             if (InBounds(cell.x, cell.y))
             {
                 _occupied[ToIndex(cell.x, cell.y)] = false;
             }
+        }
+
+        public void Release(Int2 cell)
+        {
+            Release(new Vector2Int(cell.X, cell.Y));
         }
 
         public bool TryMove(Vector2Int from, Vector2Int to)
@@ -83,6 +104,11 @@ namespace RuntimeRoguelike
 
             _occupied[toIndex] = true;
             return true;
+        }
+
+        public bool TryMove(Int2 from, Int2 to)
+        {
+            return TryMove(new Vector2Int(from.X, from.Y), new Vector2Int(to.X, to.Y));
         }
 
         private bool InBounds(int x, int y)
