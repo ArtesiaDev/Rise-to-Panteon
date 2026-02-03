@@ -72,11 +72,32 @@ namespace RuntimeRoguelike
 
             if (withColliders)
             {
-                var collider = tilemapObject.AddComponent<TilemapCollider2D>();
-                collider.usedByComposite = true;
-                tilemapObject.AddComponent<CompositeCollider2D>();
+                // Some Unity setups can fail to add 2D physics components at runtime.
+                // Make this robust: render should still work even without colliders.
                 var body = tilemapObject.AddComponent<Rigidbody2D>();
+                if (body == null)
+                {
+                    Debug.LogError("Failed to add Rigidbody2D for Tilemap collisions. Colliders will be skipped.");
+                    return tilemap;
+                }
+
                 body.bodyType = RigidbodyType2D.Static;
+
+                var collider = tilemapObject.AddComponent<TilemapCollider2D>();
+                if (collider == null)
+                {
+                    Debug.LogError("Failed to add TilemapCollider2D for Tilemap collisions. Colliders will be skipped.");
+                    return tilemap;
+                }
+
+                var composite = tilemapObject.AddComponent<CompositeCollider2D>();
+                if (composite == null)
+                {
+                    Debug.LogError("Failed to add CompositeCollider2D for Tilemap collisions. Colliders will be skipped.");
+                    return tilemap;
+                }
+
+                collider.usedByComposite = true;
             }
 
             return tilemap;

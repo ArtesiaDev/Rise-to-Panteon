@@ -5,6 +5,9 @@ namespace RuntimeRoguelike
 {
     public class UiFactory
     {
+        private const string LEGACY_RUNTIME_FONT_PATH = "LegacyRuntime.ttf";
+        private const string ARIAL_FONT_PATH = "Arial.ttf";
+
         private Font _defaultFont;
 
         public Text CreateText(Transform parent, string name, int fontSize, TextAnchor alignment, Color color)
@@ -44,7 +47,13 @@ namespace RuntimeRoguelike
         {
             if (_defaultFont == null)
             {
-                _defaultFont = Resources.GetBuiltinResource<Font>("Arial.ttf");
+                // Unity 6+: Arial.ttf is not a valid built-in font anymore (use LegacyRuntime.ttf).
+                // Keep a fallback for older Unity versions/projects.
+                _defaultFont = Resources.GetBuiltinResource<Font>(LEGACY_RUNTIME_FONT_PATH);
+                if (_defaultFont == null)
+                {
+                    _defaultFont = Resources.GetBuiltinResource<Font>(ARIAL_FONT_PATH);
+                }
             }
 
             return _defaultFont;

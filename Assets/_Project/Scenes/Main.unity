@@ -418,6 +418,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a7802125fb724463983167b0e927d25c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _runConfig: {fileID: 11400000, guid: 4819ad562668e4c06bec0be3f1a965c2, type: 2}
+  _mapGenerationConfig: {fileID: 11400000, guid: 8619f96b948804a4a953bfffa4c7affa, type: 2}
+  _hazardConfig: {fileID: 11400000, guid: 4a8ed026a73d94563b95c85b6cb0fcb8, type: 2}
+  _enemyConfig: {fileID: 11400000, guid: 4123e780799e14dafa4b0d07de8a0f4b, type: 2}
+  _enemySpawnConfig: {fileID: 11400000, guid: afd348b1e9b454a538487562d9db0650, type: 2}
+  _playerConfig: {fileID: 11400000, guid: dc76dc2afe25840cda3c568d1dda7dd9, type: 2}
+  _playerAttackConfig: {fileID: 11400000, guid: a2b358c56a0ee4a1da3e48df10b25b1a, type: 2}
+  _difficultyConfig: {fileID: 11400000, guid: a7818fdb0c9194181b7689d502797b83, type: 2}
+  _lootConfig: {fileID: 11400000, guid: 97057798a489a47fe81079bb430893b2, type: 2}
+  _levelConfig: {fileID: 11400000, guid: 8dcf3ae04d1bc4697aefe7ab5e1c0f6a, type: 2}
+  _perkConfig: {fileID: 11400000, guid: dd4de725a7600450fb6d687eca8c4d80, type: 2}
+  _devToolsConfig: {fileID: 11400000, guid: 4c531a31df006416b85d6edf45d9f614, type: 2}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

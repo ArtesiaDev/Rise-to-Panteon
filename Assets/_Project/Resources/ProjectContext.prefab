@@ -74,3 +74,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6759e2037d82b443e95463ffe786167e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _spriteFactoryConfig: {fileID: 11400000, guid: 1d4851ca72ef444f8afd78aca32d15fa, type: 2}
+  _gridConfig: {fileID: 11400000, guid: 5d35f53dcb415474d98eac465186cd56, type: 2}
+  _cameraFollowConfig: {fileID: 11400000, guid: f9ecec7a871a2497c93caad50f03e234, type: 2}
