@@ -53,6 +53,8 @@ namespace RuntimeRoguelike.Ecs
 
             _pipeline = new EcsSystemsPipeline(_world);
             RegisterSystems();
+            _pipeline.SortSystems();
+            _pipeline.PreInit();
 
             var godObject = _worldRoots.WorldRoot.parent != null ? _worldRoots.WorldRoot.parent.gameObject : _worldRoots.WorldRoot.gameObject;
             _worldBehaviour = godObject.GetComponent<EcsWorldBehaviour>();

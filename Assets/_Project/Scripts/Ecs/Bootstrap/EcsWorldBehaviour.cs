@@ -6,11 +6,8 @@ namespace RuntimeRoguelike.Ecs
     {
         private EcsSystemsPipeline _pipeline;
         private GridPositionConverter _gridPositionConverter;
-        private bool _initialized;
         private bool _awakeTriggered;
-        private bool _awakeExecuted;
-        private bool _enableTriggered;
-        private bool _enableExecuted;
+        private bool _initExecuted;
         private bool _startTriggered;
         private bool _startExecuted;
 
@@ -18,14 +15,7 @@ namespace RuntimeRoguelike.Ecs
         {
             _pipeline = pipeline;
             _gridPositionConverter = gridPositionConverter;
-            _pipeline.SortSystems();
-            _pipeline.PreInit();
-            _pipeline.Init();
-            _pipeline.LateInit();
-            _initialized = true;
-
             TryInvokeAwake();
-            TryInvokeEnable();
             TryInvokeStart();
         }
 
@@ -33,12 +23,6 @@ namespace RuntimeRoguelike.Ecs
         {
             _awakeTriggered = true;
             TryInvokeAwake();
-        }
-
-        private void OnEnable()
-        {
-            _enableTriggered = true;
-            TryInvokeEnable();
         }
 
         private void Start()
@@ -49,7 +33,7 @@ namespace RuntimeRoguelike.Ecs
 
         private void Update()
         {
-            if (!_initialized)
+            if (!_initExecuted)
             {
                 return;
             }
@@ -59,7 +43,7 @@ namespace RuntimeRoguelike.Ecs
 
         private void FixedUpdate()
         {
-            if (!_initialized)
+            if (!_initExecuted)
             {
                 return;
             }
@@ -69,7 +53,7 @@ namespace RuntimeRoguelike.Ecs
 
         private void LateUpdate()
         {
-            if (!_initialized)
+            if (!_initExecuted)
             {
                 return;
             }
@@ -77,19 +61,9 @@ namespace RuntimeRoguelike.Ecs
             _pipeline.LateUpdate(Time.deltaTime);
         }
 
-        private void OnDisable()
-        {
-            if (_initialized && _pipeline != null)
-            {
-                _pipeline.OnDisable();
-            }
-
-            _enableExecuted = false;
-        }
-
         private void OnDestroy()
         {
-            if (_initialized)
+            if (_pipeline != null)
             {
                 _pipeline.Dispose();
             }
@@ -97,7 +71,7 @@ namespace RuntimeRoguelike.Ecs
 
         private void OnDrawGizmos()
         {
-            if (!_initialized || _pipeline == null || _gridPositionConverter == null)
+            if (!_initExecuted || _pipeline == null || _gridPositionConverter == null)
             {
                 return;
             }
@@ -128,29 +102,18 @@ namespace RuntimeRoguelike.Ecs
 
         private void TryInvokeAwake()
         {
-            if (_pipeline == null || !_awakeTriggered || _awakeExecuted)
+            if (_pipeline == null || !_awakeTriggered || _initExecuted)
             {
                 return;
             }
 
-            _pipeline.Awake();
-            _awakeExecuted = true;
-        }
-
-        private void TryInvokeEnable()
-        {
-            if (_pipeline == null || !_enableTriggered || _enableExecuted)
-            {
-                return;
-            }
-
-            _pipeline.OnEnable();
-            _enableExecuted = true;
+            _pipeline.Init();
+            _initExecuted = true;
         }
 
         private void TryInvokeStart()
         {
-            if (_pipeline == null || !_startTriggered || _startExecuted)
+            if (_pipeline == null || !_startTriggered || _startExecuted || !_initExecuted)
             {
                 return;
             }

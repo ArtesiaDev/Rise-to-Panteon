@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Reflection;
 
@@ -6,19 +5,14 @@ namespace RuntimeRoguelike.Ecs
 {
     public class EcsSystemsPipeline
     {
-        private readonly List<IEcsAwakeSystem> _awakeSystems = new List<IEcsAwakeSystem>();
-        private readonly List<IEcsEnableSystem> _enableSystems = new List<IEcsEnableSystem>();
-        private readonly List<IEcsStartSystem> _startSystems = new List<IEcsStartSystem>();
-        private readonly List<IEcsDisableSystem> _disableSystems = new List<IEcsDisableSystem>();
-        private readonly List<IEcsPreInitSystem> _preInitSystems = new List<IEcsPreInitSystem>();
-        private readonly List<IEcsInitSystem> _initSystems = new List<IEcsInitSystem>();
-        private readonly List<IEcsLateInitSystem> _lateInitSystems = new List<IEcsLateInitSystem>();
-        private readonly List<IEcsPreUpdateSystem> _preUpdateSystems = new List<IEcsPreUpdateSystem>();
-        private readonly List<IEcsUpdateSystem> _updateSystems = new List<IEcsUpdateSystem>();
-        private readonly List<IEcsPostUpdateSystem> _postUpdateSystems = new List<IEcsPostUpdateSystem>();
-        private readonly List<IEcsFixedUpdateSystem> _fixedSystems = new List<IEcsFixedUpdateSystem>();
-        private readonly List<IEcsLateUpdateSystem> _lateSystems = new List<IEcsLateUpdateSystem>();
-        private readonly List<IEcsDisposeSystem> _disposeSystems = new List<IEcsDisposeSystem>();
+        private readonly List<IEcsPreInitSystem> _preInitSystems = new();
+        private readonly List<IEcsInitSystem> _initSystems = new();
+        private readonly List<IEcsStartSystem> _startSystems = new();
+        private readonly List<IEcsPreUpdateSystem> _preUpdateSystems = new();
+        private readonly List<IEcsUpdateSystem> _updateSystems = new();
+        private readonly List<IEcsFixedUpdateSystem> _fixedSystems = new();
+        private readonly List<IEcsLateUpdateSystem> _lateSystems = new();
+        private readonly List<IEcsDisposeSystem> _disposeSystems = new();
 
         public EcsWorld World { get; }
         public EcsCommandBuffer CommandBuffer { get; }
@@ -31,41 +25,21 @@ namespace RuntimeRoguelike.Ecs
 
         public void AddSystem(object system)
         {
-            if (system is IEcsAwakeSystem awake)
-            {
-                _awakeSystems.Add(awake);
-            }
-
-            if (system is IEcsEnableSystem enable)
-            {
-                _enableSystems.Add(enable);
-            }
-
-            if (system is IEcsStartSystem start)
-            {
-                _startSystems.Add(start);
-            }
-
-            if (system is IEcsDisableSystem disable)
-            {
-                _disableSystems.Add(disable);
-            }
-
             if (system is IEcsPreInitSystem preInit)
             {
                 _preInitSystems.Add(preInit);
             }
-
+            
             if (system is IEcsInitSystem init)
             {
                 _initSystems.Add(init);
             }
-
-            if (system is IEcsLateInitSystem lateInit)
+            
+            if (system is IEcsStartSystem start)
             {
-                _lateInitSystems.Add(lateInit);
+                _startSystems.Add(start);
             }
-
+            
             if (system is IEcsPreUpdateSystem preUpdate)
             {
                 _preUpdateSystems.Add(preUpdate);
@@ -74,11 +48,6 @@ namespace RuntimeRoguelike.Ecs
             if (system is IEcsUpdateSystem update)
             {
                 _updateSystems.Add(update);
-            }
-
-            if (system is IEcsPostUpdateSystem postUpdate)
-            {
-                _postUpdateSystems.Add(postUpdate);
             }
 
             if (system is IEcsFixedUpdateSystem fixedSystem)
@@ -99,51 +68,14 @@ namespace RuntimeRoguelike.Ecs
 
         public void SortSystems()
         {
-            SortByOrder(_awakeSystems);
-            SortByOrder(_enableSystems);
-            SortByOrder(_startSystems);
-            SortByOrder(_disableSystems);
             SortByOrder(_preInitSystems);
             SortByOrder(_initSystems);
-            SortByOrder(_lateInitSystems);
+            SortByOrder(_startSystems);
             SortByOrder(_preUpdateSystems);
             SortByOrder(_updateSystems);
-            SortByOrder(_postUpdateSystems);
             SortByOrder(_fixedSystems);
             SortByOrder(_lateSystems);
             SortByOrder(_disposeSystems);
-        }
-
-        public void Awake()
-        {
-            for (var i = 0; i < _awakeSystems.Count; i++)
-            {
-                _awakeSystems[i].Awake(World);
-            }
-        }
-
-        public void OnEnable()
-        {
-            for (var i = 0; i < _enableSystems.Count; i++)
-            {
-                _enableSystems[i].OnEnable(World);
-            }
-        }
-
-        public void Start()
-        {
-            for (var i = 0; i < _startSystems.Count; i++)
-            {
-                _startSystems[i].Start(World);
-            }
-        }
-
-        public void OnDisable()
-        {
-            for (var i = 0; i < _disableSystems.Count; i++)
-            {
-                _disableSystems[i].OnDisable(World);
-            }
         }
 
         public void PreInit()
@@ -166,14 +98,12 @@ namespace RuntimeRoguelike.Ecs
             CommandBuffer.Playback(World);
         }
 
-        public void LateInit()
+        public void Start()
         {
-            for (var i = 0; i < _lateInitSystems.Count; i++)
+            for (var i = 0; i < _startSystems.Count; i++)
             {
-                _lateInitSystems[i].LateInit(World, CommandBuffer);
+                _startSystems[i].Start(World);
             }
-
-            CommandBuffer.Playback(World);
         }
 
         public void Update(float deltaTime)
@@ -188,13 +118,6 @@ namespace RuntimeRoguelike.Ecs
             for (var i = 0; i < _updateSystems.Count; i++)
             {
                 _updateSystems[i].Update(World, CommandBuffer, deltaTime);
-            }
-
-            CommandBuffer.Playback(World);
-
-            for (var i = 0; i < _postUpdateSystems.Count; i++)
-            {
-                _postUpdateSystems[i].PostUpdate(World, CommandBuffer, deltaTime);
             }
 
             CommandBuffer.Playback(World);
@@ -254,7 +177,7 @@ namespace RuntimeRoguelike.Ecs
         {
             var type = system.GetType();
             var attribute = type.GetCustomAttribute<EcsSystemOrderAttribute>();
-            return attribute != null ? attribute.Order : 0;
+            return attribute?.Order ?? 0;
         }
 
         private bool HasOrderAttribute<TSystem>(TSystem system)
