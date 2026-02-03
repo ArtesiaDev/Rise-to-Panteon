@@ -3,7 +3,7 @@ using RuntimeRoguelike.Configs;
 
 namespace RuntimeRoguelike.Ecs
 {
-    public class EnemySpawnerSystem : IEcsFixedSystem
+    public class EnemySpawnerSystem : IEcsFixedUpdateSystem
     {
         private readonly EnemySpawnConfig _spawnConfig;
         private readonly EcsEntityFactory _entityFactory;

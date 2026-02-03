@@ -1,6 +1,6 @@
 namespace RuntimeRoguelike.Ecs
 {
-    public class EnemyMoveIntentSystem : IEcsInitSystem, IEcsFixedSystem
+    public class EnemyMoveIntentSystem : IEcsInitSystem, IEcsFixedUpdateSystem
     {
         private EcsPool<GridPosition> _positionPool;
         private EcsPool<TargetEntity> _targetPool;

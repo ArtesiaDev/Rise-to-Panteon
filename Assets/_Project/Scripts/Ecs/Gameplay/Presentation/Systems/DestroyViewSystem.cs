@@ -1,6 +1,6 @@
 namespace RuntimeRoguelike.Ecs
 {
-    public class DestroyViewSystem : IEcsLateSystem, IEcsDisposeSystem
+    public class DestroyViewSystem : IEcsLateUpdateSystem, IEcsDisposeSystem
     {
         private readonly EntityViewRegistry _registry;
         private readonly EntityViewPool _pool;

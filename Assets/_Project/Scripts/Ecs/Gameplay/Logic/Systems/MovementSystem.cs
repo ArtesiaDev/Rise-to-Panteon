@@ -1,6 +1,6 @@
 namespace RuntimeRoguelike.Ecs
 {
-    public class MovementSystem : IEcsInitSystem, IEcsFixedSystem
+    public class MovementSystem : IEcsInitSystem, IEcsFixedUpdateSystem
     {
         private EcsPool<GridPosition> _positionPool;
         private EcsPool<MoveIntent> _intentPool;

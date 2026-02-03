@@ -3,7 +3,7 @@ using RuntimeRoguelike;
 
 namespace RuntimeRoguelike.Ecs
 {
-    public class HazardSystemEcs : IEcsInitSystem, IEcsFixedSystem
+    public class HazardSystemEcs : IEcsInitSystem, IEcsFixedUpdateSystem
     {
         private readonly HazardConfig _config;
         private EcsPool<GridPosition> _positionPool;

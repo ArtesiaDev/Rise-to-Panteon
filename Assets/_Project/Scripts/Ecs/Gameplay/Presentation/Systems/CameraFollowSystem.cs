@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace RuntimeRoguelike.Ecs
 {
-    public class CameraFollowSystem : IEcsLateSystem
+    public class CameraFollowSystem : IEcsLateUpdateSystem
     {
         private readonly CameraFollowConfig _config;
         private readonly EntityViewRegistry _registry;

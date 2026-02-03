@@ -1,6 +1,6 @@
 namespace RuntimeRoguelike.Ecs
 {
-    public class CooldownSystem : IEcsInitSystem, IEcsFixedSystem
+    public class CooldownSystem : IEcsInitSystem, IEcsFixedUpdateSystem
     {
         private EcsPool<MoveCooldown> _movePool;
         private EcsPool<AttackCooldown> _attackPool;

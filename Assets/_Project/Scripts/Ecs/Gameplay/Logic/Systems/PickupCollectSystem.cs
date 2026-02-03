@@ -2,7 +2,7 @@ using RuntimeRoguelike;
 
 namespace RuntimeRoguelike.Ecs
 {
-    public class PickupCollectSystem : IEcsInitSystem, IEcsFixedSystem
+    public class PickupCollectSystem : IEcsInitSystem, IEcsFixedUpdateSystem
     {
         private EcsPool<GridPosition> _positionPool;
         private EcsPool<PlayerStatsComponent> _statsPool;

@@ -1,6 +1,6 @@
 namespace RuntimeRoguelike.Ecs
 {
-    public class EnemyPathSystem : IEcsInitSystem, IEcsFixedSystem
+    public class EnemyPathSystem : IEcsInitSystem, IEcsFixedUpdateSystem
     {
         private readonly PathfindingService _pathfindingService;
         private EcsPool<GridPosition> _positionPool;

@@ -3,7 +3,7 @@ using RuntimeRoguelike;
 
 namespace RuntimeRoguelike.Ecs
 {
-    public class DeathSystem : IEcsInitSystem, IEcsFixedSystem
+    public class DeathSystem : IEcsInitSystem, IEcsFixedUpdateSystem
     {
         private readonly LootConfig _lootConfig;
         private readonly EcsEntityFactory _entityFactory;

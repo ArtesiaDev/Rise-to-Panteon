@@ -3,7 +3,7 @@ using RuntimeRoguelike;
 
 namespace RuntimeRoguelike.Ecs
 {
-    public class LevelProgressSystem : IEcsInitSystem, IEcsFixedSystem
+    public class LevelProgressSystem : IEcsInitSystem, IEcsFixedUpdateSystem
     {
         private readonly LevelConfig _levelConfig;
         private readonly PerkConfig _perkConfig;

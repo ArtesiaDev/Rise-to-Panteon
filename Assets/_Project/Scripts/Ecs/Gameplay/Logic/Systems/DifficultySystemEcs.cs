@@ -2,7 +2,7 @@ using RuntimeRoguelike.Configs;
 
 namespace RuntimeRoguelike.Ecs
 {
-    public class DifficultySystemEcs : IEcsInitSystem, IEcsFixedSystem
+    public class DifficultySystemEcs : IEcsInitSystem, IEcsFixedUpdateSystem
     {
         private readonly DifficultyConfig _config;
         private EcsPool<PlayerStatsComponent> _statsPool;

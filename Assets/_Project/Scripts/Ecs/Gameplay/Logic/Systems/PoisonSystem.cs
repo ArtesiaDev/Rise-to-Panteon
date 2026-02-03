@@ -1,6 +1,6 @@
 namespace RuntimeRoguelike.Ecs
 {
-    public class PoisonSystem : IEcsInitSystem, IEcsFixedSystem
+    public class PoisonSystem : IEcsInitSystem, IEcsFixedUpdateSystem
     {
         private EcsPool<PoisonEffect> _poisonPool;
         private EcsPool<HealthComponent> _healthPool;

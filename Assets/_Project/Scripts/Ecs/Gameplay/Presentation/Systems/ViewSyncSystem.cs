@@ -1,6 +1,6 @@
 namespace RuntimeRoguelike.Ecs
 {
-    public class ViewSyncSystem : IEcsInitSystem, IEcsLateSystem
+    public class ViewSyncSystem : IEcsInitSystem, IEcsLateUpdateSystem
     {
         private readonly EntityViewRegistry _registry;
         private readonly GridPositionConverter _gridPositionConverter;

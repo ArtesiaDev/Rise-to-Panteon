@@ -16,8 +16,8 @@ namespace RuntimeRoguelike.Ecs
         private readonly List<IEcsPreUpdateSystem> _preUpdateSystems = new List<IEcsPreUpdateSystem>();
         private readonly List<IEcsUpdateSystem> _updateSystems = new List<IEcsUpdateSystem>();
         private readonly List<IEcsPostUpdateSystem> _postUpdateSystems = new List<IEcsPostUpdateSystem>();
-        private readonly List<IEcsFixedSystem> _fixedSystems = new List<IEcsFixedSystem>();
-        private readonly List<IEcsLateSystem> _lateSystems = new List<IEcsLateSystem>();
+        private readonly List<IEcsFixedUpdateSystem> _fixedSystems = new List<IEcsFixedUpdateSystem>();
+        private readonly List<IEcsLateUpdateSystem> _lateSystems = new List<IEcsLateUpdateSystem>();
         private readonly List<IEcsDisposeSystem> _disposeSystems = new List<IEcsDisposeSystem>();
 
         public EcsWorld World { get; }
@@ -81,12 +81,12 @@ namespace RuntimeRoguelike.Ecs
                 _postUpdateSystems.Add(postUpdate);
             }
 
-            if (system is IEcsFixedSystem fixedSystem)
+            if (system is IEcsFixedUpdateSystem fixedSystem)
             {
                 _fixedSystems.Add(fixedSystem);
             }
 
-            if (system is IEcsLateSystem late)
+            if (system is IEcsLateUpdateSystem late)
             {
                 _lateSystems.Add(late);
             }

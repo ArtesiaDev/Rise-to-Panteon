@@ -1,6 +1,6 @@
 namespace RuntimeRoguelike.Ecs
 {
-    public class EnemyTargetSystem : IEcsInitSystem, IEcsFixedSystem
+    public class EnemyTargetSystem : IEcsInitSystem, IEcsFixedUpdateSystem
     {
         private EcsPool<GridPosition> _positionPool;
         private EcsPool<AggroRange> _aggroPool;
