@@ -1,19 +1,25 @@
 namespace RuntimeRoguelike.Ecs
 {
-    public class PoisonSystem : IEcsUpdateSystem
+    public class PoisonSystem : IEcsInitSystem, IEcsFixedSystem
     {
-        public void Update(EcsWorld world, EcsCommandBuffer commandBuffer, float deltaTime)
-        {
-            var poisonPool = world.GetPool<PoisonEffect>();
-            var healthPool = world.GetPool<HealthComponent>();
+        private EcsPool<PoisonEffect> _poisonPool;
+        private EcsPool<HealthComponent> _healthPool;
 
+        public void Init(EcsWorld world, EcsCommandBuffer commandBuffer)
+        {
+            _poisonPool = world.GetPool<PoisonEffect>();
+            _healthPool = world.GetPool<HealthComponent>();
+        }
+
+        public void FixedUpdate(EcsWorld world, EcsCommandBuffer commandBuffer, float fixedDeltaTime)
+        {
             foreach (var entity in world.Query<PoisonEffect, HealthComponent>())
             {
-                ref var poison = ref poisonPool.GetRef(entity);
-                ref var health = ref healthPool.GetRef(entity);
+                ref var poison = ref _poisonPool.GetRef(entity);
+                ref var health = ref _healthPool.GetRef(entity);
 
-                poison.Remaining -= deltaTime;
-                poison.NextTick -= deltaTime;
+                poison.Remaining -= fixedDeltaTime;
+                poison.NextTick -= fixedDeltaTime;
 
                 if (poison.NextTick <= 0f)
                 {

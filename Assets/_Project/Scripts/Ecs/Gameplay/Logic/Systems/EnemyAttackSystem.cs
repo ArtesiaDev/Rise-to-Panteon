@@ -1,41 +1,51 @@
 namespace RuntimeRoguelike.Ecs
 {
-    public class EnemyAttackSystem : IEcsUpdateSystem
+    public class EnemyAttackSystem : IEcsInitSystem, IEcsFixedSystem
     {
-        public void Update(EcsWorld world, EcsCommandBuffer commandBuffer, float deltaTime)
-        {
-            var positionPool = world.GetPool<GridPosition>();
-            var targetPool = world.GetPool<TargetEntity>();
-            var attackPool = world.GetPool<AttackCooldown>();
-            var rangePool = world.GetPool<AttackRange>();
-            var damagePool = world.GetPool<DamageComponent>();
-            var healthPool = world.GetPool<HealthComponent>();
+        private EcsPool<GridPosition> _positionPool;
+        private EcsPool<TargetEntity> _targetPool;
+        private EcsPool<AttackCooldown> _attackPool;
+        private EcsPool<AttackRange> _rangePool;
+        private EcsPool<DamageComponent> _damagePool;
+        private EcsPool<HealthComponent> _healthPool;
 
+        public void Init(EcsWorld world, EcsCommandBuffer commandBuffer)
+        {
+            _positionPool = world.GetPool<GridPosition>();
+            _targetPool = world.GetPool<TargetEntity>();
+            _attackPool = world.GetPool<AttackCooldown>();
+            _rangePool = world.GetPool<AttackRange>();
+            _damagePool = world.GetPool<DamageComponent>();
+            _healthPool = world.GetPool<HealthComponent>();
+        }
+
+        public void FixedUpdate(EcsWorld world, EcsCommandBuffer commandBuffer, float fixedDeltaTime)
+        {
             foreach (var entity in world.Query<EnemyTag, GridPosition, TargetEntity, AttackCooldown, AttackRange, DamageComponent>())
             {
-                ref var target = ref targetPool.GetRef(entity);
-                if (!target.HasTarget || !positionPool.Has(target.EntityId) || !healthPool.Has(target.EntityId))
+                ref var target = ref _targetPool.GetRef(entity);
+                if (!target.HasTarget || !_positionPool.Has(target.EntityId) || !_healthPool.Has(target.EntityId))
                 {
                     target.HasTarget = false;
                     continue;
                 }
 
-                ref var cooldown = ref attackPool.GetRef(entity);
+                ref var cooldown = ref _attackPool.GetRef(entity);
                 if (cooldown.Remaining > 0f)
                 {
                     continue;
                 }
 
-                var attackerPos = positionPool.GetRef(entity).Value;
-                var targetPos = positionPool.GetRef(target.EntityId).Value;
+                var attackerPos = _positionPool.GetRef(entity).Value;
+                var targetPos = _positionPool.GetRef(target.EntityId).Value;
                 var distance = attackerPos.ManhattanDistance(targetPos);
-                if (distance > rangePool.GetRef(entity).Value)
+                if (distance > _rangePool.GetRef(entity).Value)
                 {
                     continue;
                 }
 
-                ref var health = ref healthPool.GetRef(target.EntityId);
-                health.Current = EcsMath.Max(0, health.Current - damagePool.GetRef(entity).Value);
+                ref var health = ref _healthPool.GetRef(target.EntityId);
+                health.Current = EcsMath.Max(0, health.Current - _damagePool.GetRef(entity).Value);
                 cooldown.Remaining = cooldown.Interval;
             }
         }

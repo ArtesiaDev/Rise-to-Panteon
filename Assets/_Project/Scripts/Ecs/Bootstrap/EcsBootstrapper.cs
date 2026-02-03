@@ -122,14 +122,14 @@ namespace RuntimeRoguelike.Ecs
         private void RegisterSystems()
         {
             _pipeline.AddSystem(_container.Instantiate<RunInitSystem>());
-            _pipeline.AddSystem(_container.Instantiate<EnemySpawnerSystem>());
-
             _pipeline.AddSystem(_container.Instantiate<RestartSystem>());
             _pipeline.AddSystem(_container.Instantiate<MapRenderSystem>());
             _pipeline.AddSystem(_container.Instantiate<PlayerInputSystem>());
             _pipeline.AddSystem(_container.Instantiate<DevToolsSystemEcs>());
+
             _pipeline.AddSystem(_container.Instantiate<CooldownSystem>());
             _pipeline.AddSystem(_container.Instantiate<DifficultySystemEcs>());
+            _pipeline.AddSystem(_container.Instantiate<EnemySpawnerSystem>());
             _pipeline.AddSystem(_container.Instantiate<EnemyTargetSystem>());
             _pipeline.AddSystem(_container.Instantiate<EnemyPathSystem>());
             _pipeline.AddSystem(_container.Instantiate<EnemyMoveIntentSystem>());
@@ -141,12 +141,11 @@ namespace RuntimeRoguelike.Ecs
             _pipeline.AddSystem(_container.Instantiate<PickupCollectSystem>());
             _pipeline.AddSystem(_container.Instantiate<DeathSystem>());
             _pipeline.AddSystem(_container.Instantiate<LevelProgressSystem>());
-            _pipeline.AddSystem(_container.Instantiate<PerkApplySystem>());
 
+            _pipeline.AddSystem(_container.Instantiate<PerkApplySystem>());
             _pipeline.AddSystem(_container.Instantiate<HudModelSyncSystem>());
             _pipeline.AddSystem(_container.Instantiate<PerkUiBridgeSystem>());
             _pipeline.AddSystem(_container.Instantiate<ViewSpawnSystem>());
-
             _pipeline.AddSystem(_container.Instantiate<ViewSyncSystem>());
             _pipeline.AddSystem(_container.Instantiate<CameraFollowSystem>());
             _pipeline.AddSystem(_container.Instantiate<DestroyViewSystem>());

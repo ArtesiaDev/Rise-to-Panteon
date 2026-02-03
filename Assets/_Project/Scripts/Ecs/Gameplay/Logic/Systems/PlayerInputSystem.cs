@@ -1,12 +1,20 @@
 namespace RuntimeRoguelike.Ecs
 {
-    public class PlayerInputSystem : IEcsUpdateSystem
+    public class PlayerInputSystem : IEcsInitSystem, IEcsUpdateSystem
     {
         private readonly IInputService _inputService;
+        private EcsPool<MoveIntent> _moveIntentPool;
+        private EcsPool<AttackIntent> _attackIntentPool;
 
         public PlayerInputSystem(IInputService inputService)
         {
             _inputService = inputService;
+        }
+
+        public void Init(EcsWorld world, EcsCommandBuffer commandBuffer)
+        {
+            _moveIntentPool = world.GetPool<MoveIntent>();
+            _attackIntentPool = world.GetPool<AttackIntent>();
         }
 
         public void Update(EcsWorld world, EcsCommandBuffer commandBuffer, float deltaTime)
@@ -27,19 +35,18 @@ namespace RuntimeRoguelike.Ecs
                 commands.RestartRequested = true;
             }
 
-            var moveIntentPool = world.GetPool<MoveIntent>();
             if (input.MoveDirection != Int2.Zero)
             {
-                moveIntentPool.Add(counters.PlayerEntityId).Direction = input.MoveDirection;
+                _moveIntentPool.Add(counters.PlayerEntityId).Direction = input.MoveDirection;
             }
             else
             {
-                moveIntentPool.RemoveEntity(counters.PlayerEntityId);
+                _moveIntentPool.RemoveEntity(counters.PlayerEntityId);
             }
 
             if (input.AttackPressed)
             {
-                world.GetPool<AttackIntent>().Add(counters.PlayerEntityId);
+                _attackIntentPool.Add(counters.PlayerEntityId);
             }
         }
     }

@@ -1,46 +1,55 @@
 namespace RuntimeRoguelike.Ecs
 {
-    public class CooldownSystem : IEcsUpdateSystem
+    public class CooldownSystem : IEcsInitSystem, IEcsFixedSystem
     {
-        public void Update(EcsWorld world, EcsCommandBuffer commandBuffer, float deltaTime)
+        private EcsPool<MoveCooldown> _movePool;
+        private EcsPool<AttackCooldown> _attackPool;
+        private EcsPool<PathRefreshCooldown> _pathPool;
+        private EcsPool<IdleMoveCooldown> _idlePool;
+
+        public void Init(EcsWorld world, EcsCommandBuffer commandBuffer)
         {
-            var movePool = world.GetPool<MoveCooldown>();
+            _movePool = world.GetPool<MoveCooldown>();
+            _attackPool = world.GetPool<AttackCooldown>();
+            _pathPool = world.GetPool<PathRefreshCooldown>();
+            _idlePool = world.GetPool<IdleMoveCooldown>();
+        }
+
+        public void FixedUpdate(EcsWorld world, EcsCommandBuffer commandBuffer, float fixedDeltaTime)
+        {
             foreach (var entity in world.Query<MoveCooldown>())
             {
-                ref var cooldown = ref movePool.GetRef(entity);
+                ref var cooldown = ref _movePool.GetRef(entity);
                 if (cooldown.Remaining > 0f)
                 {
-                    cooldown.Remaining = EcsMath.Clamp(cooldown.Remaining - deltaTime, 0f, float.MaxValue);
+                    cooldown.Remaining = EcsMath.Clamp(cooldown.Remaining - fixedDeltaTime, 0f, float.MaxValue);
                 }
             }
 
-            var attackPool = world.GetPool<AttackCooldown>();
             foreach (var entity in world.Query<AttackCooldown>())
             {
-                ref var cooldown = ref attackPool.GetRef(entity);
+                ref var cooldown = ref _attackPool.GetRef(entity);
                 if (cooldown.Remaining > 0f)
                 {
-                    cooldown.Remaining = EcsMath.Clamp(cooldown.Remaining - deltaTime, 0f, float.MaxValue);
+                    cooldown.Remaining = EcsMath.Clamp(cooldown.Remaining - fixedDeltaTime, 0f, float.MaxValue);
                 }
             }
 
-            var pathPool = world.GetPool<PathRefreshCooldown>();
             foreach (var entity in world.Query<PathRefreshCooldown>())
             {
-                ref var cooldown = ref pathPool.GetRef(entity);
+                ref var cooldown = ref _pathPool.GetRef(entity);
                 if (cooldown.Remaining > 0f)
                 {
-                    cooldown.Remaining = EcsMath.Clamp(cooldown.Remaining - deltaTime, 0f, float.MaxValue);
+                    cooldown.Remaining = EcsMath.Clamp(cooldown.Remaining - fixedDeltaTime, 0f, float.MaxValue);
                 }
             }
 
-            var idlePool = world.GetPool<IdleMoveCooldown>();
             foreach (var entity in world.Query<IdleMoveCooldown>())
             {
-                ref var cooldown = ref idlePool.GetRef(entity);
+                ref var cooldown = ref _idlePool.GetRef(entity);
                 if (cooldown.Remaining > 0f)
                 {
-                    cooldown.Remaining = EcsMath.Clamp(cooldown.Remaining - deltaTime, 0f, float.MaxValue);
+                    cooldown.Remaining = EcsMath.Clamp(cooldown.Remaining - fixedDeltaTime, 0f, float.MaxValue);
                 }
             }
         }

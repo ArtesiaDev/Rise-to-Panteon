@@ -156,6 +156,81 @@ namespace RuntimeRoguelike.Ecs
             return new EcsQuery<T1, T2, T3, T4>(this);
         }
 
+        public EcsQuery<T1, T2, T3, T4, T5> Query<T1, T2, T3, T4, T5>()
+            where T1 : struct
+            where T2 : struct
+            where T3 : struct
+            where T4 : struct
+            where T5 : struct
+        {
+            return new EcsQuery<T1, T2, T3, T4, T5>(this);
+        }
+
+        public EcsQuery<T1, T2, T3, T4, T5, T6> Query<T1, T2, T3, T4, T5, T6>()
+            where T1 : struct
+            where T2 : struct
+            where T3 : struct
+            where T4 : struct
+            where T5 : struct
+            where T6 : struct
+        {
+            return new EcsQuery<T1, T2, T3, T4, T5, T6>(this);
+        }
+
+        public EcsQuery<T1, T2, T3, T4, T5, T6, T7> Query<T1, T2, T3, T4, T5, T6, T7>()
+            where T1 : struct
+            where T2 : struct
+            where T3 : struct
+            where T4 : struct
+            where T5 : struct
+            where T6 : struct
+            where T7 : struct
+        {
+            return new EcsQuery<T1, T2, T3, T4, T5, T6, T7>(this);
+        }
+
+        public EcsQuery<T1, T2, T3, T4, T5, T6, T7, T8> Query<T1, T2, T3, T4, T5, T6, T7, T8>()
+            where T1 : struct
+            where T2 : struct
+            where T3 : struct
+            where T4 : struct
+            where T5 : struct
+            where T6 : struct
+            where T7 : struct
+            where T8 : struct
+        {
+            return new EcsQuery<T1, T2, T3, T4, T5, T6, T7, T8>(this);
+        }
+
+        public EcsQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Query<T1, T2, T3, T4, T5, T6, T7, T8, T9>()
+            where T1 : struct
+            where T2 : struct
+            where T3 : struct
+            where T4 : struct
+            where T5 : struct
+            where T6 : struct
+            where T7 : struct
+            where T8 : struct
+            where T9 : struct
+        {
+            return new EcsQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this);
+        }
+
+        public EcsQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>()
+            where T1 : struct
+            where T2 : struct
+            where T3 : struct
+            where T4 : struct
+            where T5 : struct
+            where T6 : struct
+            where T7 : struct
+            where T8 : struct
+            where T9 : struct
+            where T10 : struct
+        {
+            return new EcsQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this);
+        }
+
         private void EnsureCapacity(int entityId)
         {
             if (entityId < _alive.Length)

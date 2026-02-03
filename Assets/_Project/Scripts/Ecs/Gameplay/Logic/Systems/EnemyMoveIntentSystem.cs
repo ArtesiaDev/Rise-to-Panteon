@@ -1,35 +1,44 @@
 namespace RuntimeRoguelike.Ecs
 {
-    public class EnemyMoveIntentSystem : IEcsUpdateSystem
+    public class EnemyMoveIntentSystem : IEcsInitSystem, IEcsFixedSystem
     {
-        public void Update(EcsWorld world, EcsCommandBuffer commandBuffer, float deltaTime)
-        {
-            var positionPool = world.GetPool<GridPosition>();
-            var targetPool = world.GetPool<TargetEntity>();
-            var pathPool = world.GetPool<EnemyPath>();
-            var idlePool = world.GetPool<IdleMoveCooldown>();
-            var intentPool = world.GetPool<MoveIntent>();
+        private EcsPool<GridPosition> _positionPool;
+        private EcsPool<TargetEntity> _targetPool;
+        private EcsPool<EnemyPath> _pathPool;
+        private EcsPool<IdleMoveCooldown> _idlePool;
+        private EcsPool<MoveIntent> _intentPool;
 
+        public void Init(EcsWorld world, EcsCommandBuffer commandBuffer)
+        {
+            _positionPool = world.GetPool<GridPosition>();
+            _targetPool = world.GetPool<TargetEntity>();
+            _pathPool = world.GetPool<EnemyPath>();
+            _idlePool = world.GetPool<IdleMoveCooldown>();
+            _intentPool = world.GetPool<MoveIntent>();
+        }
+
+        public void FixedUpdate(EcsWorld world, EcsCommandBuffer commandBuffer, float fixedDeltaTime)
+        {
             world.TryGetResource<RunRandom>(out var rng);
 
             foreach (var entity in world.Query<EnemyTag, GridPosition, TargetEntity, EnemyPath, IdleMoveCooldown>())
             {
-                ref var target = ref targetPool.GetRef(entity);
-                ref var path = ref pathPool.GetRef(entity);
-                ref var idle = ref idlePool.GetRef(entity);
+                ref var target = ref _targetPool.GetRef(entity);
+                ref var path = ref _pathPool.GetRef(entity);
+                ref var idle = ref _idlePool.GetRef(entity);
 
                 if (target.HasTarget && path.Steps != null && path.Index < path.Steps.Count)
                 {
-                    var current = positionPool.GetRef(entity).Value;
+                    var current = _positionPool.GetRef(entity).Value;
                     var next = path.Steps[path.Index];
-                    var direction = new Int2(next.X - current.X, next.Y - current.Y);
-                    intentPool.Add(entity).Direction = direction;
+                    var moveDirection = new Int2(next.X - current.X, next.Y - current.Y);
+                    _intentPool.Add(entity).Direction = moveDirection;
                     continue;
                 }
 
                 if (idle.Remaining > 0f)
                 {
-                    intentPool.RemoveEntity(entity);
+                    _intentPool.RemoveEntity(entity);
                     continue;
                 }
 
@@ -51,7 +60,7 @@ namespace RuntimeRoguelike.Ecs
                         break;
                 }
 
-                intentPool.Add(entity).Direction = direction;
+                _intentPool.Add(entity).Direction = direction;
                 idle.Remaining = idle.Interval;
             }
         }

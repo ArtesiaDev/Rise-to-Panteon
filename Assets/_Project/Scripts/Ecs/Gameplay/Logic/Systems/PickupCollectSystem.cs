@@ -2,9 +2,22 @@ using RuntimeRoguelike;
 
 namespace RuntimeRoguelike.Ecs
 {
-    public class PickupCollectSystem : IEcsUpdateSystem
+    public class PickupCollectSystem : IEcsInitSystem, IEcsFixedSystem
     {
-        public void Update(EcsWorld world, EcsCommandBuffer commandBuffer, float deltaTime)
+        private EcsPool<GridPosition> _positionPool;
+        private EcsPool<PlayerStatsComponent> _statsPool;
+        private EcsPool<HealthComponent> _healthPool;
+        private EcsPool<LootPickup> _lootPool;
+
+        public void Init(EcsWorld world, EcsCommandBuffer commandBuffer)
+        {
+            _positionPool = world.GetPool<GridPosition>();
+            _statsPool = world.GetPool<PlayerStatsComponent>();
+            _healthPool = world.GetPool<HealthComponent>();
+            _lootPool = world.GetPool<LootPickup>();
+        }
+
+        public void FixedUpdate(EcsWorld world, EcsCommandBuffer commandBuffer, float fixedDeltaTime)
         {
             if (!world.TryGetResource<RunCounters>(out var counters))
             {
@@ -12,29 +25,25 @@ namespace RuntimeRoguelike.Ecs
             }
 
             var playerId = counters.PlayerEntityId;
-            var positionPool = world.GetPool<GridPosition>();
-            if (!positionPool.Has(playerId))
+            if (!_positionPool.Has(playerId))
             {
                 return;
             }
 
-            var playerCell = positionPool.GetRef(playerId).Value;
-            var statsPool = world.GetPool<PlayerStatsComponent>();
-            var healthPool = world.GetPool<HealthComponent>();
-            var lootPool = world.GetPool<LootPickup>();
+            var playerCell = _positionPool.GetRef(playerId).Value;
 
             foreach (var lootEntity in world.Query<LootTag, GridPosition, LootPickup>())
             {
-                var lootCell = positionPool.GetRef(lootEntity).Value;
+                var lootCell = _positionPool.GetRef(lootEntity).Value;
                 if (lootCell != playerCell)
                 {
                     continue;
                 }
 
-                ref var loot = ref lootPool.GetRef(lootEntity);
-                if (statsPool.Has(playerId))
+                ref var loot = ref _lootPool.GetRef(lootEntity);
+                if (_statsPool.Has(playerId))
                 {
-                    ref var stats = ref statsPool.GetRef(playerId);
+                    ref var stats = ref _statsPool.GetRef(playerId);
                     if (loot.Type == PickupType.Gold)
                     {
                         stats.Gold += loot.Amount;
@@ -45,9 +54,9 @@ namespace RuntimeRoguelike.Ecs
                     }
                 }
 
-                if (loot.Type == PickupType.Heal && healthPool.Has(playerId))
+                if (loot.Type == PickupType.Heal && _healthPool.Has(playerId))
                 {
-                    ref var health = ref healthPool.GetRef(playerId);
+                    ref var health = ref _healthPool.GetRef(playerId);
                     health.Current = EcsMath.Max(0, health.Current + loot.Amount);
                     if (health.Current > health.Max)
                     {

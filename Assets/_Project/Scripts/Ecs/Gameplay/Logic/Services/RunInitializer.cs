@@ -64,10 +64,10 @@ namespace RuntimeRoguelike.Ecs
 
             var random = new RunRandom
             {
-                Core = new Random(seed),
-                EnemySpawn = new Random(seed + 1337),
-                Loot = new Random(seed + 7777),
-                Perks = new Random(seed + 2222)
+                Core = new System.Random(seed),
+                EnemySpawn = new System.Random(seed + 1337),
+                Loot = new System.Random(seed + 7777),
+                Perks = new System.Random(seed + 2222)
             };
 
             world.SetResource(runState);

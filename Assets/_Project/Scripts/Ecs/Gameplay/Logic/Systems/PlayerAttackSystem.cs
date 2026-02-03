@@ -1,35 +1,47 @@
 namespace RuntimeRoguelike.Ecs
 {
-    public class PlayerAttackSystem : IEcsUpdateSystem
+    public class PlayerAttackSystem : IEcsInitSystem, IEcsFixedSystem
     {
-        public void Update(EcsWorld world, EcsCommandBuffer commandBuffer, float deltaTime)
+        private EcsPool<GridPosition> _positionPool;
+        private EcsPool<AttackCooldown> _attackPool;
+        private EcsPool<DamageComponent> _damagePool;
+        private EcsPool<LastMoveDirection> _dirPool;
+        private EcsPool<PlayerStatsComponent> _statsPool;
+        private EcsPool<GridPosition> _enemyPositionPool;
+        private EcsPool<HealthComponent> _enemyHealthPool;
+        private EcsPool<AttackRange> _attackRangePool;
+
+        public void Init(EcsWorld world, EcsCommandBuffer commandBuffer)
         {
-            var positionPool = world.GetPool<GridPosition>();
-            var attackPool = world.GetPool<AttackCooldown>();
-            var damagePool = world.GetPool<DamageComponent>();
-            var dirPool = world.GetPool<LastMoveDirection>();
-            var statsPool = world.GetPool<PlayerStatsComponent>();
+            _positionPool = world.GetPool<GridPosition>();
+            _attackPool = world.GetPool<AttackCooldown>();
+            _damagePool = world.GetPool<DamageComponent>();
+            _dirPool = world.GetPool<LastMoveDirection>();
+            _statsPool = world.GetPool<PlayerStatsComponent>();
+            _enemyPositionPool = world.GetPool<GridPosition>();
+            _enemyHealthPool = world.GetPool<HealthComponent>();
+            _attackRangePool = world.GetPool<AttackRange>();
+        }
 
-            var enemyPositionPool = world.GetPool<GridPosition>();
-            var enemyHealthPool = world.GetPool<HealthComponent>();
-
-            foreach (var entity in world.Query<PlayerTag, AttackIntent, AttackCooldown, DamageComponent, LastMoveDirection, GridPosition>())
+        public void FixedUpdate(EcsWorld world, EcsCommandBuffer commandBuffer, float fixedDeltaTime)
+        {
+            foreach (var entity in world.Query<PlayerTag, AttackIntent, AttackCooldown, DamageComponent, LastMoveDirection, GridPosition, AttackRange>())
             {
-                ref var attackCooldown = ref attackPool.GetRef(entity);
+                ref var attackCooldown = ref _attackPool.GetRef(entity);
                 if (attackCooldown.Remaining > 0f)
                 {
                     commandBuffer.RemoveComponent<AttackIntent>(world.GetEntity(entity));
                     continue;
                 }
 
-                var origin = positionPool.GetRef(entity).Value;
-                var direction = dirPool.GetRef(entity).Value;
-                var range = EcsMath.Max(1, EcsMath.RoundToInt(world.GetPool<AttackRange>().GetRef(entity).Value));
+                var origin = _positionPool.GetRef(entity).Value;
+                var direction = _dirPool.GetRef(entity).Value;
+                var range = EcsMath.Max(1, EcsMath.RoundToInt(_attackRangePool.GetRef(entity).Value));
 
-                var damage = damagePool.GetRef(entity).Value;
-                if (statsPool.Has(entity))
+                var damage = _damagePool.GetRef(entity).Value;
+                if (_statsPool.Has(entity))
                 {
-                    damage += statsPool.GetRef(entity).BonusDamage;
+                    damage += _statsPool.GetRef(entity).BonusDamage;
                 }
 
                 for (var step = 1; step <= range; step++)
@@ -37,9 +49,9 @@ namespace RuntimeRoguelike.Ecs
                     var targetCell = origin + direction * step;
                     foreach (var enemy in world.Query<EnemyTag, GridPosition, HealthComponent>())
                     {
-                        if (enemyPositionPool.GetRef(enemy).Value == targetCell)
+                        if (_enemyPositionPool.GetRef(enemy).Value == targetCell)
                         {
-                            ref var health = ref enemyHealthPool.GetRef(enemy);
+                            ref var health = ref _enemyHealthPool.GetRef(enemy);
                             health.Current = EcsMath.Max(0, health.Current - damage);
                         }
                     }

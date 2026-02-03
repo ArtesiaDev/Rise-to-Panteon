@@ -3,7 +3,7 @@ using RuntimeRoguelike.Configs;
 
 namespace RuntimeRoguelike.Ecs
 {
-    public class EnemySpawnerSystem : IEcsUpdateSystem
+    public class EnemySpawnerSystem : IEcsFixedSystem
     {
         private readonly EnemySpawnConfig _spawnConfig;
         private readonly EcsEntityFactory _entityFactory;
@@ -16,7 +16,7 @@ namespace RuntimeRoguelike.Ecs
             _entityFactory = entityFactory;
         }
 
-        public void Update(EcsWorld world, EcsCommandBuffer commandBuffer, float deltaTime)
+        public void FixedUpdate(EcsWorld world, EcsCommandBuffer commandBuffer, float fixedDeltaTime)
         {
             if (!world.TryGetResource<RunState>(out var runState))
             {
@@ -44,7 +44,7 @@ namespace RuntimeRoguelike.Ecs
                 _spawnTimer = _spawnConfig.SpawnInterval;
             }
 
-            _spawnTimer -= deltaTime;
+            _spawnTimer -= fixedDeltaTime;
             if (_spawnTimer > 0f)
             {
                 return;

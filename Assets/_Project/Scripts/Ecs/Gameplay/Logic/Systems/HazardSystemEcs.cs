@@ -3,32 +3,39 @@ using RuntimeRoguelike;
 
 namespace RuntimeRoguelike.Ecs
 {
-    public class HazardSystemEcs : IEcsUpdateSystem
+    public class HazardSystemEcs : IEcsInitSystem, IEcsFixedSystem
     {
         private readonly HazardConfig _config;
+        private EcsPool<GridPosition> _positionPool;
+        private EcsPool<HealthComponent> _healthPool;
+        private EcsPool<HazardState> _hazardStatePool;
+        private EcsPool<PoisonEffect> _poisonPool;
 
         public HazardSystemEcs(HazardConfig config)
         {
             _config = config;
         }
 
-        public void Update(EcsWorld world, EcsCommandBuffer commandBuffer, float deltaTime)
+        public void Init(EcsWorld world, EcsCommandBuffer commandBuffer)
+        {
+            _positionPool = world.GetPool<GridPosition>();
+            _healthPool = world.GetPool<HealthComponent>();
+            _hazardStatePool = world.GetPool<HazardState>();
+            _poisonPool = world.GetPool<PoisonEffect>();
+        }
+
+        public void FixedUpdate(EcsWorld world, EcsCommandBuffer commandBuffer, float fixedDeltaTime)
         {
             if (!world.TryGetResource<MapGrid>(out var mapGrid))
             {
                 return;
             }
 
-            var positionPool = world.GetPool<GridPosition>();
-            var healthPool = world.GetPool<HealthComponent>();
-            var hazardStatePool = world.GetPool<HazardState>();
-            var poisonPool = world.GetPool<PoisonEffect>();
-
             foreach (var entity in world.Query<GridPosition, HealthComponent, HazardState>())
             {
-                ref var position = ref positionPool.GetRef(entity);
-                ref var hazardState = ref hazardStatePool.GetRef(entity);
-                ref var health = ref healthPool.GetRef(entity);
+                ref var position = ref _positionPool.GetRef(entity);
+                ref var hazardState = ref _hazardStatePool.GetRef(entity);
+                ref var health = ref _healthPool.GetRef(entity);
 
                 var hazard = mapGrid.Get(position.Value).Hazard;
                 if (hazardState.Current != hazard)
@@ -43,7 +50,7 @@ namespace RuntimeRoguelike.Ecs
                     }
                     else if (hazard == HazardType.Poison)
                     {
-                        ref var poison = ref poisonPool.Add(entity);
+                        ref var poison = ref _poisonPool.Add(entity);
                         poison.Remaining = EcsMath.Max(poison.Remaining, _config.PoisonDuration);
                         poison.Dps = EcsMath.Max(poison.Dps, _config.PoisonDps);
                         poison.TickInterval = EcsMath.Clamp(_config.PoisonTickInterval, 0.05f, 10f);
@@ -53,7 +60,7 @@ namespace RuntimeRoguelike.Ecs
 
                 if (hazardState.Current == HazardType.Spike)
                 {
-                    hazardState.SpikeTickRemaining -= deltaTime;
+                    hazardState.SpikeTickRemaining -= fixedDeltaTime;
                     if (hazardState.SpikeTickRemaining <= 0f)
                     {
                         hazardState.SpikeTickRemaining = _config.SpikeTickInterval;

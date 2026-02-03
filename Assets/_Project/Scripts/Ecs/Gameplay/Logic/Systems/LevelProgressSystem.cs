@@ -3,10 +3,11 @@ using RuntimeRoguelike;
 
 namespace RuntimeRoguelike.Ecs
 {
-    public class LevelProgressSystem : IEcsInitSystem, IEcsUpdateSystem
+    public class LevelProgressSystem : IEcsInitSystem, IEcsFixedSystem
     {
         private readonly LevelConfig _levelConfig;
         private readonly PerkConfig _perkConfig;
+        private EcsPool<PlayerStatsComponent> _statsPool;
 
         public LevelProgressSystem(LevelConfig levelConfig, PerkConfig perkConfig)
         {
@@ -16,10 +17,10 @@ namespace RuntimeRoguelike.Ecs
 
         public void Init(EcsWorld world, EcsCommandBuffer commandBuffer)
         {
-            var statsPool = world.GetPool<PlayerStatsComponent>();
+            _statsPool = world.GetPool<PlayerStatsComponent>();
             foreach (var entity in world.Query<PlayerTag, PlayerStatsComponent>())
             {
-                ref var stats = ref statsPool.GetRef(entity);
+                ref var stats = ref _statsPool.GetRef(entity);
                 if (stats.XpToNext <= 0)
                 {
                     stats.XpToNext = GetXpForLevel(stats.Level);
@@ -27,17 +28,16 @@ namespace RuntimeRoguelike.Ecs
             }
         }
 
-        public void Update(EcsWorld world, EcsCommandBuffer commandBuffer, float deltaTime)
+        public void FixedUpdate(EcsWorld world, EcsCommandBuffer commandBuffer, float fixedDeltaTime)
         {
             if (!world.TryGetResource<PerkOfferState>(out var offer))
             {
                 return;
             }
 
-            var statsPool = world.GetPool<PlayerStatsComponent>();
             foreach (var entity in world.Query<PlayerTag, PlayerStatsComponent>())
             {
-                ref var stats = ref statsPool.GetRef(entity);
+                ref var stats = ref _statsPool.GetRef(entity);
                 var leveled = false;
                 while (stats.Xp >= stats.XpToNext)
                 {

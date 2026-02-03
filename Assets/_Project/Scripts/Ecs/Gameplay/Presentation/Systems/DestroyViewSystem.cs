@@ -1,6 +1,6 @@
 namespace RuntimeRoguelike.Ecs
 {
-    public class DestroyViewSystem : IEcsLateSystem
+    public class DestroyViewSystem : IEcsLateSystem, IEcsDisposeSystem
     {
         private readonly EntityViewRegistry _registry;
         private readonly EntityViewPool _pool;
@@ -24,6 +24,16 @@ namespace RuntimeRoguelike.Ecs
 
                 commandBuffer.DestroyEntity(world.GetEntity(entity));
             }
+        }
+
+        public void Dispose(EcsWorld world)
+        {
+            foreach (var view in _registry.Views)
+            {
+                _pool.Release(view, _roots.PoolRoot);
+            }
+
+            _registry.Clear();
         }
     }
 }

@@ -1,9 +1,13 @@
 namespace RuntimeRoguelike.Ecs
 {
-    public class ViewSyncSystem : IEcsLateSystem
+    public class ViewSyncSystem : IEcsInitSystem, IEcsLateSystem
     {
         private readonly EntityViewRegistry _registry;
         private readonly GridPositionConverter _gridPositionConverter;
+        private EcsPool<GridPosition> _positionPool;
+        private EcsPool<RenderPosition> _renderPool;
+        private EcsPool<MoveSpeed> _movePool;
+        private EcsPool<PlayerStatsComponent> _statsPool;
 
         public ViewSyncSystem(EntityViewRegistry registry, GridPositionConverter gridPositionConverter)
         {
@@ -11,13 +15,16 @@ namespace RuntimeRoguelike.Ecs
             _gridPositionConverter = gridPositionConverter;
         }
 
+        public void Init(EcsWorld world, EcsCommandBuffer commandBuffer)
+        {
+            _positionPool = world.GetPool<GridPosition>();
+            _renderPool = world.GetPool<RenderPosition>();
+            _movePool = world.GetPool<MoveSpeed>();
+            _statsPool = world.GetPool<PlayerStatsComponent>();
+        }
+
         public void LateUpdate(EcsWorld world, EcsCommandBuffer commandBuffer, float deltaTime)
         {
-            var positionPool = world.GetPool<GridPosition>();
-            var renderPool = world.GetPool<RenderPosition>();
-            var movePool = world.GetPool<MoveSpeed>();
-            var statsPool = world.GetPool<PlayerStatsComponent>();
-
             foreach (var entity in world.Query<GridPosition, RenderPosition, SpriteKeyComponent>())
             {
                 if (!_registry.TryGet(entity, out var view))
@@ -25,14 +32,14 @@ namespace RuntimeRoguelike.Ecs
                     continue;
                 }
 
-                ref var grid = ref positionPool.GetRef(entity);
-                ref var render = ref renderPool.GetRef(entity);
+                ref var grid = ref _positionPool.GetRef(entity);
+                ref var render = ref _renderPool.GetRef(entity);
 
                 var target = new Float2(grid.Value.X, grid.Value.Y);
-                var speed = movePool.Has(entity) ? movePool.GetRef(entity).CellsPerSecond : 0f;
-                if (statsPool.Has(entity))
+                var speed = _movePool.Has(entity) ? _movePool.GetRef(entity).CellsPerSecond : 0f;
+                if (_statsPool.Has(entity))
                 {
-                    speed *= statsPool.GetRef(entity).MoveSpeedMultiplier;
+                    speed *= _statsPool.GetRef(entity).MoveSpeedMultiplier;
                 }
 
                 render.Value = speed > 0.01f

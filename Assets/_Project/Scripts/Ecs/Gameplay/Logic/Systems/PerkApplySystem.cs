@@ -2,8 +2,17 @@ using RuntimeRoguelike;
 
 namespace RuntimeRoguelike.Ecs
 {
-    public class PerkApplySystem : IEcsUpdateSystem
+    public class PerkApplySystem : IEcsInitSystem, IEcsUpdateSystem
     {
+        private EcsPool<PlayerStatsComponent> _statsPool;
+        private EcsPool<HealthComponent> _healthPool;
+
+        public void Init(EcsWorld world, EcsCommandBuffer commandBuffer)
+        {
+            _statsPool = world.GetPool<PlayerStatsComponent>();
+            _healthPool = world.GetPool<HealthComponent>();
+        }
+
         public void Update(EcsWorld world, EcsCommandBuffer commandBuffer, float deltaTime)
         {
             if (!world.TryGetResource<RunCommands>(out var commands))
@@ -21,13 +30,10 @@ namespace RuntimeRoguelike.Ecs
                 return;
             }
 
-            var statsPool = world.GetPool<PlayerStatsComponent>();
-            var healthPool = world.GetPool<HealthComponent>();
-
             foreach (var entity in world.Query<PlayerTag, PlayerStatsComponent>())
             {
-                ref var stats = ref statsPool.GetRef(entity);
-                ref var health = ref healthPool.GetRef(entity);
+                ref var stats = ref _statsPool.GetRef(entity);
+                ref var health = ref _healthPool.GetRef(entity);
                 ApplyPerk(commands.ChosenPerk, ref stats, ref health);
                 break;
             }

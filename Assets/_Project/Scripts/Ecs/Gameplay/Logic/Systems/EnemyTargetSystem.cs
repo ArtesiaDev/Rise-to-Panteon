@@ -1,8 +1,19 @@
 namespace RuntimeRoguelike.Ecs
 {
-    public class EnemyTargetSystem : IEcsUpdateSystem
+    public class EnemyTargetSystem : IEcsInitSystem, IEcsFixedSystem
     {
-        public void Update(EcsWorld world, EcsCommandBuffer commandBuffer, float deltaTime)
+        private EcsPool<GridPosition> _positionPool;
+        private EcsPool<AggroRange> _aggroPool;
+        private EcsPool<TargetEntity> _targetPool;
+
+        public void Init(EcsWorld world, EcsCommandBuffer commandBuffer)
+        {
+            _positionPool = world.GetPool<GridPosition>();
+            _aggroPool = world.GetPool<AggroRange>();
+            _targetPool = world.GetPool<TargetEntity>();
+        }
+
+        public void FixedUpdate(EcsWorld world, EcsCommandBuffer commandBuffer, float fixedDeltaTime)
         {
             if (!world.TryGetResource<RunCounters>(out var counters))
             {
@@ -10,22 +21,19 @@ namespace RuntimeRoguelike.Ecs
             }
 
             var playerId = counters.PlayerEntityId;
-            var positionPool = world.GetPool<GridPosition>();
-            if (!positionPool.Has(playerId))
+            if (!_positionPool.Has(playerId))
             {
                 return;
             }
 
-            var playerCell = positionPool.GetRef(playerId).Value;
+            var playerCell = _positionPool.GetRef(playerId).Value;
 
-            var aggroPool = world.GetPool<AggroRange>();
-            var targetPool = world.GetPool<TargetEntity>();
             foreach (var entity in world.Query<EnemyTag, GridPosition, AggroRange, TargetEntity>())
             {
-                var enemyCell = positionPool.GetRef(entity).Value;
+                var enemyCell = _positionPool.GetRef(entity).Value;
                 var distance = enemyCell.ManhattanDistance(playerCell);
-                ref var target = ref targetPool.GetRef(entity);
-                if (distance <= aggroPool.GetRef(entity).Value)
+                ref var target = ref _targetPool.GetRef(entity);
+                if (distance <= _aggroPool.GetRef(entity).Value)
                 {
                     target.EntityId = playerId;
                     target.HasTarget = true;

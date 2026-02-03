@@ -3,10 +3,14 @@ using RuntimeRoguelike;
 
 namespace RuntimeRoguelike.Ecs
 {
-    public class DeathSystem : IEcsUpdateSystem
+    public class DeathSystem : IEcsInitSystem, IEcsFixedSystem
     {
         private readonly LootConfig _lootConfig;
         private readonly EcsEntityFactory _entityFactory;
+        private EcsPool<HealthComponent> _healthPool;
+        private EcsPool<DestroyedTag> _destroyedPool;
+        private EcsPool<GridPosition> _positionPool;
+        private EcsPool<EnemyTag> _enemyTagPool;
 
         public DeathSystem(LootConfig lootConfig, EcsEntityFactory entityFactory)
         {
@@ -14,39 +18,42 @@ namespace RuntimeRoguelike.Ecs
             _entityFactory = entityFactory;
         }
 
-        public void Update(EcsWorld world, EcsCommandBuffer commandBuffer, float deltaTime)
+        public void Init(EcsWorld world, EcsCommandBuffer commandBuffer)
         {
-            var healthPool = world.GetPool<HealthComponent>();
-            var destroyedPool = world.GetPool<DestroyedTag>();
-            var positionPool = world.GetPool<GridPosition>();
-            var enemyTagPool = world.GetPool<EnemyTag>();
+            _healthPool = world.GetPool<HealthComponent>();
+            _destroyedPool = world.GetPool<DestroyedTag>();
+            _positionPool = world.GetPool<GridPosition>();
+            _enemyTagPool = world.GetPool<EnemyTag>();
+        }
 
+        public void FixedUpdate(EcsWorld world, EcsCommandBuffer commandBuffer, float fixedDeltaTime)
+        {
             world.TryGetResource<GridOccupancy>(out var occupancy);
             world.TryGetResource<RunCounters>(out var counters);
             world.TryGetResource<RunRandom>(out var rng);
 
             foreach (var entity in world.Query<HealthComponent>())
             {
-                ref var health = ref healthPool.GetRef(entity);
+                ref var health = ref _healthPool.GetRef(entity);
                 if (health.Current > 0)
                 {
                     continue;
                 }
 
-                if (destroyedPool.Has(entity))
+                if (_destroyedPool.Has(entity))
                 {
                     continue;
                 }
 
-                if (positionPool.Has(entity) && occupancy != null)
+                if (_positionPool.Has(entity) && occupancy != null)
                 {
-                    occupancy.Release(positionPool.GetRef(entity).Value);
+                    occupancy.Release(_positionPool.GetRef(entity).Value);
                 }
 
-                if (enemyTagPool.Has(entity) && counters != null)
+                if (_enemyTagPool.Has(entity) && counters != null)
                 {
                     counters.EnemyCount = EcsMath.Max(0, counters.EnemyCount - 1);
-                    TryDropLoot(world, positionPool, entity, rng, counters);
+                    TryDropLoot(world, _positionPool, entity, rng, counters);
                 }
 
                 commandBuffer.AddComponent<DestroyedTag>(world.GetEntity(entity), new DestroyedTag());

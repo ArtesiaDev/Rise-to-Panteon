@@ -3,17 +3,25 @@ using UnityEngine;
 
 namespace RuntimeRoguelike.Ecs
 {
-    public class DevToolsSystemEcs : IEcsUpdateSystem
+    public class DevToolsSystemEcs : IEcsInitSystem, IEcsUpdateSystem
     {
         private readonly DevToolsConfig _config;
         private readonly IInputService _inputService;
         private readonly GridPositionConverter _gridPositionConverter;
+        private EcsPool<GridPosition> _positionPool;
+        private EcsPool<RenderPosition> _renderPool;
 
         public DevToolsSystemEcs(DevToolsConfig config, IInputService inputService, GridPositionConverter gridPositionConverter)
         {
             _config = config;
             _inputService = inputService;
             _gridPositionConverter = gridPositionConverter;
+        }
+
+        public void Init(EcsWorld world, EcsCommandBuffer commandBuffer)
+        {
+            _positionPool = world.GetPool<GridPosition>();
+            _renderPool = world.GetPool<RenderPosition>();
         }
 
         public void Update(EcsWorld world, EcsCommandBuffer commandBuffer, float deltaTime)
@@ -72,22 +80,20 @@ namespace RuntimeRoguelike.Ecs
             }
 
             var playerId = counters.PlayerEntityId;
-            var positionPool = world.GetPool<GridPosition>();
-            if (!positionPool.Has(playerId))
+            if (!_positionPool.Has(playerId))
             {
                 return;
             }
 
-            var from = positionPool.GetRef(playerId).Value;
+            var from = _positionPool.GetRef(playerId).Value;
             occupancy.Release(from);
             occupancy.Occupy(target);
-            positionPool.GetRef(playerId).Value = target;
+            _positionPool.GetRef(playerId).Value = target;
             counters.PlayerCell = target;
 
-            var renderPool = world.GetPool<RenderPosition>();
-            if (renderPool.Has(playerId))
+            if (_renderPool.Has(playerId))
             {
-                renderPool.GetRef(playerId).Value = new Float2(target.X, target.Y);
+                _renderPool.GetRef(playerId).Value = new Float2(target.X, target.Y);
             }
         }
     }
