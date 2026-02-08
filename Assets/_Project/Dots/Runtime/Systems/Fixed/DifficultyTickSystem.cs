@@ -1,7 +1,7 @@
 using Unity.Entities;
 using Unity.Mathematics;
 
-namespace RuntimeRoguelike.Dots
+namespace RuntimeRoguelike.Dots.Runtime
 {
     [UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
     [UpdateAfter(typeof(CooldownTickSystem))]

@@ -2,7 +2,9 @@
   "name": "RuntimeRoguelike.Dots.Hybrid",
   "references": [
     "RuntimeRoguelike.Dots.Runtime",
-    "Unity.Entities"
+    "Unity.Entities",
+    "Unity.Mathematics",
+    "Unity.Collections"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

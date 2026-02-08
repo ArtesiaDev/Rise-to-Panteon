@@ -1,6 +1,6 @@
 using Unity.Entities;
 
-namespace RuntimeRoguelike.Dots
+namespace RuntimeRoguelike.Dots.Runtime
 {
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     public partial struct RestartRequestSystem : ISystem

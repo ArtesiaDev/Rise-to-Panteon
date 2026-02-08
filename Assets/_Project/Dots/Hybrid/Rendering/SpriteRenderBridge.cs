@@ -1,75 +1,61 @@
 using System.Collections.Generic;
-using RuntimeRoguelike.Dots;
+using RuntimeRoguelike.Dots.Runtime;
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Mathematics;
 using UnityEngine;
 
 namespace RuntimeRoguelike.Dots.Hybrid
 {
     public class SpriteRenderBridge : MonoBehaviour
     {
-        [SerializeField] private Transform entitiesRoot;
-        [SerializeField] private Transform poolRoot;
-        [SerializeField] private float spriteScale = 1f;
-        [SerializeField] private Color playerColor = new Color(0.9f, 0.9f, 0.2f, 1f);
-        [SerializeField] private Color enemyColor = new Color(0.85f, 0.2f, 0.2f, 1f);
-        [SerializeField] private Color lootColor = new Color(0.2f, 0.8f, 0.2f, 1f);
+        [SerializeField] private Transform _entitiesRoot;
+        [SerializeField] private Transform _poolRoot;
+        [SerializeField] private float _spriteScale = 1f;
+        [SerializeField] private Color _playerColor = new(0.9f, 0.9f, 0.2f, 1f);
+        [SerializeField] private Color _enemyColor = new(0.85f, 0.2f, 0.2f, 1f);
+        [SerializeField] private Color _lootColor = new(0.2f, 0.8f, 0.2f, 1f);
 
         private EntityManager _entityManager;
         private EntityQuery _query;
         private EntityQuery _gridQuery;
-        private readonly Dictionary<Entity, SpriteRenderer> _views = new Dictionary<Entity, SpriteRenderer>();
-        private readonly Dictionary<DotsSpriteKey, Stack<SpriteRenderer>> _pool = new Dictionary<DotsSpriteKey, Stack<SpriteRenderer>>();
-        private readonly Dictionary<DotsSpriteKey, Sprite> _spriteCache = new Dictionary<DotsSpriteKey, Sprite>();
-        private readonly HashSet<Entity> _alive = new HashSet<Entity>();
-        private readonly List<Entity> _toRemove = new List<Entity>();
+        private World _world;
+        
+        private readonly Dictionary<Entity, SpriteRenderer> _views = new();
+        private readonly Dictionary<DotsSpriteKey, Stack<SpriteRenderer>> _pool = new();
+        private readonly Dictionary<DotsSpriteKey, Sprite> _spriteCache = new();
+        private readonly HashSet<Entity> _alive = new();
+        private readonly List<Entity> _toRemove = new();
 
         private void Awake()
         {
-            var world = World.DefaultGameObjectInjectionWorld;
-            if (world == null)
+            _world = World.DefaultGameObjectInjectionWorld;
+            if (_world == null)
             {
                 enabled = false;
                 return;
             }
 
-            _entityManager = world.EntityManager;
+            _entityManager = _world.EntityManager;
             _query = _entityManager.CreateEntityQuery(
                 ComponentType.ReadOnly<SpriteKeyComponent>(),
                 ComponentType.ReadOnly<RenderPosition>());
             _gridQuery = _entityManager.CreateEntityQuery(ComponentType.ReadOnly<GridConfigData>());
 
-            if (entitiesRoot == null)
+            if (_entitiesRoot == null)
             {
-                entitiesRoot = transform;
+                _entitiesRoot = transform;
             }
 
-            if (poolRoot == null)
+            if (_poolRoot == null)
             {
-                poolRoot = transform;
-            }
-        }
-
-        private void OnDestroy()
-        {
-            if (_query.IsCreated)
-            {
-                _query.Dispose();
-            }
-
-            if (_gridQuery.IsCreated)
-            {
-                _gridQuery.Dispose();
+                _poolRoot = transform;
             }
         }
 
         private void Update()
         {
-            if (!_query.IsCreated)
-            {
+            if (_world is not { IsCreated: true })
                 return;
-            }
 
             var cellSize = 1f;
             if (_gridQuery.TryGetSingleton<GridConfigData>(out var gridConfig))
@@ -109,9 +95,8 @@ namespace RuntimeRoguelike.Dots.Hybrid
                 }
             }
 
-            for (var i = 0; i < _toRemove.Count; i++)
+            foreach (var entity in _toRemove)
             {
-                var entity = _toRemove[i];
                 if (_views.TryGetValue(entity, out var renderer))
                 {
                     ReleaseView(renderer);
@@ -133,13 +118,13 @@ namespace RuntimeRoguelike.Dots.Hybrid
             {
                 var renderer = stack.Pop();
                 renderer.gameObject.SetActive(true);
-                renderer.transform.SetParent(entitiesRoot, false);
+                renderer.transform.SetParent(_entitiesRoot, false);
                 return renderer;
             }
 
             var go = new GameObject($"DotsView_{key}");
-            go.transform.SetParent(entitiesRoot, false);
-            go.transform.localScale = Vector3.one * spriteScale;
+            go.transform.SetParent(_entitiesRoot, false);
+            go.transform.localScale = Vector3.one * _spriteScale;
             var spriteRenderer = go.AddComponent<SpriteRenderer>();
             spriteRenderer.sprite = GetSprite(key);
             return spriteRenderer;
@@ -160,7 +145,7 @@ namespace RuntimeRoguelike.Dots.Hybrid
             }
 
             renderer.gameObject.SetActive(false);
-            renderer.transform.SetParent(poolRoot, false);
+            renderer.transform.SetParent(_poolRoot, false);
             stack.Push(renderer);
         }
 
@@ -173,9 +158,9 @@ namespace RuntimeRoguelike.Dots.Hybrid
 
             var color = key switch
             {
-                DotsSpriteKey.Player => playerColor,
-                DotsSpriteKey.Enemy => enemyColor,
-                _ => lootColor
+                DotsSpriteKey.Player => _playerColor,
+                DotsSpriteKey.Enemy => _enemyColor,
+                _ => _lootColor
             };
 
             var texture = new Texture2D(1, 1) { filterMode = FilterMode.Point };

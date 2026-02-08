@@ -1,3 +1,4 @@
+using RuntimeRoguelike.Dots.Runtime;
 using Unity.Entities;
 using UnityEngine;
 
@@ -5,8 +6,8 @@ namespace RuntimeRoguelike.Dots.Authoring
 {
     public class LevelConfigAuthoring : MonoBehaviour
     {
-        [SerializeField] private int baseXpToLevel = 10;
-        [SerializeField] private int xpIncreasePerLevel = 5;
+        [SerializeField] private int _baseXpToLevel = 10;
+        [SerializeField] private int _xpIncreasePerLevel = 5;
 
         private class Baker : Baker<LevelConfigAuthoring>
         {
@@ -15,8 +16,8 @@ namespace RuntimeRoguelike.Dots.Authoring
                 var entity = GetEntity(TransformUsageFlags.None);
                 AddComponent(entity, new LevelConfigData
                 {
-                    BaseXpToLevel = authoring.baseXpToLevel,
-                    XpIncreasePerLevel = authoring.xpIncreasePerLevel
+                    BaseXpToLevel = authoring._baseXpToLevel,
+                    XpIncreasePerLevel = authoring._xpIncreasePerLevel
                 });
             }
         }

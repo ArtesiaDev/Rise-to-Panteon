@@ -1,4 +1,4 @@
-using RuntimeRoguelike.Dots;
+using RuntimeRoguelike.Dots.Runtime;
 using Unity.Entities;
 using UnityEngine;
 using UnityEngine.UI;
@@ -7,80 +7,69 @@ namespace RuntimeRoguelike.Dots.Hybrid
 {
     public class HudBridge : MonoBehaviour
     {
-        [SerializeField] private Text hpText;
-        [SerializeField] private Text xpText;
-        [SerializeField] private Text levelText;
-        [SerializeField] private Text goldText;
-        [SerializeField] private Text seedText;
+        [SerializeField] private Text _hpText;
+        [SerializeField] private Text _xpText;
+        [SerializeField] private Text _levelText;
+        [SerializeField] private Text _goldText;
+        [SerializeField] private Text _seedText;
 
+        private World _world;
         private EntityManager _entityManager;
         private EntityQuery _playerQuery;
         private EntityQuery _runStateQuery;
 
         private void Awake()
         {
-            var world = World.DefaultGameObjectInjectionWorld;
-            if (world == null)
+            _world = World.DefaultGameObjectInjectionWorld;
+            if (_world == null)
             {
                 enabled = false;
                 return;
             }
 
-            _entityManager = world.EntityManager;
+            _entityManager = _world.EntityManager;
             _playerQuery = _entityManager.CreateEntityQuery(
                 ComponentType.ReadOnly<PlayerTag>(),
                 ComponentType.ReadOnly<PlayerStats>(),
                 ComponentType.ReadOnly<Health>());
             _runStateQuery = _entityManager.CreateEntityQuery(ComponentType.ReadOnly<RunState>());
         }
-
-        private void OnDestroy()
-        {
-            if (_playerQuery.IsCreated)
-            {
-                _playerQuery.Dispose();
-            }
-
-            if (_runStateQuery.IsCreated)
-            {
-                _runStateQuery.Dispose();
-            }
-        }
-
+        
         private void Update()
         {
-            if (_playerQuery.IsEmpty)
-            {
+            if (_world is not { IsCreated: true })
                 return;
-            }
-
+            
+            if (_playerQuery.IsEmpty)
+                return;
+            
             var playerEntity = _playerQuery.GetSingletonEntity();
             var stats = _entityManager.GetComponentData<PlayerStats>(playerEntity);
             var health = _entityManager.GetComponentData<Health>(playerEntity);
 
-            if (hpText != null)
+            if (_hpText != null)
             {
-                hpText.text = $"HP: {health.Current}/{health.Max}";
+                _hpText.text = $"HP: {health.Current}/{health.Max}";
             }
 
-            if (xpText != null)
+            if (_xpText != null)
             {
-                xpText.text = $"XP: {stats.Xp}/{stats.XpToNext}";
+                _xpText.text = $"XP: {stats.Xp}/{stats.XpToNext}";
             }
 
-            if (levelText != null)
+            if (_levelText != null)
             {
-                levelText.text = $"Level: {stats.Level}";
+                _levelText.text = $"Level: {stats.Level}";
             }
 
-            if (goldText != null)
+            if (_goldText != null)
             {
-                goldText.text = $"Gold: {stats.Gold}";
+                _goldText.text = $"Gold: {stats.Gold}";
             }
 
-            if (seedText != null && _runStateQuery.TryGetSingleton<RunState>(out var runState))
+            if (_seedText != null && _runStateQuery.TryGetSingleton<RunState>(out var runState))
             {
-                seedText.text = $"Seed: {runState.Seed}";
+                _seedText.text = $"Seed: {runState.Seed}";
             }
         }
     }

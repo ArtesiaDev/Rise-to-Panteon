@@ -1,7 +1,7 @@
 using Unity.Entities;
 using Unity.Mathematics;
 
-namespace RuntimeRoguelike.Dots
+namespace RuntimeRoguelike.Dots.Runtime
 {
     [UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
     [UpdateAfter(typeof(PlayerAttackSystem))]
@@ -9,7 +9,8 @@ namespace RuntimeRoguelike.Dots
     {
         public void OnUpdate(ref SystemState state)
         {
-            foreach (var (position, target, cooldown, range, damage) in SystemAPI.Query<RefRO<GridPosition>, RefRW<Target>, RefRW<AttackCooldown>, RefRO<AttackRange>, RefRO<Damage>>().WithAll<EnemyTag>())
+            foreach (var (position, target, cooldown, range, damage) 
+                     in SystemAPI.Query<RefRO<GridPosition>, RefRW<Target>, RefRW<AttackCooldown>, RefRO<AttackRange>, RefRO<Damage>>().WithAll<EnemyTag>())
             {
                 if (!target.ValueRO.HasTarget || !state.EntityManager.Exists(target.ValueRO.Value) || !SystemAPI.HasComponent<Health>(target.ValueRO.Value))
                 {

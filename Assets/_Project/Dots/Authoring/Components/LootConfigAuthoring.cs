@@ -1,4 +1,5 @@
 using System;
+using RuntimeRoguelike.Dots.Runtime;
 using Unity.Entities;
 using UnityEngine;
 
@@ -9,17 +10,17 @@ namespace RuntimeRoguelike.Dots.Authoring
         [Serializable]
         public struct LootEntryAuthoring
         {
-            public PickupType Type;
-            public int Amount;
-            public int Weight;
+            public PickupType _type;
+            public int _amount;
+            public int _weight;
         }
 
-        [SerializeField] private float dropChance = 0.45f;
-        [SerializeField] private LootEntryAuthoring[] lootTable =
+        [SerializeField] private float _dropChance = 0.45f;
+        [SerializeField] private LootEntryAuthoring[] _lootTable =
         {
-            new LootEntryAuthoring { Type = PickupType.Gold, Amount = 5, Weight = 5 },
-            new LootEntryAuthoring { Type = PickupType.Xp, Amount = 2, Weight = 3 },
-            new LootEntryAuthoring { Type = PickupType.Heal, Amount = 2, Weight = 2 }
+            new() { _type = PickupType.Gold, _amount = 5, _weight = 5 },
+            new() { _type = PickupType.Xp, _amount = 2, _weight = 3 },
+            new() { _type = PickupType.Heal, _amount = 2, _weight = 2 }
         };
 
         private class Baker : Baker<LootConfigAuthoring>
@@ -29,22 +30,22 @@ namespace RuntimeRoguelike.Dots.Authoring
                 var entity = GetEntity(TransformUsageFlags.None);
                 AddComponent(entity, new LootConfigData
                 {
-                    DropChance = authoring.dropChance
+                    DropChance = authoring._dropChance
                 });
 
                 var buffer = AddBuffer<LootEntryData>(entity);
-                if (authoring.lootTable == null)
+                if (authoring._lootTable == null)
                 {
                     return;
                 }
 
-                foreach (var entry in authoring.lootTable)
+                foreach (var entry in authoring._lootTable)
                 {
                     buffer.Add(new LootEntryData
                     {
-                        Type = entry.Type,
-                        Amount = entry.Amount,
-                        Weight = entry.Weight
+                        Type = entry._type,
+                        Amount = entry._amount,
+                        Weight = entry._weight
                     });
                 }
             }

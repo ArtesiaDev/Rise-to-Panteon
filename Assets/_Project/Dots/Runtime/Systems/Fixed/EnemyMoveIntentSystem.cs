@@ -1,7 +1,7 @@
 using Unity.Entities;
 using Unity.Mathematics;
 
-namespace RuntimeRoguelike.Dots
+namespace RuntimeRoguelike.Dots.Runtime
 {
     [UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
     [UpdateAfter(typeof(EnemyPathfindSystem))]
@@ -10,10 +10,16 @@ namespace RuntimeRoguelike.Dots
         public void OnUpdate(ref SystemState state)
         {
             var rngState = SystemAPI.GetSingletonRW<RngState>();
+            var pathLookup = SystemAPI.GetBufferLookup<PathStep>();
             var rng = rngState.ValueRW.Rng;
 
-            foreach (var (position, target, path, pathIndex, idle, entity) in SystemAPI.Query<RefRO<GridPosition>, RefRO<Target>, DynamicBuffer<PathStep>, RefRO<PathIndex>, RefRW<IdleMoveCooldown>>().WithAll<EnemyTag>().WithEntityAccess())
+            foreach (var (position, target, pathIndex, idle, entity) 
+                     in SystemAPI.Query<RefRO<GridPosition>, RefRO<Target>, RefRO<PathIndex>, RefRW<IdleMoveCooldown>>()
+                         .WithAll<EnemyTag>()
+                         .WithEntityAccess())
             {
+                var path = pathLookup[entity];
+                
                 var hasPathStep = target.ValueRO.HasTarget && pathIndex.ValueRO.Value < path.Length;
                 if (hasPathStep)
                 {
@@ -32,7 +38,7 @@ namespace RuntimeRoguelike.Dots
                 }
 
                 var roll = rng.NextInt(0, 4);
-                var direction = roll switch
+                var rollDirection = roll switch
                 {
                     0 => new int2(0, 1),
                     1 => new int2(1, 0),
@@ -40,7 +46,7 @@ namespace RuntimeRoguelike.Dots
                     _ => new int2(-1, 0)
                 };
 
-                SystemAPI.SetComponent(entity, new MoveIntent { Direction = direction });
+                SystemAPI.SetComponent(entity, new MoveIntent { Direction = rollDirection });
                 SystemAPI.SetComponentEnabled<MoveIntent>(entity, true);
                 idle.ValueRW.Remaining = idle.ValueRO.Interval;
             }

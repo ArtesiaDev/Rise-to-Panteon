@@ -1,3 +1,4 @@
+using RuntimeRoguelike.Dots.Runtime;
 using Unity.Entities;
 using UnityEngine;
 
@@ -5,9 +6,9 @@ namespace RuntimeRoguelike.Dots.Authoring
 {
     public class PrefabConfigAuthoring : MonoBehaviour
     {
-        [SerializeField] private GameObject playerPrefab;
-        [SerializeField] private GameObject enemyPrefab;
-        [SerializeField] private GameObject lootPrefab;
+        [SerializeField] private GameObject _playerPrefab;
+        [SerializeField] private GameObject _enemyPrefab;
+        [SerializeField] private GameObject _lootPrefab;
 
         private class Baker : Baker<PrefabConfigAuthoring>
         {
@@ -16,14 +17,14 @@ namespace RuntimeRoguelike.Dots.Authoring
                 var entity = GetEntity(TransformUsageFlags.None);
                 AddComponent(entity, new PrefabConfigData
                 {
-                    Player = authoring.playerPrefab != null
-                        ? GetEntity(authoring.playerPrefab, TransformUsageFlags.Dynamic)
+                    Player = authoring._playerPrefab != null
+                        ? GetEntity(authoring._playerPrefab, TransformUsageFlags.Dynamic)
                         : Entity.Null,
-                    Enemy = authoring.enemyPrefab != null
-                        ? GetEntity(authoring.enemyPrefab, TransformUsageFlags.Dynamic)
+                    Enemy = authoring._enemyPrefab != null
+                        ? GetEntity(authoring._enemyPrefab, TransformUsageFlags.Dynamic)
                         : Entity.Null,
-                    Loot = authoring.lootPrefab != null
-                        ? GetEntity(authoring.lootPrefab, TransformUsageFlags.Dynamic)
+                    Loot = authoring._lootPrefab != null
+                        ? GetEntity(authoring._lootPrefab, TransformUsageFlags.Dynamic)
                         : Entity.Null
                 });
             }

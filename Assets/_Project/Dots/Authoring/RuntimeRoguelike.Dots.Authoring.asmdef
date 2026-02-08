@@ -2,7 +2,10 @@
   "name": "RuntimeRoguelike.Dots.Authoring",
   "references": [
     "RuntimeRoguelike.Dots.Runtime",
-    "Unity.Entities"
+    "Unity.Entities",
+    "Unity.Entities.Hybrid",
+    "Unity.Collections",
+    "Unity.Mathematics"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

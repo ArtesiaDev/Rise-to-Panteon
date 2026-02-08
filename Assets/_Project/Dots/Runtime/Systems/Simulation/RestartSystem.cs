@@ -1,6 +1,6 @@
 using Unity.Entities;
 
-namespace RuntimeRoguelike.Dots
+namespace RuntimeRoguelike.Dots.Runtime
 {
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     public partial struct RestartSystem : ISystem
@@ -9,6 +9,7 @@ namespace RuntimeRoguelike.Dots
 
         public void OnCreate(ref SystemState state)
         {
+            state.RequireForUpdate<EndSimulationEntityCommandBufferSystem.Singleton>();
             _runEntities = state.GetEntityQuery(ComponentType.ReadOnly<RunTag>());
             state.RequireForUpdate<RunState>();
             state.RequireForUpdate<RunCommand>();

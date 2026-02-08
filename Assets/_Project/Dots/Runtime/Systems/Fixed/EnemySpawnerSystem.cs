@@ -1,7 +1,7 @@
 using Unity.Entities;
 using Unity.Mathematics;
 
-namespace RuntimeRoguelike.Dots
+namespace RuntimeRoguelike.Dots.Runtime
 {
     [UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
     [UpdateAfter(typeof(DifficultyTickSystem))]
@@ -11,6 +11,8 @@ namespace RuntimeRoguelike.Dots
 
         public void OnCreate(ref SystemState state)
         {
+            state.RequireForUpdate<PrefabConfigData>();
+            state.RequireForUpdate<DifficultyState>();
             state.RequireForUpdate<RunState>();
             state.RequireForUpdate<RunSpawnState>();
             state.RequireForUpdate<EnemySpawnState>();
@@ -25,18 +27,12 @@ namespace RuntimeRoguelike.Dots
         {
             var runState = SystemAPI.GetSingleton<RunState>();
             var spawnState = SystemAPI.GetSingleton<RunSpawnState>();
-            if (!runState.IsInitialized || !spawnState.InitialEnemiesSpawned)
-            {
-                return;
-            }
-
+            if (!runState.IsInitialized || !spawnState.InitialEnemiesSpawned) return;
+            
             var mapRef = SystemAPI.GetSingleton<MapBlobReference>();
-            if (!mapRef.Value.IsCreated)
-            {
-                return;
-            }
-
-            var map = mapRef.Value.Value;
+            if (!mapRef.Value.IsCreated) return;
+            
+            ref var map = ref mapRef.Value.Value;
             var spawnConfig = SystemAPI.GetSingleton<EnemySpawnConfigData>();
             var enemyConfig = SystemAPI.GetSingleton<EnemyConfigData>();
             var difficulty = SystemAPI.HasSingleton<DifficultyState>()
@@ -45,11 +41,8 @@ namespace RuntimeRoguelike.Dots
 
             var timer = SystemAPI.GetSingletonRW<EnemySpawnState>();
             timer.ValueRW.Timer -= SystemAPI.Time.DeltaTime;
-            if (timer.ValueRO.Timer > 0f)
-            {
-                return;
-            }
-
+            if (timer.ValueRO.Timer > 0f) return;
+            
             var enemyCount = _enemyQuery.CalculateEntityCount();
             if (enemyCount >= spawnConfig.MaxCount)
             {
@@ -62,14 +55,13 @@ namespace RuntimeRoguelike.Dots
             var rng = rngState.ValueRW.Rng;
 
             var attempts = math.max(1, spawnConfig.SpawnAttempts);
-            var spawned = false;
             for (var attempt = 0; attempt < attempts; attempt++)
             {
                 var cell = new int2(
                     rng.NextInt(1, map.Size.x - 1),
                     rng.NextInt(1, map.Size.y - 1));
 
-                if (!MapUtilities.IsWalkable(map, cell))
+                if (!MapUtilities.IsWalkable(ref map, cell))
                 {
                     continue;
                 }
@@ -97,7 +89,6 @@ namespace RuntimeRoguelike.Dots
 
                 InitializeEnemy(state.EntityManager, enemy, cell, enemyConfig, difficulty.EnemyMultiplier, 0);
                 occupancy[index] = new CellOccupant { Value = enemy };
-                spawned = true;
                 break;
             }
 

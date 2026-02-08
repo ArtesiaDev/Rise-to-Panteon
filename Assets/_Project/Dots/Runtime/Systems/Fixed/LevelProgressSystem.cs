@@ -2,7 +2,7 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 
-namespace RuntimeRoguelike.Dots
+namespace RuntimeRoguelike.Dots.Runtime
 {
     [UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
     [UpdateAfter(typeof(DeathSystem))]
@@ -65,24 +65,30 @@ namespace RuntimeRoguelike.Dots
             {
                 count = perks.Length;
             }
+            
+            var indices = new NativeArray<int>(perks.Length, Allocator.Temp);
 
-            using var indices = new NativeArray<int>(perks.Length, Allocator.Temp);
-            for (var i = 0; i < indices.Length; i++)
+            try
             {
-                indices[i] = i;
+                for (var i = 0; i < indices.Length; i++)
+                {
+                    indices[i] = i;
+                }
+
+                for (var i = 0; i < indices.Length; i++)
+                {
+                    var swap = rng.NextInt(i, indices.Length);
+                    (indices[i], indices[swap]) = (indices[swap], indices[i]);
+                }
+
+                for (var i = 0; i < count; i++)
+                {
+                    offerBuffer.Add(new PerkOption { PerkId = indices[i] });
+                }
             }
-
-            for (var i = 0; i < indices.Length; i++)
+            finally
             {
-                var swap = rng.NextInt(i, indices.Length);
-                var temp = indices[i];
-                indices[i] = indices[swap];
-                indices[swap] = temp;
-            }
-
-            for (var i = 0; i < count; i++)
-            {
-                offerBuffer.Add(new PerkOption { PerkId = indices[i] });
+                indices.Dispose();
             }
         }
 

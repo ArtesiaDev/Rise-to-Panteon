@@ -1,6 +1,6 @@
 using Unity.Mathematics;
 
-namespace RuntimeRoguelike.Dots
+namespace RuntimeRoguelike.Dots.Runtime
 {
     public static class MapUtilities
     {
@@ -14,7 +14,7 @@ namespace RuntimeRoguelike.Dots
             return cell.x >= 0 && cell.y >= 0 && cell.x < size.x && cell.y < size.y;
         }
 
-        public static bool IsWalkable(in MapBlob map, int2 cell)
+        public static bool IsWalkable(ref  MapBlob map, int2 cell)
         {
             if (!InBounds(cell, map.Size))
             {

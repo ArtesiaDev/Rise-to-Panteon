@@ -1,4 +1,4 @@
-using RuntimeRoguelike.Dots;
+using RuntimeRoguelike.Dots.Runtime;
 using Unity.Entities;
 using UnityEngine;
 
@@ -6,18 +6,16 @@ namespace RuntimeRoguelike.Dots.Hybrid
 {
     public class CameraFollowBridge : MonoBehaviour
     {
-        [SerializeField] private Camera targetCamera;
-        [SerializeField] private Vector3 offset = new Vector3(0f, 0f, -10f);
+        [SerializeField] private Camera _targetCamera;
+        [SerializeField] private Vector3 _offset = new(0f, 0f, -10f);
 
         private EntityManager _entityManager;
         private EntityQuery _playerQuery;
 
         private void Awake()
         {
-            if (targetCamera == null)
-            {
-                targetCamera = Camera.main;
-            }
+            if (_targetCamera == null)
+                _targetCamera = Camera.main;
 
             var world = World.DefaultGameObjectInjectionWorld;
             if (world == null)
@@ -32,24 +30,13 @@ namespace RuntimeRoguelike.Dots.Hybrid
                 ComponentType.ReadOnly<RenderPosition>());
         }
 
-        private void OnDestroy()
-        {
-            if (_playerQuery.IsCreated)
-            {
-                _playerQuery.Dispose();
-            }
-        }
-
         private void LateUpdate()
         {
-            if (targetCamera == null || _playerQuery.IsEmpty)
-            {
-                return;
-            }
-
+            if (_targetCamera == null || _playerQuery.IsEmpty) return;
+            
             var playerEntity = _playerQuery.GetSingletonEntity();
             var position = _entityManager.GetComponentData<RenderPosition>(playerEntity).Value;
-            targetCamera.transform.position = new Vector3(position.x, position.y, 0f) + offset;
+            _targetCamera.transform.position = new Vector3(position.x, position.y, 0f) + _offset;
         }
     }
 }

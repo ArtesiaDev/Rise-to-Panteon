@@ -1,6 +1,6 @@
 using Unity.Entities;
 
-namespace RuntimeRoguelike.Dots
+namespace RuntimeRoguelike.Dots.Runtime
 {
     public struct LootEntryData : IBufferElementData
     {

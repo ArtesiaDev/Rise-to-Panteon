@@ -3,7 +3,7 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 
-namespace RuntimeRoguelike.Dots
+namespace RuntimeRoguelike.Dots.Runtime
 {
     [UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
     [UpdateAfter(typeof(EnemyMoveIntentSystem))]
@@ -33,6 +33,7 @@ namespace RuntimeRoguelike.Dots
 
         public void OnCreate(ref SystemState state)
         {
+            state.RequireForUpdate<RunState>();
             state.RequireForUpdate<MapBlobReference>();
         }
 
@@ -44,12 +45,13 @@ namespace RuntimeRoguelike.Dots
                 return;
             }
 
-            var map = mapRef.Value.Value;
+            ref var map = ref mapRef.Value.Value;
             var occupancy = state.EntityManager.GetBuffer<CellOccupant>(SystemAPI.GetSingletonEntity<RunState>());
 
             using var requests = new NativeList<MoveRequest>(Allocator.Temp);
 
-            foreach (var (position, intent, speed, cooldown, entity) in SystemAPI.Query<RefRO<GridPosition>, RefRO<MoveIntent>, RefRO<MoveSpeed>, RefRW<MoveCooldown>>().WithEntityAccess())
+            foreach (var (position, intent, _, cooldown, entity) 
+                     in SystemAPI.Query<RefRO<GridPosition>, RefRO<MoveIntent>, RefRO<MoveSpeed>, RefRW<MoveCooldown>>().WithEntityAccess())
             {
                 if (!SystemAPI.IsComponentEnabled<MoveIntent>(entity))
                 {
@@ -64,7 +66,7 @@ namespace RuntimeRoguelike.Dots
 
                 var from = position.ValueRO.Value;
                 var to = from + intent.ValueRO.Direction;
-                if (!MapUtilities.IsWalkable(map, to))
+                if (!MapUtilities.IsWalkable(ref map, to))
                 {
                     SystemAPI.SetComponentEnabled<MoveIntent>(entity, false);
                     continue;
@@ -82,9 +84,8 @@ namespace RuntimeRoguelike.Dots
 
             requests.AsArray().Sort(new MoveRequestComparer());
 
-            for (var i = 0; i < requests.Length; i++)
+            foreach (var request in requests)
             {
-                var request = requests[i];
                 var toIndex = MapUtilities.ToIndex(request.To, map.Size);
                 if (occupancy[toIndex].Value != Entity.Null)
                 {

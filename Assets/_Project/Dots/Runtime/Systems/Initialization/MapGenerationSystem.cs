@@ -5,7 +5,7 @@ using Unity.Entities;
 using Unity.Mathematics;
 using Random = Unity.Mathematics.Random;
 
-namespace RuntimeRoguelike.Dots
+namespace RuntimeRoguelike.Dots.Runtime
 {
     [UpdateInGroup(typeof(InitializationSystemGroup))]
     public partial struct MapGenerationSystem : ISystem
@@ -65,15 +65,24 @@ namespace RuntimeRoguelike.Dots
 
             var rng = rngState.ValueRW.Rng;
 
-            using var baseLayer = new NativeArray<MapCellType>(cellCount, Allocator.Temp);
-            using var obstacleLayer = new NativeArray<ObstacleType>(cellCount, Allocator.Temp);
-            using var hazardLayer = new NativeArray<HazardType>(cellCount, Allocator.Temp);
+            var baseLayer = new NativeArray<MapCellType>(cellCount, Allocator.Temp);
+            var obstacleLayer = new NativeArray<ObstacleType>(cellCount, Allocator.Temp);
+            var hazardLayer = new NativeArray<HazardType>(cellCount, Allocator.Temp);
 
-            for (var i = 0; i < cellCount; i++)
+            try
             {
-                baseLayer[i] = MapCellType.Wall;
-                obstacleLayer[i] = ObstacleType.None;
-                hazardLayer[i] = HazardType.None;
+                for (var i = 0; i < cellCount; i++)
+                {
+                    baseLayer[i] = MapCellType.Wall;
+                    obstacleLayer[i] = ObstacleType.None;
+                    hazardLayer[i] = HazardType.None;
+                }
+            }
+            finally
+            {
+                baseLayer.Dispose();
+                obstacleLayer.Dispose();
+                hazardLayer.Dispose();
             }
 
             var rooms = new List<RoomRect>(mapConfig.RoomAttempts);
@@ -101,7 +110,7 @@ namespace RuntimeRoguelike.Dots
 
                 if (rooms.Count > 0)
                 {
-                    var previousCenter = GetCenter(rooms[rooms.Count - 1]);
+                    var previousCenter = GetCenter(rooms[^1]);
                     var currentCenter = GetCenter(room);
                     CarveCorridor(baseLayer, mapSize, previousCenter, currentCenter, ref rng);
                 }
@@ -255,9 +264,9 @@ namespace RuntimeRoguelike.Dots
                 Height = room.Height + 2
             };
 
-            for (var i = 0; i < rooms.Count; i++)
+            foreach (var rect in rooms)
             {
-                if (Overlaps(expanded, rooms[i]))
+                if (Overlaps(expanded, rect))
                 {
                     return true;
                 }
@@ -327,7 +336,6 @@ namespace RuntimeRoguelike.Dots
             {
                 for (var x = 1; x < size.x - 1; x++)
                 {
-                    var cell = new int2(x, y);
                     var dx = x - startCell.x;
                     var dy = y - startCell.y;
                     if (dx * dx + dy * dy <= safeRadius * safeRadius)

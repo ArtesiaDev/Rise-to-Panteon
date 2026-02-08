@@ -1,7 +1,7 @@
 using Unity.Entities;
 using Unity.Mathematics;
 
-namespace RuntimeRoguelike.Dots
+namespace RuntimeRoguelike.Dots.Runtime
 {
     [UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
     [UpdateAfter(typeof(EnemyAttackSystem))]
@@ -9,6 +9,7 @@ namespace RuntimeRoguelike.Dots
     {
         public void OnCreate(ref SystemState state)
         {
+            state.RequireForUpdate<EndSimulationEntityCommandBufferSystem.Singleton>();
             state.RequireForUpdate<MapBlobReference>();
             state.RequireForUpdate<HazardConfigData>();
         }
@@ -21,7 +22,7 @@ namespace RuntimeRoguelike.Dots
                 return;
             }
 
-            var map = mapRef.Value.Value;
+            ref var map = ref mapRef.Value.Value;
             var config = SystemAPI.GetSingleton<HazardConfigData>();
             var deltaTime = SystemAPI.Time.DeltaTime;
 

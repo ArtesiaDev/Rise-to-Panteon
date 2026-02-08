@@ -1,4 +1,4 @@
-using RuntimeRoguelike.Dots;
+using RuntimeRoguelike.Dots.Runtime;
 using Unity.Entities;
 using UnityEngine;
 
@@ -6,11 +6,11 @@ namespace RuntimeRoguelike.Dots.Hybrid
 {
     public class FixedStepSettingsBridge : MonoBehaviour
     {
-        [SerializeField] private bool applyOnEnable = true;
+        [SerializeField] private bool _applyOnEnable = true;
 
         private void OnEnable()
         {
-            if (applyOnEnable)
+            if (_applyOnEnable)
             {
                 Apply();
             }
@@ -18,7 +18,7 @@ namespace RuntimeRoguelike.Dots.Hybrid
 
         private void OnValidate()
         {
-            if (applyOnEnable && Application.isPlaying)
+            if (_applyOnEnable && Application.isPlaying)
             {
                 Apply();
             }

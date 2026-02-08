@@ -1,3 +1,4 @@
+using RuntimeRoguelike.Dots.Runtime;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
@@ -6,40 +7,31 @@ namespace RuntimeRoguelike.Dots.Hybrid
 {
     public class InputBridge : MonoBehaviour
     {
-        [SerializeField] private KeyCode attackKey = KeyCode.Space;
-        [SerializeField] private KeyCode restartKey = KeyCode.R;
-        [SerializeField] private KeyCode toggleGizmosKey = KeyCode.G;
+        [SerializeField] private KeyCode _attackKey = KeyCode.Space;
+        [SerializeField] private KeyCode _restartKey = KeyCode.R;
+        [SerializeField] private KeyCode _toggleGizmosKey = KeyCode.G;
 
         private EntityManager _entityManager;
         private EntityQuery _inputQuery;
+        private World _world;
 
         private void Awake()
         {
-            var world = World.DefaultGameObjectInjectionWorld;
-            if (world == null)
+            _world = World.DefaultGameObjectInjectionWorld;
+            if (_world == null)
             {
                 enabled = false;
                 return;
             }
 
-            _entityManager = world.EntityManager;
+            _entityManager = _world.EntityManager;
             _inputQuery = _entityManager.CreateEntityQuery(ComponentType.ReadWrite<InputState>());
-        }
-
-        private void OnDestroy()
-        {
-            if (_inputQuery.IsCreated)
-            {
-                _inputQuery.Dispose();
-            }
         }
 
         private void Update()
         {
-            if (!_inputQuery.IsCreated)
-            {
+            if (_world is not { IsCreated: true })
                 return;
-            }
 
             var move = int2.zero;
             if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow))
@@ -59,9 +51,9 @@ namespace RuntimeRoguelike.Dots.Hybrid
                 move = new int2(1, 0);
             }
 
-            var attackPressed = Input.GetKeyDown(attackKey);
-            var restartPressed = Input.GetKeyDown(restartKey);
-            var toggleGizmos = Input.GetKeyDown(toggleGizmosKey);
+            var attackPressed = Input.GetKeyDown(_attackKey);
+            var restartPressed = Input.GetKeyDown(_restartKey);
+            var toggleGizmos = Input.GetKeyDown(_toggleGizmosKey);
 
             if (_inputQuery.IsEmpty)
             {

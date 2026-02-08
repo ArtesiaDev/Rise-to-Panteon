@@ -1,4 +1,4 @@
-using RuntimeRoguelike.Dots;
+using RuntimeRoguelike.Dots.Runtime;
 using Unity.Entities;
 using UnityEngine;
 using UnityEngine.UI;
@@ -7,47 +7,38 @@ namespace RuntimeRoguelike.Dots.Hybrid
 {
     public class PerkUiBridge : MonoBehaviour
     {
-        [SerializeField] private GameObject panel;
-        [SerializeField] private Button[] buttons;
-        [SerializeField] private Text[] titleTexts;
-        [SerializeField] private Text[] valueTexts;
+        [SerializeField] private GameObject _panel;
+        [SerializeField] private Button[] _buttons;
+        [SerializeField] private Text[] _titleTexts;
+        [SerializeField] private Text[] _valueTexts;
 
+        private World _world;
         private EntityManager _entityManager;
         private EntityQuery _offerQuery;
         private EntityQuery _commandQuery;
         private bool _initialized;
 
         private void Awake()
-        {
-            var world = World.DefaultGameObjectInjectionWorld;
-            if (world == null)
+        { 
+            _world = World.DefaultGameObjectInjectionWorld;
+            if (_world == null)
             {
                 enabled = false;
                 return;
             }
 
-            _entityManager = world.EntityManager;
+            _entityManager = _world.EntityManager;
             _offerQuery = _entityManager.CreateEntityQuery(ComponentType.ReadOnly<PerkOfferState>());
             _commandQuery = _entityManager.CreateEntityQuery(ComponentType.ReadWrite<RunCommand>());
 
             HookButtons();
         }
-
-        private void OnDestroy()
-        {
-            if (_offerQuery.IsCreated)
-            {
-                _offerQuery.Dispose();
-            }
-
-            if (_commandQuery.IsCreated)
-            {
-                _commandQuery.Dispose();
-            }
-        }
-
+        
         private void Update()
         {
+            if (_world is not { IsCreated: true })
+                return;
+            
             if (_offerQuery.IsEmpty)
             {
                 SetVisible(false);
@@ -67,7 +58,7 @@ namespace RuntimeRoguelike.Dots.Hybrid
 
             SetVisible(true);
 
-            for (var i = 0; i < buttons.Length; i++)
+            for (var i = 0; i < _buttons.Length; i++)
             {
                 if (i >= options.Length || i >= perks.Length)
                 {
@@ -84,17 +75,17 @@ namespace RuntimeRoguelike.Dots.Hybrid
 
         private void HookButtons()
         {
-            if (_initialized || buttons == null)
+            if (_initialized || _buttons == null)
             {
                 return;
             }
 
-            for (var i = 0; i < buttons.Length; i++)
+            for (var i = 0; i < _buttons.Length; i++)
             {
                 var index = i;
-                if (buttons[i] != null)
+                if (_buttons[i] != null)
                 {
-                    buttons[i].onClick.AddListener(() => OnPerkSelected(index));
+                    _buttons[i].onClick.AddListener(() => OnPerkSelected(index));
                 }
             }
 
@@ -117,29 +108,29 @@ namespace RuntimeRoguelike.Dots.Hybrid
 
         private void SetVisible(bool visible)
         {
-            if (panel != null)
+            if (_panel != null)
             {
-                panel.SetActive(visible);
+                _panel.SetActive(visible);
             }
         }
 
         private void SetButton(int index, bool active, string title, string value)
         {
-            if (buttons == null || index >= buttons.Length || buttons[index] == null)
+            if (_buttons == null || index >= _buttons.Length || _buttons[index] == null)
             {
                 return;
             }
 
-            buttons[index].gameObject.SetActive(active);
+            _buttons[index].gameObject.SetActive(active);
 
-            if (titleTexts != null && index < titleTexts.Length && titleTexts[index] != null)
+            if (_titleTexts != null && index < _titleTexts.Length && _titleTexts[index] != null)
             {
-                titleTexts[index].text = title;
+                _titleTexts[index].text = title;
             }
 
-            if (valueTexts != null && index < valueTexts.Length && valueTexts[index] != null)
+            if (_valueTexts != null && index < _valueTexts.Length && _valueTexts[index] != null)
             {
-                valueTexts[index].text = value;
+                _valueTexts[index].text = value;
             }
         }
 

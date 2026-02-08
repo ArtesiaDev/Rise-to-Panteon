@@ -1,7 +1,7 @@
 using Unity.Entities;
 using Unity.Mathematics;
 
-namespace RuntimeRoguelike.Dots
+namespace RuntimeRoguelike.Dots.Runtime
 {
     [UpdateInGroup(typeof(InitializationSystemGroup))]
     [UpdateAfter(typeof(SpawnPlayerSystem))]
@@ -9,6 +9,7 @@ namespace RuntimeRoguelike.Dots
     {
         public void OnCreate(ref SystemState state)
         {
+            state.RequireForUpdate<DifficultyState>();
             state.RequireForUpdate<RunState>();
             state.RequireForUpdate<RunSpawnState>();
             state.RequireForUpdate<EnemyConfigData>();
@@ -31,7 +32,7 @@ namespace RuntimeRoguelike.Dots
                 return;
             }
 
-            var map = mapRef.Value.Value;
+            ref var map = ref mapRef.Value.Value;
             var enemyConfig = SystemAPI.GetSingleton<EnemyConfigData>();
             var spawnConfig = SystemAPI.GetSingleton<EnemySpawnConfigData>();
             var difficulty = SystemAPI.HasSingleton<DifficultyState>()
@@ -50,7 +51,7 @@ namespace RuntimeRoguelike.Dots
                         rng.NextInt(1, map.Size.x - 1),
                         rng.NextInt(1, map.Size.y - 1));
 
-                    if (!MapUtilities.IsWalkable(map, cell))
+                    if (!MapUtilities.IsWalkable(ref map, cell))
                     {
                         continue;
                     }

@@ -1,3 +1,4 @@
+using RuntimeRoguelike.Dots.Runtime;
 using Unity.Entities;
 using UnityEngine;
 
@@ -5,10 +6,10 @@ namespace RuntimeRoguelike.Dots.Authoring
 {
     public class DifficultyConfigAuthoring : MonoBehaviour
     {
-        [SerializeField] private float timeToMaxDifficulty = 300f;
-        [SerializeField] private float maxEnemyStatMultiplier = 2f;
-        [SerializeField] private float maxSpawnRateMultiplier = 2f;
-        [SerializeField] private float levelStatBonus = 0.05f;
+        [SerializeField] private float _timeToMaxDifficulty = 300f;
+        [SerializeField] private float _maxEnemyStatMultiplier = 2f;
+        [SerializeField] private float _maxSpawnRateMultiplier = 2f;
+        [SerializeField] private float _levelStatBonus = 0.05f;
 
         private class Baker : Baker<DifficultyConfigAuthoring>
         {
@@ -17,10 +18,10 @@ namespace RuntimeRoguelike.Dots.Authoring
                 var entity = GetEntity(TransformUsageFlags.None);
                 AddComponent(entity, new DifficultyConfigData
                 {
-                    TimeToMaxDifficulty = authoring.timeToMaxDifficulty,
-                    MaxEnemyStatMultiplier = authoring.maxEnemyStatMultiplier,
-                    MaxSpawnRateMultiplier = authoring.maxSpawnRateMultiplier,
-                    LevelStatBonus = authoring.levelStatBonus
+                    TimeToMaxDifficulty = authoring._timeToMaxDifficulty,
+                    MaxEnemyStatMultiplier = authoring._maxEnemyStatMultiplier,
+                    MaxSpawnRateMultiplier = authoring._maxSpawnRateMultiplier,
+                    LevelStatBonus = authoring._levelStatBonus
                 });
             }
         }

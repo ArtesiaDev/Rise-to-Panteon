@@ -1,7 +1,7 @@
 using Unity.Entities;
 using Unity.Mathematics;
 
-namespace RuntimeRoguelike.Dots
+namespace RuntimeRoguelike.Dots.Runtime
 {
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     public partial struct PlayerInputSystem : ISystem
@@ -17,7 +17,9 @@ namespace RuntimeRoguelike.Dots
             var moveDir = input.ValueRO.MoveDir;
             var attackPressed = input.ValueRO.AttackPressed;
 
-            foreach (var entity in SystemAPI.Query<Entity>().WithAll<PlayerTag>())
+            foreach (var (_, entity) in SystemAPI
+                         .Query<RefRO<PlayerTag>>()
+                         .WithEntityAccess())
             {
                 if (!moveDir.Equals(int2.zero))
                 {

@@ -1,3 +1,4 @@
+using RuntimeRoguelike.Dots.Runtime;
 using Unity.Entities;
 using UnityEngine;
 
@@ -5,7 +6,7 @@ namespace RuntimeRoguelike.Dots.Authoring
 {
     public class GridConfigAuthoring : MonoBehaviour
     {
-        [SerializeField] private float cellSize = 1f;
+        [SerializeField] private float _cellSize = 1f;
 
         private class Baker : Baker<GridConfigAuthoring>
         {
@@ -14,7 +15,7 @@ namespace RuntimeRoguelike.Dots.Authoring
                 var entity = GetEntity(TransformUsageFlags.None);
                 AddComponent(entity, new GridConfigData
                 {
-                    CellSize = authoring.cellSize
+                    CellSize = authoring._cellSize
                 });
             }
         }

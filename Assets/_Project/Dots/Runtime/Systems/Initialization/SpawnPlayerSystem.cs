@@ -1,7 +1,7 @@
 using Unity.Entities;
 using Unity.Mathematics;
 
-namespace RuntimeRoguelike.Dots
+namespace RuntimeRoguelike.Dots.Runtime
 {
     [UpdateInGroup(typeof(InitializationSystemGroup))]
     [UpdateAfter(typeof(MapGenerationSystem))]
@@ -9,6 +9,7 @@ namespace RuntimeRoguelike.Dots
     {
         public void OnCreate(ref SystemState state)
         {
+            state.RequireForUpdate<PrefabConfigData>();
             state.RequireForUpdate<RunState>();
             state.RequireForUpdate<RunSpawnState>();
             state.RequireForUpdate<PlayerConfigData>();

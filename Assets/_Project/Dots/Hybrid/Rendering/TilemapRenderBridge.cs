@@ -1,7 +1,6 @@
 using System.Collections.Generic;
-using RuntimeRoguelike.Dots;
+using RuntimeRoguelike.Dots.Runtime;
 using Unity.Entities;
-using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
@@ -9,56 +8,42 @@ namespace RuntimeRoguelike.Dots.Hybrid
 {
     public class TilemapRenderBridge : MonoBehaviour
     {
-        [SerializeField] private Transform worldRoot;
-        [SerializeField] private Color floorColor = new Color(0.25f, 0.25f, 0.25f, 1f);
-        [SerializeField] private Color wallColor = new Color(0.12f, 0.12f, 0.12f, 1f);
-        [SerializeField] private Color obstacleColor = new Color(0.18f, 0.18f, 0.18f, 1f);
-        [SerializeField] private Color poisonColor = new Color(0.2f, 0.5f, 0.2f, 1f);
-        [SerializeField] private Color spikeColor = new Color(0.6f, 0.2f, 0.2f, 1f);
+        [SerializeField] private Transform _worldRoot;
+        [SerializeField] private Color _floorColor = new(0.25f, 0.25f, 0.25f, 1f);
+        [SerializeField] private Color _wallColor = new(0.12f, 0.12f, 0.12f, 1f);
+        [SerializeField] private Color _obstacleColor = new(0.18f, 0.18f, 0.18f, 1f);
+        [SerializeField] private Color _poisonColor = new(0.2f, 0.5f, 0.2f, 1f);
+        [SerializeField] private Color _spikeColor = new(0.6f, 0.2f, 0.2f, 1f);
 
+        private World _world;
         private EntityManager _entityManager;
         private EntityQuery _mapQuery;
         private EntityQuery _gridQuery;
         private Entity _mapEntity;
         private GameObject _gridRoot;
-        private readonly Dictionary<string, Tile> _tileCache = new Dictionary<string, Tile>();
+        private readonly Dictionary<string, Tile> _tileCache = new();
         private int _lastRunId = -1;
 
         private void Awake()
         {
-            var world = World.DefaultGameObjectInjectionWorld;
-            if (world == null)
+            _world = World.DefaultGameObjectInjectionWorld;
+            if (_world == null)
             {
                 enabled = false;
                 return;
             }
 
-            _entityManager = world.EntityManager;
+            _entityManager = _world.EntityManager;
             _mapQuery = _entityManager.CreateEntityQuery(
                 ComponentType.ReadOnly<MapBlobReference>(),
                 ComponentType.ReadOnly<MapRenderRequest>());
             _gridQuery = _entityManager.CreateEntityQuery(ComponentType.ReadOnly<GridConfigData>());
         }
-
-        private void OnDestroy()
-        {
-            if (_mapQuery.IsCreated)
-            {
-                _mapQuery.Dispose();
-            }
-
-            if (_gridQuery.IsCreated)
-            {
-                _gridQuery.Dispose();
-            }
-        }
-
+        
         private void Update()
         {
-            if (!_mapQuery.IsCreated || _mapQuery.IsEmpty)
-            {
+            if (_world is not { IsCreated: true })
                 return;
-            }
 
             _mapEntity = _mapQuery.GetSingletonEntity();
             if (!_entityManager.IsComponentEnabled<MapRenderRequest>(_mapEntity))
@@ -85,19 +70,19 @@ namespace RuntimeRoguelike.Dots.Hybrid
                 gridSize = Mathf.Max(0.01f, gridConfig.CellSize);
             }
 
-            Render(mapRef.Value.Value, gridSize);
+            Render(ref mapRef.Value.Value, gridSize);
             _lastRunId = request.RunId;
             _entityManager.SetComponentEnabled<MapRenderRequest>(_mapEntity, false);
         }
 
-        private void Render(in MapBlob map, float cellSize)
+        private void Render(ref MapBlob map, float cellSize)
         {
             if (_gridRoot != null)
             {
                 Destroy(_gridRoot);
             }
 
-            var parent = worldRoot != null ? worldRoot : transform;
+            var parent = _worldRoot != null ? _worldRoot : transform;
             _gridRoot = new GameObject("DotsGrid");
             _gridRoot.transform.SetParent(parent, false);
 
@@ -118,26 +103,26 @@ namespace RuntimeRoguelike.Dots.Hybrid
 
                     if (map.BaseLayer[index] == MapCellType.Floor)
                     {
-                        ground.SetTile(position, GetTile("floor", floorColor));
+                        ground.SetTile(position, GetTile("floor", _floorColor));
                     }
                     else if (map.BaseLayer[index] == MapCellType.Wall)
                     {
-                        walls.SetTile(position, GetTile("wall", wallColor));
+                        walls.SetTile(position, GetTile("wall", _wallColor));
                     }
 
                     if (map.ObstacleLayer[index] != ObstacleType.None)
                     {
-                        walls.SetTile(position, GetTile("obstacle", obstacleColor));
+                        walls.SetTile(position, GetTile("obstacle", _obstacleColor));
                     }
 
                     var hazard = map.HazardLayer[index];
                     if (hazard == HazardType.Poison)
                     {
-                        hazards.SetTile(position, GetTile("poison", poisonColor));
+                        hazards.SetTile(position, GetTile("poison", _poisonColor));
                     }
                     else if (hazard == HazardType.Spike)
                     {
-                        hazards.SetTile(position, GetTile("spike", spikeColor));
+                        hazards.SetTile(position, GetTile("spike", _spikeColor));
                     }
                 }
             }
@@ -161,7 +146,7 @@ namespace RuntimeRoguelike.Dots.Hybrid
                 var body = tilemapObject.AddComponent<Rigidbody2D>();
                 body.bodyType = RigidbodyType2D.Static;
                 var collider = tilemapObject.AddComponent<TilemapCollider2D>();
-                var composite = tilemapObject.AddComponent<CompositeCollider2D>();
+                tilemapObject.AddComponent<CompositeCollider2D>();
                 collider.usedByComposite = true;
             }
 

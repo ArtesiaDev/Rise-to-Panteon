@@ -1,4 +1,4 @@
-namespace RuntimeRoguelike.Dots
+namespace RuntimeRoguelike.Dots.Runtime
 {
     public enum MapCellType
     {

@@ -1,7 +1,7 @@
 using Unity.Entities;
 using Unity.Mathematics;
 
-namespace RuntimeRoguelike.Dots
+namespace RuntimeRoguelike.Dots.Runtime
 {
     [UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
     [UpdateAfter(typeof(LootPickupSystem))]
@@ -9,6 +9,9 @@ namespace RuntimeRoguelike.Dots
     {
         public void OnCreate(ref SystemState state)
         {
+            state.RequireForUpdate<EndSimulationEntityCommandBufferSystem.Singleton>();
+            state.RequireForUpdate<PrefabConfigData>();
+            state.RequireForUpdate<RunState>();
             state.RequireForUpdate<MapBlobReference>();
             state.RequireForUpdate<LootConfigData>();
         }
@@ -21,7 +24,7 @@ namespace RuntimeRoguelike.Dots
                 return;
             }
 
-            var map = mapRef.Value.Value;
+            ref var map = ref mapRef.Value.Value;
             var occupancy = state.EntityManager.GetBuffer<CellOccupant>(SystemAPI.GetSingletonEntity<RunState>());
             var lootConfig = SystemAPI.GetSingleton<LootConfigData>();
             var lootTable = SystemAPI.GetSingletonBuffer<LootEntryData>();

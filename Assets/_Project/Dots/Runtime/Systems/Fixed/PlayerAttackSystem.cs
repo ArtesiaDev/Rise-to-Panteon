@@ -1,7 +1,7 @@
 using Unity.Entities;
 using Unity.Mathematics;
 
-namespace RuntimeRoguelike.Dots
+namespace RuntimeRoguelike.Dots.Runtime
 {
     [UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
     [UpdateAfter(typeof(MovementResolveSystem))]
@@ -9,6 +9,7 @@ namespace RuntimeRoguelike.Dots
     {
         public void OnCreate(ref SystemState state)
         {
+            state.RequireForUpdate<RunState>();
             state.RequireForUpdate<MapBlobReference>();
         }
 
@@ -20,10 +21,13 @@ namespace RuntimeRoguelike.Dots
                 return;
             }
 
-            var map = mapRef.Value.Value;
+            ref var map = ref mapRef.Value.Value;
             var occupancy = state.EntityManager.GetBuffer<CellOccupant>(SystemAPI.GetSingletonEntity<RunState>());
 
-            foreach (var (attackRequest, cooldown, damage, direction, position, range, stats, entity) in SystemAPI.Query<RefRO<AttackRequest>, RefRW<AttackCooldown>, RefRO<Damage>, RefRO<LastMoveDirection>, RefRO<GridPosition>, RefRO<AttackRange>, RefRO<PlayerStats>>().WithAll<PlayerTag>().WithEntityAccess())
+            foreach (var (cooldown, damage, direction, position, range, stats, entity) 
+                     in SystemAPI.Query< RefRW<AttackCooldown>, RefRO<Damage>, RefRO<LastMoveDirection>, RefRO<GridPosition>, RefRO<AttackRange>, RefRO<PlayerStats>>()
+                         .WithAll<PlayerTag>()
+                         .WithEntityAccess())
             {
                 if (!SystemAPI.IsComponentEnabled<AttackRequest>(entity))
                 {

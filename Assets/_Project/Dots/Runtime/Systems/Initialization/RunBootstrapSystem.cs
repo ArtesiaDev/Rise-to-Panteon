@@ -1,12 +1,13 @@
 using Unity.Entities;
 using Unity.Mathematics;
 
-namespace RuntimeRoguelike.Dots
+namespace RuntimeRoguelike.Dots.Runtime
 {
     public partial struct RunBootstrapSystem : ISystem
     {
         public void OnCreate(ref SystemState state)
         {
+            state.RequireForUpdate<FixedStepSettings>();
             if (!SystemAPI.HasSingleton<RunState>())
             {
                 var entity = state.EntityManager.CreateEntity();

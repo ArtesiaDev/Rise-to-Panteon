@@ -1,14 +1,13 @@
-using RuntimeRoguelike.Dots;
+using RuntimeRoguelike.Dots.Runtime;
 using Unity.Entities;
-using Unity.Mathematics;
 using UnityEngine;
 
 namespace RuntimeRoguelike.Dots.Hybrid
 {
     public class GizmosBridge : MonoBehaviour
     {
-        [SerializeField] private bool drawOccupancy = true;
-        [SerializeField] private Color occupancyColor = new Color(0.2f, 0.6f, 1f, 0.4f);
+        [SerializeField] private bool _drawOccupancy = true;
+        [SerializeField] private Color _occupancyColor = new(0.2f, 0.6f, 1f, 0.4f);
 
         private EntityManager _entityManager;
         private EntityQuery _runQuery;
@@ -27,19 +26,6 @@ namespace RuntimeRoguelike.Dots.Hybrid
             _entityManager = world.EntityManager;
             _runQuery = _entityManager.CreateEntityQuery(ComponentType.ReadOnly<RunState>(), ComponentType.ReadOnly<MapBlobReference>());
             _inputQuery = _entityManager.CreateEntityQuery(ComponentType.ReadOnly<InputState>());
-        }
-
-        private void OnDestroy()
-        {
-            if (_runQuery.IsCreated)
-            {
-                _runQuery.Dispose();
-            }
-
-            if (_inputQuery.IsCreated)
-            {
-                _inputQuery.Dispose();
-            }
         }
 
         private void Update()
@@ -66,7 +52,7 @@ namespace RuntimeRoguelike.Dots.Hybrid
 
         private void OnDrawGizmos()
         {
-            if (!_enabledState || !drawOccupancy || _runQuery.IsEmpty)
+            if (!_enabledState || !_drawOccupancy || _runQuery.IsEmpty)
             {
                 return;
             }
@@ -77,7 +63,7 @@ namespace RuntimeRoguelike.Dots.Hybrid
                 return;
             }
 
-            var map = mapRef.Value.Value;
+            ref var map = ref mapRef.Value.Value;
             var runEntity = _runQuery.GetSingletonEntity();
             if (!_entityManager.HasBuffer<CellOccupant>(runEntity))
             {
@@ -85,7 +71,7 @@ namespace RuntimeRoguelike.Dots.Hybrid
             }
 
             var occupancy = _entityManager.GetBuffer<CellOccupant>(runEntity);
-            Gizmos.color = occupancyColor;
+            Gizmos.color = _occupancyColor;
 
             for (var y = 0; y < map.Size.y; y++)
             {
