@@ -6,8 +6,9 @@
 
 - Полная замена текущего ECS (вся логика геймплея — DOTS).
 - Геймплейная логика не меняется.
-- Визуал и UI остаются на текущем URP 2D (гибридный подход).
-- Рендер DOTS Graphics не используется как основной (из-за URP 2D Renderer).
+- Визуал и UI остаются на GameObject/URP 2D (гибридный подход).
+- DOTS Graphics/Entities Graphics не используется и не подключается.
+- Данные сущностей задаются через authoring+baking (SubScene/authoring компоненты).
 - Код пишется заново под DOTS, без адаптации существующего ECS-фреймворка.
 
 ## 2) Инварианты геймплея (должны сохраниться)
@@ -35,7 +36,7 @@
 ### 3.1 Слои
 
 - Simulation (DOTS, Burst-friendly): только unmanaged данные, ECB для структурных изменений.
-- Presentation (Hybrid): Tilemap, SpriteRenderer, UI, камера, Gizmos. Все на main thread.
+- Presentation (Hybrid, GameObject-only): Tilemap, SpriteRenderer, UI, камера, Gizmos. Все на main thread, без DOTS Graphics.
 
 ### 3.2 Поток данных
 
@@ -76,14 +77,27 @@ Assets/_Project/Dots/
     Rendering/
     UI/
     Debug/
-  Authoring/ (опционально)
+  Authoring/
+    Components/
+    Bakers/
+  Baking/
+    Systems/
 ```
 
 Asmdef:
 
 - `Assets/_Project/Dots/Runtime/RuntimeRoguelike.Dots.Runtime.asmdef`
 - `Assets/_Project/Dots/Hybrid/RuntimeRoguelike.Dots.Hybrid.asmdef`
-- `Assets/_Project/Dots/Authoring/RuntimeRoguelike.Dots.Authoring.asmdef` (опционально)
+- `Assets/_Project/Dots/Authoring/RuntimeRoguelike.Dots.Authoring.asmdef`
+- `Assets/_Project/Dots/Baking/RuntimeRoguelike.Dots.Baking.asmdef`
+
+### 4.1 Authoring & Baking
+
+- Authoring-компоненты для `Player/Enemy/Loot/Perk/MapConfig` хранят дизайн-данные.
+- Bakers переводят данные в unmanaged `IComponentData` и/или `BlobAssetReference`.
+- Entity-prefab-ы запекаются и хранятся в конфиге/синглтоне как `EntityPrefabReference`.
+- SubScene используется для authoring-контента; runtime лишь инстанцирует сущности.
+- В bakers фиксируем зависимости через `DependsOn(...)` для корректного ребейка.
 
 ## 5) Компоненты DOTS (основные)
 
@@ -93,7 +107,7 @@ Asmdef:
 
 - `GridPosition : IComponentData` (int2)
 - `RenderPosition : IComponentData` (float2)
-- `MoveIntent : IComponentData` (int2)
+- `MoveIntent : IComponentData, IEnableableComponent` (int2)
 - `MoveSpeed : IComponentData` (float)
 - `MoveCooldown : IComponentData` (float)
 - `LastMoveDirection : IComponentData` (int2)
@@ -104,7 +118,7 @@ Asmdef:
 - `Damage : IComponentData` (int)
 - `AttackCooldown : IComponentData` (remaining, interval)
 - `AttackRange : IComponentData` (float)
-- `AttackRequest : IComponentData` (enableable/tag)
+- `AttackRequest : IComponentData, IEnableableComponent` (tag)
 
 AI:
 
@@ -127,7 +141,7 @@ Loot/Progress:
 
 Теги:
 
-- `PlayerTag`, `EnemyTag`, `LootTag`
+- `PlayerTag`, `EnemyTag`, `LootTag`, `RunTag`
 
 ### 5.2 Singleton-компоненты
 
@@ -143,8 +157,18 @@ Loot/Progress:
 Рекомендуется:
 
 - `MapBlob` (BlobAssetReference) с 3 слоями: base, obstacle, hazard.
-- `DynamicBuffer<CellOccupant>` на singleton entity для occupancy (Entity.Null если свободно).
+- `MapBlob` создается через `BlobBuilder`; при рестарте старый `BlobAssetReference` обязательно `Dispose()`.
+- `DynamicBuffer<CellOccupant>` на singleton entity для occupancy, `InternalBufferCapacity(0)`, `Entity.Null` если свободно.
 - Loot не записываем в occupancy (как сейчас).
+
+### 5.4 DOTS Best Practices
+
+- `ISystem` + `[BurstCompile]` по умолчанию для симуляции.
+- Доступ к данным через `SystemAPI`/`RefRO`/`RefRW`, `BufferLookup`, `ComponentLookup` с `[ReadOnly]` где возможно.
+- Структурные изменения только через `EntityCommandBuffer` (Begin/End Simulation ECB).
+- Requests/flags хранить как `IEnableableComponent`, чтобы избегать add/remove.
+- `RunTag` или `RunId` на всех run-entities для безопасного рестарта/очистки.
+- Native-коллекции создаются в `OnCreate`, освобождаются в `OnDestroy`, managed-данных в runtime-компонентах нет.
 
 ## 6) Порядок систем (для паритета)
 
@@ -155,6 +179,8 @@ Loot/Progress:
 - `PerkApplySystem` — применяет выбранный перк.
 
 ### FixedStep (FixedStepSimulationSystemGroup)
+
+Фиксированный timestep задается явно и соответствует текущему FixedUpdate проекта.
 
 Строго повторяем порядок текущего проекта:
 
@@ -180,6 +206,7 @@ Loot/Progress:
 - `RenderInterpolationSystem` (PresentationSystemGroup): RenderPosition -> LocalTransform.
 - `TilemapRenderBridge` (Mono): перестройка карты по `MapRenderRequest`.
 - `SpriteRenderBridge` (Mono): пул, создание и позиционирование спрайтов.
+- `PresentationCleanupSystem` (PresentationSystemGroup): освобождение GO/пула для уничтоженных entities.
 - `CameraFollowBridge` (Mono).
 - `HudBridge` (Mono).
 - `PerkUiBridge` (Mono).
@@ -192,13 +219,14 @@ Loot/Progress:
 Через Package Manager:
 
 - `com.unity.entities` (1.4.x для 2022.3)
-- `com.unity.entities.graphics` (1.4.x для hybrid/companion)
 - `com.unity.burst`, `com.unity.collections`, `com.unity.mathematics` (если не подтянулись)
+- `com.unity.entities.graphics` не устанавливаем (DOTS Graphics не используется)
 
 ### Шаг 2 — Новый каркас DOTS
 
 - Создать директории `Assets/_Project/Dots/...`.
-- Создать asmdef’ы для Runtime/Hybrid.
+- Создать asmdef’ы для Runtime/Hybrid/Authoring/Baking.
+- Подготовить authoring-компоненты и bakers (SubScene, entity-prefab-ы, конфиги).
 - Написать базовый `RunBootstrapSystem`, который:
   - создает singleton entity
   - инициализирует `RunState`, `DifficultyState`, `InputState`, `PerkOfferState`, `RngState`
@@ -206,13 +234,14 @@ Loot/Progress:
 ### Шаг 3 — Map + Hazards
 
 - Переписать генерацию карты в DOTS.
-- Записать карту в `MapBlob`.
+- Записать карту в `MapBlob` через `BlobBuilder` (dispose старого blob на рестарте).
 - Применить hazards в DOTS (spike/poison) и сохранить в `MapBlob`.
-- Инициализировать `CellOccupant` буфер по размерам карты.
+- Инициализировать `CellOccupant` буфер по размерам карты (`InternalBufferCapacity(0)`).
 - Поднять `MapRenderRequest`.
 
 ### Шаг 4 — Спавн сущностей
 
+- Спавн использует baked entity-prefab-ы и конфиги из singleton/Blob.
 - `SpawnPlayerSystem`: player entity + occupancy.
 - `SpawnInitialEnemiesSystem`: initial count, safe radius, occupancy.
 - `EnemySpawnerSystem`: регулярный спавн, difficulty multiplier.
@@ -229,6 +258,7 @@ Loot/Progress:
 
 - Tilemap читает `MapBlob`, создает layers (ground/walls/hazards).
 - Entity views: SpriteRenderer pool, привязка к entity.
+- Cleanup: при уничтожении entity — возврат спрайтов в пул и удаление связей.
 - RenderPosition -> Transform с плавной интерполяцией.
 - HUD/Perks: UI на Mono, данные из singletons/компонентов.
 
@@ -237,9 +267,10 @@ Loot/Progress:
 В `RestartSystem`:
 
 - инкрементировать `RunState.runId`
-- уничтожить все run-entities
-- пересоздать map/occupancy/singletons
+- уничтожить все run-entities по `RunTag`/`RunId`
+- dispose старого `MapBlob`, пересоздать map/occupancy/singletons
 - установить `MapRenderRequest`
+- очистить presentation-пулы/GO по `runId`
 
 ### Шаг 8 — Проверка паритета
 
