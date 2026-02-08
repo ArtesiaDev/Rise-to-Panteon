@@ -1,0 +1,166 @@
+using Unity.Entities;
+using Unity.Mathematics;
+
+namespace RuntimeRoguelike.Dots
+{
+    [UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
+    [UpdateAfter(typeof(DifficultyTickSystem))]
+    public partial struct EnemySpawnerSystem : ISystem
+    {
+        private EntityQuery _enemyQuery;
+
+        public void OnCreate(ref SystemState state)
+        {
+            state.RequireForUpdate<RunState>();
+            state.RequireForUpdate<RunSpawnState>();
+            state.RequireForUpdate<EnemySpawnState>();
+            state.RequireForUpdate<EnemySpawnConfigData>();
+            state.RequireForUpdate<EnemyConfigData>();
+            state.RequireForUpdate<MapBlobReference>();
+
+            _enemyQuery = state.GetEntityQuery(ComponentType.ReadOnly<EnemyTag>());
+        }
+
+        public void OnUpdate(ref SystemState state)
+        {
+            var runState = SystemAPI.GetSingleton<RunState>();
+            var spawnState = SystemAPI.GetSingleton<RunSpawnState>();
+            if (!runState.IsInitialized || !spawnState.InitialEnemiesSpawned)
+            {
+                return;
+            }
+
+            var mapRef = SystemAPI.GetSingleton<MapBlobReference>();
+            if (!mapRef.Value.IsCreated)
+            {
+                return;
+            }
+
+            var map = mapRef.Value.Value;
+            var spawnConfig = SystemAPI.GetSingleton<EnemySpawnConfigData>();
+            var enemyConfig = SystemAPI.GetSingleton<EnemyConfigData>();
+            var difficulty = SystemAPI.HasSingleton<DifficultyState>()
+                ? SystemAPI.GetSingleton<DifficultyState>()
+                : new DifficultyState { EnemyMultiplier = 1f, SpawnRateMultiplier = 1f };
+
+            var timer = SystemAPI.GetSingletonRW<EnemySpawnState>();
+            timer.ValueRW.Timer -= SystemAPI.Time.DeltaTime;
+            if (timer.ValueRO.Timer > 0f)
+            {
+                return;
+            }
+
+            var enemyCount = _enemyQuery.CalculateEntityCount();
+            if (enemyCount >= spawnConfig.MaxCount)
+            {
+                timer.ValueRW.Timer = spawnConfig.SpawnInterval;
+                return;
+            }
+
+            var occupancy = state.EntityManager.GetBuffer<CellOccupant>(SystemAPI.GetSingletonEntity<RunState>());
+            var rngState = SystemAPI.GetSingletonRW<RngState>();
+            var rng = rngState.ValueRW.Rng;
+
+            var attempts = math.max(1, spawnConfig.SpawnAttempts);
+            var spawned = false;
+            for (var attempt = 0; attempt < attempts; attempt++)
+            {
+                var cell = new int2(
+                    rng.NextInt(1, map.Size.x - 1),
+                    rng.NextInt(1, map.Size.y - 1));
+
+                if (!MapUtilities.IsWalkable(map, cell))
+                {
+                    continue;
+                }
+
+                var index = MapUtilities.ToIndex(cell, map.Size);
+                if (occupancy[index].Value != Entity.Null)
+                {
+                    continue;
+                }
+
+                var dx = cell.x - runState.StartCell.x;
+                var dy = cell.y - runState.StartCell.y;
+                if (dx * dx + dy * dy <= runState.SafeRadius * runState.SafeRadius)
+                {
+                    continue;
+                }
+
+                var prefabConfig = SystemAPI.HasSingleton<PrefabConfigData>()
+                    ? SystemAPI.GetSingleton<PrefabConfigData>()
+                    : new PrefabConfigData { Enemy = Entity.Null };
+
+                var enemy = prefabConfig.Enemy != Entity.Null
+                    ? state.EntityManager.Instantiate(prefabConfig.Enemy)
+                    : state.EntityManager.CreateEntity();
+
+                InitializeEnemy(state.EntityManager, enemy, cell, enemyConfig, difficulty.EnemyMultiplier, 0);
+                occupancy[index] = new CellOccupant { Value = enemy };
+                spawned = true;
+                break;
+            }
+
+            rngState.ValueRW.Rng = rng;
+
+            var interval = spawnConfig.SpawnInterval;
+            if (difficulty.SpawnRateMultiplier > 0f)
+            {
+                interval = spawnConfig.SpawnInterval / difficulty.SpawnRateMultiplier;
+            }
+
+            timer.ValueRW.Timer = math.max(0.05f, interval);
+        }
+
+        private static void InitializeEnemy(EntityManager entityManager, Entity entity, int2 cell, EnemyConfigData config, float difficultyMultiplier, int damageBonus)
+        {
+            EnsureComponent(entityManager, entity, new EnemyTag());
+            EnsureComponent(entityManager, entity, new RunTag());
+            EnsureComponent(entityManager, entity, new SpriteKeyComponent { Value = DotsSpriteKey.Enemy });
+            EnsureComponent(entityManager, entity, new GridPosition { Value = cell });
+            EnsureComponent(entityManager, entity, new RenderPosition { Value = new float2(cell.x, cell.y) });
+            EnsureComponent(entityManager, entity, new MoveSpeed { CellsPerSecond = config.MoveSpeed });
+            EnsureComponent(entityManager, entity, new MoveCooldown { Remaining = 0f });
+
+            var maxHp = math.max(1, (int)math.round(config.MaxHealth * difficultyMultiplier));
+            EnsureComponent(entityManager, entity, new Health { Max = maxHp, Current = maxHp });
+            EnsureComponent(entityManager, entity, new Damage { Value = config.BaseDamage + damageBonus });
+            EnsureComponent(entityManager, entity, new AggroRange { Value = config.AggroRange });
+            EnsureComponent(entityManager, entity, new AttackRange { Value = config.AttackRange });
+            EnsureComponent(entityManager, entity, new AttackCooldown { Remaining = 0f, Interval = config.AttackCooldown });
+            EnsureComponent(entityManager, entity, new PathRefreshCooldown { Remaining = 0f, Interval = config.PathRefreshInterval });
+            EnsureComponent(entityManager, entity, new IdleMoveCooldown { Remaining = config.IdleMoveInterval, Interval = config.IdleMoveInterval });
+            EnsureComponent(entityManager, entity, new PathIndex { Value = 0 });
+            EnsureComponent(entityManager, entity, new Target { Value = Entity.Null, HasTarget = false });
+            EnsureComponent(entityManager, entity, new HazardState { Current = HazardType.None, SpikeTickRemaining = 0f });
+
+            if (!entityManager.HasComponent<PathStep>(entity))
+            {
+                entityManager.AddBuffer<PathStep>(entity);
+            }
+            else
+            {
+                entityManager.GetBuffer<PathStep>(entity).Clear();
+            }
+
+            EnsureComponent(entityManager, entity, new MoveIntent { Direction = int2.zero });
+            entityManager.SetComponentEnabled<MoveIntent>(entity, false);
+
+            EnsureComponent(entityManager, entity, new AttackRequest());
+            entityManager.SetComponentEnabled<AttackRequest>(entity, false);
+        }
+
+        private static void EnsureComponent<T>(EntityManager entityManager, Entity entity, T data)
+            where T : unmanaged, IComponentData
+        {
+            if (entityManager.HasComponent<T>(entity))
+            {
+                entityManager.SetComponentData(entity, data);
+            }
+            else
+            {
+                entityManager.AddComponentData(entity, data);
+            }
+        }
+    }
+}
