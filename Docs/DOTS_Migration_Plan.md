@@ -222,60 +222,222 @@ Loot/Progress:
 - `com.unity.burst`, `com.unity.collections`, `com.unity.mathematics` (если не подтянулись)
 - `com.unity.entities.graphics` не устанавливаем (DOTS Graphics не используется)
 
+Дополнительно:
+
+- Убедиться, что `com.unity.entities.graphics` отсутствует в `Packages/manifest.json`.
+- Включить Burst (Project Settings > Jobs > Burst) и не отключать Burst в Editor.
+- Зафиксировать версии пакетов в VCS (manifest + packages-lock).
+
 ### Шаг 2 — Новый каркас DOTS
 
 - Создать директории `Assets/_Project/Dots/...`.
 - Создать asmdef’ы для Runtime/Hybrid/Authoring/Baking.
+  - Runtime: `Unity.Entities`, `Unity.Burst`, `Unity.Collections`, `Unity.Mathematics` (без `UnityEngine`).
+  - Hybrid: `UnityEngine`, `Unity.Entities` (мосты и доступ к `EntityManager`).
+  - Authoring: `UnityEngine`, `Unity.Entities` (Baker-ы).
+  - Baking: `Unity.Entities` (BakingSystem-ы, если нужны).
 - Подготовить authoring-компоненты и bakers (SubScene, entity-prefab-ы, конфиги).
-- Написать базовый `RunBootstrapSystem`, который:
+- В Runtime создать базовые компоненты/синглтоны: `RunState`, `DifficultyState`, `InputState`, `PerkOfferState`, `RngState`, `RunCommand`.
+- Написать базовый `RunBootstrapSystem` (InitializationSystemGroup), который:
   - создает singleton entity
-  - инициализирует `RunState`, `DifficultyState`, `InputState`, `PerkOfferState`, `RngState`
+  - инициализирует все нужные singleton-компоненты
+  - задает `RunState.isInitialized=false`, `runId` и `seed`
+  - выставляет фиксированный timestep `FixedStepSimulationSystemGroup` под текущий `FixedUpdate`
+
+Подробно:
+
+- Структура каталогов:
+  - `Runtime/Components` — только данные, без ссылок на `UnityEngine`.
+  - `Runtime/Systems` — `Initialization/Simulation/Fixed/Presentation`.
+  - `Authoring/Components` — MonoBehaviour для данных дизайна.
+  - `Authoring/Bakers` — `Baker<T>` с конвертацией в DOTS.
+  - `Baking/Systems` — опциональные `BakingSystem` для пост-обработки.
+- asmdef-границы:
+  - Runtime не зависит от `UnityEngine` и не содержит managed-полей.
+  - Hybrid содержит мосты (input/render/ui/debug) и доступ к `EntityManager`.
+  - Authoring/Baking не используются в runtime-логике.
+- Authoring входные данные:
+  - `MapConfigAuthoring` (размеры, seed, safe radius, комнаты/коридоры).
+  - `PlayerConfigAuthoring`, `EnemyConfigAuthoring`, `LootConfigAuthoring`, `PerkConfigAuthoring`.
+  - Baking конвертирует конфиги в `BlobAssetReference` и singleton-поля.
+- SubScene:
+  - В SubScene лежат авторинг-префабы, bakers превращают их в entity-prefab.
+  - Runtime только инстанцирует entity-prefab-ы и читает blob-конфиги.
+- Bootstrap:
+  - Все singleton-компоненты создаются/обновляются один раз.
+  - `RunState.isInitialized` используется как gate для генерации карты и спавна.
+  - `FixedStepSimulationSystemGroup.Timestep` берется из `Time.fixedDeltaTime` (Mono/Bridge) и один раз устанавливается.
 
 ### Шаг 3 — Map + Hazards
 
-- Переписать генерацию карты в DOTS.
-- Записать карту в `MapBlob` через `BlobBuilder` (dispose старого blob на рестарте).
+- Переписать генерацию карты в DOTS (Initialization/Simulation, до начала FixedStep).
+- Использовать `Unity.Mathematics.Random` из `RngState` для детерминизма по seed.
+- Записать карту в `MapBlob` через `BlobBuilder` (base/obstacle/hazard слои + размеры).
 - Применить hazards в DOTS (spike/poison) и сохранить в `MapBlob`.
-- Инициализировать `CellOccupant` буфер по размерам карты (`InternalBufferCapacity(0)`).
-- Поднять `MapRenderRequest`.
+- При рестарте обязательно `Dispose()` старого `BlobAssetReference`.
+- Инициализировать `CellOccupant` буфер по размерам карты (`InternalBufferCapacity(0)`), заполнить `Entity.Null`.
+- Сгенерировать `MapRenderRequest` (tag/enableable) для гибридного рендера.
+
+Подробно:
+
+- Генерация карты повторяет текущий алгоритм 1:1 (комнаты/коридоры/периметр).
+- Конфиг карты берется из baked `MapConfig` (blob или singleton).
+- Safe radius фиксируется до спавна и влияет на:
+  - размещение hazards
+  - начальные спавны врагов/лут
+- `MapBlob` хранит:
+  - размеры, стартовую клетку
+  - base/obstacle/hazard слои
+  - любые дополнительные маркеры (например, safe radius mask)
+- `MapRenderRequest` имеет версию/`runId`, чтобы Tilemap перерисовывался 1 раз.
 
 ### Шаг 4 — Спавн сущностей
 
 - Спавн использует baked entity-prefab-ы и конфиги из singleton/Blob.
-- `SpawnPlayerSystem`: player entity + occupancy.
-- `SpawnInitialEnemiesSystem`: initial count, safe radius, occupancy.
-- `EnemySpawnerSystem`: регулярный спавн, difficulty multiplier.
+- `SpawnPlayerSystem`:
+  - инстанцирует prefab игрока через ECB
+  - выставляет `GridPosition`, `RenderPosition`, `LastMoveDirection`, `MoveCooldown`
+  - отмечает `RunTag` и пишет в occupancy
+- `SpawnInitialEnemiesSystem`:
+  - спавнит стартовый пул врагов за пределами safe radius
+  - гарантирует свободную клетку и запись в occupancy
+- `EnemySpawnerSystem`:
+  - тикает таймер спавна, учитывает `DifficultyState`
+  - выбирает клетку по `MapBlob` + occupancy
+  - инстанцирует entity через ECB
+
+Подробно:
+
+- Все спавны помечаются `RunTag` и получают `RenderPosition = GridPosition`.
+- Для спавна подбирается валидная клетка:
+  - `MapBlob` не obstacle
+  - нет occupancy
+  - не в safe radius
+- `SpawnPlayerSystem` берет стартовую клетку из `RunState`/`MapBlob`.
+- `SpawnInitialEnemiesSystem`:
+  - лимит по количеству из конфига
+  - безопасный отступ от игрока
+- `EnemySpawnerSystem`:
+  - имеет `SpawnCooldown` + `MaxEnemies` из конфига
+  - учитывает `DifficultyState` (частота/лимиты)
+  - спавнит через `EntityCommandBuffer` в конце FixedStep
 
 ### Шаг 5 — Симуляция
 
-- Реализовать все FixedStep системы в нужном порядке.
-- Pathfinding переписать под DOTS:
-  - `NativeArray` и `TempJob`
-  - путь в `DynamicBuffer<PathStep>`
-  - occupancy учитываем (кроме цели)
+- Реализовать все FixedStep системы в нужном порядке (см. раздел 6).
+- `CooldownTickSystem`: уменьшает все кулдауны (move/attack/path/idle/poison).
+- `DifficultyTickSystem`: увеличивает `elapsedTime`, пересчитывает множители спавна/сложности.
+- `EnemySpawnerSystem`: регулярный спавн по таймеру и множителям сложности.
+- `EnemyTargetAcquireSystem`: назначает/сбрасывает `Target` по aggro-радиусу.
+- `EnemyPathfindSystem`:
+  - пересчитывает путь по `PathRefreshCooldown`
+  - использует `NativeArray`/`TempJob`, пишет шаги в `DynamicBuffer<PathStep>`
+  - occupancy учитывает (кроме клетки цели)
+- `EnemyMoveIntentSystem`: ставит `MoveIntent` по пути или idle-бродилке.
+- `MovementResolveSystem`: детерминированно применяет `MoveIntent`, обновляет occupancy и `GridPosition`.
+- `PlayerAttackSystem`: атака по `LastMoveDirection`, кулдаун, урон цели в соседней клетке.
+- `EnemyAttackSystem`: атака по range и кулдауну, урон игроку.
+- `HazardSystem`: применяет входной урон spike + стартует poison.
+- `PoisonTickSystem`: периодический урон и завершение эффекта.
+- `LootPickupSystem`: подбор лута, апдейт `PlayerStats`, удаление лута.
+- `DeathSystem`: обработка смерти, drop, очистка occupancy, destroy через ECB.
+- `LevelProgressSystem`: XP, уровень, предложение/применение перков.
+
+Подробно:
+
+- Все системы — `ISystem` + `[BurstCompile]`, доступ к данным через `SystemAPI`.
+- В `CooldownTickSystem` кулдауны не уходят в минус, используются `math.max`.
+- В `EnemyTargetAcquireSystem`:
+  - target выбирается по grid-дистанции (как в текущей логике)
+  - если target потерян — `Target.hasTarget=false`
+- В `EnemyPathfindSystem`:
+  - пересчет пути только по таймеру
+  - путь в `DynamicBuffer<PathStep>`; если нет пути — idle
+  - `NativeArray`/`TempJob` создаются внутри системы и освобождаются
+- В `MovementResolveSystem`:
+  - сначала собираем intent-ы, затем применяем детерминированно
+  - конфликтные намерения решаем по фиксированному правилу (приоритет игрока/индекс сущности)
+  - после движения синхронизируем occupancy + `LastMoveDirection`
+- В `PlayerAttackSystem`/`EnemyAttackSystem`:
+  - атака только если кулдаун <= 0
+  - цель ищется по соседней клетке/радиусу и occupancy
+  - урон записывается в `Health`
+- В `HazardSystem`:
+  - spike наносит входной урон, poison ставит `PoisonEffect`
+- В `PoisonTickSystem`:
+  - тики по `tickInterval`, после истечения `remaining` — disable/clear
+- В `DeathSystem`:
+  - drop лута по таблице из конфига
+  - cleanup occupancy, destroy через ECB
+- В `LevelProgressSystem`:
+  - XP -> LevelUp, формирование `PerkOfferState` (buffer опций)
 
 ### Шаг 6 — Гибридная визуализация
 
-- Tilemap читает `MapBlob`, создает layers (ground/walls/hazards).
-- Entity views: SpriteRenderer pool, привязка к entity.
+- Tilemap читает `MapBlob`, создает layers (ground/walls/hazards) по `MapRenderRequest`.
+- Entity views: пул `SpriteRenderer` и маппинг `Entity -> GO` (Dictionary).
 - Cleanup: при уничтожении entity — возврат спрайтов в пул и удаление связей.
-- RenderPosition -> Transform с плавной интерполяцией.
-- HUD/Perks: UI на Mono, данные из singletons/компонентов.
+- RenderPosition -> Transform с плавной интерполяцией (`RenderInterpolationSystem`).
+- HUD/Perks: UI на Mono, данные из `PlayerStats`, `RunState`, `PerkOfferState`.
+- Bridges читают `EntityManager` только на main thread (`World.DefaultGameObjectInjectionWorld`).
+
+Подробно:
+
+- `TilemapRenderBridge`:
+  - слушает `MapRenderRequest` и `runId`
+  - пересоздает Tilemap слоями, затем сбрасывает запрос
+- `SpriteRenderBridge`:
+  - пул GO по типу (player/enemy/loot)
+  - маппинг `Entity -> GO` хранится и обновляется каждый кадр
+  - удаление entity => возврат GO в пул
+- `RenderInterpolationSystem`:
+  - интерполирует от предыдущего grid-положения к текущему по кулдауну
+  - пишет `RenderPosition` для мостов
+- `HudBridge`:
+  - читает `PlayerStats`, `DifficultyState`, `RunState`
+- `PerkUiBridge`:
+  - читает `PerkOfferState` и пишет в `RunCommand`
+- `GizmosBridge`:
+  - отображает occupancy/радиусы/пути по debug-флагам
 
 ### Шаг 7 — Restart
 
 В `RestartSystem`:
 
-- инкрементировать `RunState.runId`
-- уничтожить все run-entities по `RunTag`/`RunId`
+- инкрементировать `RunState.runId` и сбросить `isInitialized`
+- уничтожить все run-entities по `RunTag`/`RunId` через ECB
 - dispose старого `MapBlob`, пересоздать map/occupancy/singletons
+- пересоздать/сбросить `RngState`, `DifficultyState`, `PerkOfferState`
 - установить `MapRenderRequest`
-- очистить presentation-пулы/GO по `runId`
+- очистить presentation-пулы/GO по `runId` (bridge-side)
+
+Подробно:
+
+- `RestartSystem` срабатывает по `RunCommand.restart` или input-флагу.
+- Перед рестартом `state.Dependency.Complete()` чтобы не было активных джобов.
+- `RunCommand` и `InputState` сбрасываются, чтобы не получить повторный рестарт.
+- `PerkOfferState` и связанные UI-буферы очищаются.
+- `RunState.isInitialized=false` служит точкой входа для повторной инициализации.
 
 ### Шаг 8 — Проверка паритета
 
 - Проверить все инварианты из раздела 2.
-- Сравнить поведение на нескольких seed.
+- Сравнить поведение на нескольких seed (карта, спавн, позиции, атаки, лут).
+- Зафиксировать тестовый набор seed и чеклист действий игрока.
+- Добавить временные debug-маркеры (лог/гизмосы) для сравнения порядка тиков.
+
+Подробно:
+
+- Тестовый набор seed фиксируется в документе (например, 3-5 ключевых).
+- Для каждого seed — одинаковый сценарий действий (движение/атаки/перки).
+- Сравниваем:
+  - карту и стартовую позицию
+  - траектории врагов и порядок атак
+  - дроп и подбор лута
+  - уровень/XP и перки
+- Временный режим "детерминированной записи":
+  - лог шагов FixedStep (tick index, input, ключевые компоненты)
+  - сравнение со старой реализацией
 
 ## 8) Изменения сцены
 
