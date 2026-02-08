@@ -14,6 +14,10 @@ namespace RuntimeRoguelike.Dots.Authoring
         {
             public override void Bake(PrefabConfigAuthoring authoring)
             {
+                if (authoring._playerPrefab != null) DependsOn(authoring._playerPrefab);
+                if (authoring._enemyPrefab != null) DependsOn(authoring._enemyPrefab);
+                if (authoring._lootPrefab != null) DependsOn(authoring._lootPrefab);
+
                 var entity = GetEntity(TransformUsageFlags.None);
                 AddComponent(entity, new PrefabConfigData
                 {

@@ -13,6 +13,14 @@ namespace RuntimeRoguelike.Dots.Runtime
         public float2 Value;
     }
 
+    /// <summary>
+    /// Previous grid cell for smooth interpolation; set when movement is applied.
+    /// </summary>
+    public struct PreviousGridPosition : IComponentData
+    {
+        public int2 Value;
+    }
+
     public struct MoveIntent : IComponentData, IEnableableComponent
     {
         public int2 Direction;

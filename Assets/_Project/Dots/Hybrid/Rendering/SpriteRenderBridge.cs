@@ -26,8 +26,11 @@ namespace RuntimeRoguelike.Dots.Hybrid
         private readonly HashSet<Entity> _alive = new();
         private readonly List<Entity> _toRemove = new();
 
+        public static SpriteRenderBridge Instance { get; private set; }
+
         private void Awake()
         {
+            Instance = this;
             _world = World.DefaultGameObjectInjectionWorld;
             if (_world == null)
             {
@@ -49,6 +52,42 @@ namespace RuntimeRoguelike.Dots.Hybrid
             if (_poolRoot == null)
             {
                 _poolRoot = transform;
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this)
+                Instance = null;
+        }
+
+        /// <summary>
+        /// Called by PresentationCleanupSystem to release GO/pool for destroyed entities.
+        /// </summary>
+        public void CleanupDestroyedViews()
+        {
+            if (_world is not { IsCreated: true } || _query.IsEmptyIgnoreFilter)
+            {
+                return;
+            }
+
+            using var entities = _query.ToEntityArray(Allocator.Temp);
+            _alive.Clear();
+            for (var i = 0; i < entities.Length; i++)
+                _alive.Add(entities[i]);
+
+            _toRemove.Clear();
+            foreach (var pair in _views)
+            {
+                if (!_alive.Contains(pair.Key))
+                    _toRemove.Add(pair.Key);
+            }
+
+            foreach (var entity in _toRemove)
+            {
+                if (_views.TryGetValue(entity, out var renderer))
+                    ReleaseView(renderer);
+                _views.Remove(entity);
             }
         }
 
@@ -84,25 +123,6 @@ namespace RuntimeRoguelike.Dots.Hybrid
                     (position.x + 0.5f) * cellSize,
                     (position.y + 0.5f) * cellSize,
                     0f);
-            }
-
-            _toRemove.Clear();
-            foreach (var pair in _views)
-            {
-                if (!_alive.Contains(pair.Key))
-                {
-                    _toRemove.Add(pair.Key);
-                }
-            }
-
-            foreach (var entity in _toRemove)
-            {
-                if (_views.TryGetValue(entity, out var renderer))
-                {
-                    ReleaseView(renderer);
-                }
-
-                _views.Remove(entity);
             }
         }
 

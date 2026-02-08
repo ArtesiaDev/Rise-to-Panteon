@@ -1,10 +1,12 @@
 using System.Collections.Generic;
 using Unity.Collections;
+using Unity.Burst;
 using Unity.Entities;
 using Unity.Mathematics;
 
 namespace RuntimeRoguelike.Dots.Runtime
 {
+    [BurstCompile]
     [UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
     [UpdateAfter(typeof(EnemyMoveIntentSystem))]
     public partial struct MovementResolveSystem : ISystem
@@ -95,6 +97,11 @@ namespace RuntimeRoguelike.Dots.Runtime
                 var fromIndex = MapUtilities.ToIndex(request.From, map.Size);
                 occupancy[fromIndex] = new CellOccupant { Value = Entity.Null };
                 occupancy[toIndex] = new CellOccupant { Value = request.Entity };
+
+                if (state.EntityManager.HasComponent<PreviousGridPosition>(request.Entity))
+                    state.EntityManager.SetComponentData(request.Entity, new PreviousGridPosition { Value = request.From });
+                else
+                    state.EntityManager.AddComponentData(request.Entity, new PreviousGridPosition { Value = request.From });
 
                 SystemAPI.SetComponent(request.Entity, new GridPosition { Value = request.To });
 

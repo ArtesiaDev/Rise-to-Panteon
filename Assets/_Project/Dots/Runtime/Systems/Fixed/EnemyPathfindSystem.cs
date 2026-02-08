@@ -1,9 +1,11 @@
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 
 namespace RuntimeRoguelike.Dots.Runtime
 {
+    [BurstCompile]
     [UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
     [UpdateAfter(typeof(EnemyTargetAcquireSystem))]
     public partial struct EnemyPathfindSystem : ISystem

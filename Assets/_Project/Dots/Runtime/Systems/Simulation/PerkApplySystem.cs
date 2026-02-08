@@ -1,8 +1,10 @@
+using Unity.Burst;
 using Unity.Entities;
 using Unity.Mathematics;
 
 namespace RuntimeRoguelike.Dots.Runtime
 {
+    [BurstCompile]
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     public partial struct PerkApplySystem : ISystem
     {

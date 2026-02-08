@@ -1,8 +1,10 @@
+using Unity.Burst;
 using Unity.Entities;
 using Unity.Mathematics;
 
 namespace RuntimeRoguelike.Dots.Runtime
 {
+    [BurstCompile]
     [UpdateInGroup(typeof(InitializationSystemGroup))]
     [UpdateAfter(typeof(SpawnPlayerSystem))]
     public partial struct SpawnInitialEnemiesSystem : ISystem
@@ -86,6 +88,7 @@ namespace RuntimeRoguelike.Dots.Runtime
             EnsureComponent(entityManager, entity, new RunTag());
             EnsureComponent(entityManager, entity, new SpriteKeyComponent { Value = DotsSpriteKey.Enemy });
             EnsureComponent(entityManager, entity, new GridPosition { Value = cell });
+            EnsureComponent(entityManager, entity, new PreviousGridPosition { Value = cell });
             EnsureComponent(entityManager, entity, new RenderPosition { Value = new float2(cell.x, cell.y) });
             EnsureComponent(entityManager, entity, new MoveSpeed { CellsPerSecond = config.MoveSpeed });
             EnsureComponent(entityManager, entity, new MoveCooldown { Remaining = 0f });

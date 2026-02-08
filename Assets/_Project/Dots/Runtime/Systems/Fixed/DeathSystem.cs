@@ -1,8 +1,12 @@
+using Unity.Burst;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
+using Random = Unity.Mathematics.Random;
 
 namespace RuntimeRoguelike.Dots.Runtime
 {
+    [BurstCompile]
     [UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
     [UpdateAfter(typeof(LootPickupSystem))]
     public partial struct DeathSystem : ISystem
@@ -100,6 +104,7 @@ namespace RuntimeRoguelike.Dots.Runtime
             ecb.AddComponent(lootEntity, new RunTag());
             ecb.AddComponent(lootEntity, new SpriteKeyComponent { Value = DotsSpriteKey.Loot });
             ecb.AddComponent(lootEntity, new GridPosition { Value = cell });
+            ecb.AddComponent(lootEntity, new PreviousGridPosition { Value = cell });
             ecb.AddComponent(lootEntity, new RenderPosition { Value = new float2(cell.x, cell.y) });
             ecb.AddComponent(lootEntity, new LootPickup { Type = entry.Type, Amount = entry.Amount });
         }

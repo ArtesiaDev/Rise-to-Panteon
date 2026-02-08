@@ -1,8 +1,10 @@
+using Unity.Burst;
 using Unity.Entities;
 using Unity.Mathematics;
 
 namespace RuntimeRoguelike.Dots.Runtime
 {
+    [BurstCompile]
     [UpdateInGroup(typeof(InitializationSystemGroup))]
     [UpdateAfter(typeof(MapGenerationSystem))]
     public partial struct SpawnPlayerSystem : ISystem
@@ -48,6 +50,7 @@ namespace RuntimeRoguelike.Dots.Runtime
             EnsureComponent(state.EntityManager, entity, new RunTag());
             EnsureComponent(state.EntityManager, entity, new SpriteKeyComponent { Value = DotsSpriteKey.Player });
             EnsureComponent(state.EntityManager, entity, new GridPosition { Value = startCell });
+            EnsureComponent(state.EntityManager, entity, new PreviousGridPosition { Value = startCell });
             EnsureComponent(state.EntityManager, entity, new RenderPosition { Value = new float2(startCell.x, startCell.y) });
             EnsureComponent(state.EntityManager, entity, new MoveSpeed { CellsPerSecond = playerConfig.MoveSpeed });
             EnsureComponent(state.EntityManager, entity, new MoveCooldown { Remaining = 0f });

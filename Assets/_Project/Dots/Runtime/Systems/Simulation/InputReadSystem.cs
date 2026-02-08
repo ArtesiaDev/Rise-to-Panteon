@@ -1,10 +1,12 @@
+using Unity.Burst;
 using Unity.Entities;
 using Unity.Mathematics;
 
 namespace RuntimeRoguelike.Dots.Runtime
 {
+    [BurstCompile]
     [UpdateInGroup(typeof(SimulationSystemGroup))]
-    public partial struct PlayerInputSystem : ISystem
+    public partial struct InputReadSystem : ISystem
     {
         public void OnCreate(ref SystemState state)
         {

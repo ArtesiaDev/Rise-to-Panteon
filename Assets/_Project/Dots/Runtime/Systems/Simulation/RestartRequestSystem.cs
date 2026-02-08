@@ -1,7 +1,9 @@
+using Unity.Burst;
 using Unity.Entities;
 
 namespace RuntimeRoguelike.Dots.Runtime
 {
+    [BurstCompile]
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     public partial struct RestartRequestSystem : ISystem
     {
