@@ -106,11 +106,13 @@ Asmdef:
 Позиции и движение:
 
 - `GridPosition : IComponentData` (int2)
+- `PreviousGridPosition : IComponentData` (int2)
 - `RenderPosition : IComponentData` (float2)
 - `MoveIntent : IComponentData, IEnableableComponent` (int2)
 - `MoveSpeed : IComponentData` (float)
 - `MoveCooldown : IComponentData` (float)
 - `LastMoveDirection : IComponentData` (int2)
+- `SpriteKeyComponent : IComponentData` (DotsSpriteKey enum)
 
 Комбат:
 
@@ -145,12 +147,15 @@ Loot/Progress:
 
 ### 5.2 Singleton-компоненты
 
-- `RunState` (seed, mapSize, startCell, safeRadius, runId, isInitialized)
+- `RunState` (seed, mapSize, startCell, safeRadius, runId, isInitialized, fixedStepApplied)
+- `RunSpawnState` (playerSpawned, initialEnemiesSpawned)
+- `EnemySpawnState` (timer)
 - `DifficultyState` (elapsedTime, enemyMultiplier, spawnRateMultiplier)
 - `PerkOfferState` (isVisible, optionsBuffer)
-- `RngState` (Unity.Mathematics.Random streams)
-- `InputState` (moveDir, attackPressed, restartPressed, toggleGizmos, teleport)
+- `RngState` (Unity.Mathematics.Random, isInitialized)
+- `InputState` (moveDir, attackPressed, restartPressed, toggleGizmos, teleportRequested, teleportTarget)
 - `RunCommand` (restart, perkChosen, chosenPerkIndex)
+- `FixedStepSettings` (timestep, isSet)
 
 ### 5.3 Карта и occupancy
 
@@ -175,7 +180,9 @@ Loot/Progress:
 ### Update (SimulationSystemGroup)
 
 - `InputReadSystem` (main thread) — читает input в `InputState`.
+- `TeleportSystem` — телепорт игрока (DevTool), после InputReadSystem.
 - `RestartRequestSystem` — инициирует reset.
+- `RestartSystem` — выполняет рестарт (очистка entities, сброс состояния).
 - `PerkApplySystem` — применяет выбранный перк.
 
 ### FixedStep (FixedStepSimulationSystemGroup)
@@ -214,7 +221,10 @@ Loot/Progress:
 
 ## 7) Подробные шаги реализации
 
-### Шаг 1 — Подключение DOTS пакетов
+> **Статус**: Шаги 1–7 завершены. Проект полностью мигрирован на DOTS.
+> Шаг 8 (проверка паритета) — в процессе.
+
+### Шаг 1 — Подключение DOTS пакетов [ЗАВЕРШЁН]
 
 Через Package Manager:
 
@@ -228,7 +238,7 @@ Loot/Progress:
 - Включить Burst (Project Settings > Jobs > Burst) и не отключать Burst в Editor.
 - Зафиксировать версии пакетов в VCS (manifest + packages-lock).
 
-### Шаг 2 — Новый каркас DOTS
+### Шаг 2 — Новый каркас DOTS [ЗАВЕРШЁН]
 
 - Создать директории `Assets/_Project/Dots/...`.
 - Создать asmdef’ы для Runtime/Hybrid/Authoring/Baking.
@@ -268,7 +278,7 @@ Loot/Progress:
   - `RunState.isInitialized` используется как gate для генерации карты и спавна.
   - `FixedStepSimulationSystemGroup.Timestep` берется из `Time.fixedDeltaTime` (Mono/Bridge) и один раз устанавливается.
 
-### Шаг 3 — Map + Hazards
+### Шаг 3 — Map + Hazards [ЗАВЕРШЁН]
 
 - Переписать генерацию карты в DOTS (Initialization/Simulation, до начала FixedStep).
 - Использовать `Unity.Mathematics.Random` из `RngState` для детерминизма по seed.
@@ -291,7 +301,7 @@ Loot/Progress:
   - любые дополнительные маркеры (например, safe radius mask)
 - `MapRenderRequest` имеет версию/`runId`, чтобы Tilemap перерисовывался 1 раз.
 
-### Шаг 4 — Спавн сущностей
+### Шаг 4 — Спавн сущностей [ЗАВЕРШЁН]
 
 - Спавн использует baked entity-prefab-ы и конфиги из singleton/Blob.
 - `SpawnPlayerSystem`:
@@ -322,7 +332,7 @@ Loot/Progress:
   - учитывает `DifficultyState` (частота/лимиты)
   - спавнит через `EntityCommandBuffer` в конце FixedStep
 
-### Шаг 5 — Симуляция
+### Шаг 5 — Симуляция [ЗАВЕРШЁН]
 
 - Реализовать все FixedStep системы в нужном порядке (см. раздел 6).
 - `CooldownTickSystem`: уменьшает все кулдауны (move/attack/path/idle/poison).
@@ -372,7 +382,7 @@ Loot/Progress:
 - В `LevelProgressSystem`:
   - XP -> LevelUp, формирование `PerkOfferState` (buffer опций)
 
-### Шаг 6 — Гибридная визуализация
+### Шаг 6 — Гибридная визуализация [ЗАВЕРШЁН]
 
 - Tilemap читает `MapBlob`, создает layers (ground/walls/hazards) по `MapRenderRequest`.
 - Entity views: пул `SpriteRenderer` и маппинг `Entity -> GO` (Dictionary).
@@ -400,7 +410,7 @@ Loot/Progress:
 - `GizmosBridge`:
   - отображает occupancy/радиусы/пути по debug-флагам
 
-### Шаг 7 — Restart
+### Шаг 7 — Restart [ЗАВЕРШЁН]
 
 В `RestartSystem`:
 
@@ -435,10 +445,10 @@ Loot/Progress:
   - траектории врагов и порядок атак
   - дроп и подбор лута
   - уровень/XP и перки
-- Тестовые seed (TODO заполнить после первых прогонов):
-  - Seed A: <placeholder>
-  - Seed B: <placeholder>
-  - Seed C: <placeholder>
+- Тестовые seed:
+  - Seed A: 42
+  - Seed B: 12345
+  - Seed C: 999999
 - Временный режим "детерминированной записи":
   - лог шагов FixedStep (tick index, input, ключевые компоненты)
   - сравнение со старой реализацией
@@ -473,4 +483,14 @@ Loot/Progress:
 - level up + perk offer + apply
 - difficulty рост во времени
 - restart без reload сцены
+
+## 11) Известные отклонения от плана
+
+1. **EnemyPathfindSystem**: A*-массивы аллоцируются как `Allocator.Persistent` в `OnCreate` и переиспользуются, а не создаются как `Temp`/`TempJob` каждый тик. Причина: снижение GC-нагрузки (~48MB/тик при 50 врагах).
+2. **Спавн сущностей**: используется прямой `EntityManager.Instantiate`/`CreateEntity` + `EnsureComponent` вместо `EntityCommandBuffer`, т.к. все спавн-системы работают на main thread и не внутри Entities.ForEach/IJobEntity.
+3. **MapGenerationSystem**: система НЕ помечена `[BurstCompile]` — OnUpdate использует `EntityManager` напрямую (BlobBuilder, AddComponent, SetComponent), что несовместимо с Burst. Все внутренние статические методы (CarveRoom, CarveCorridor, PopulateHazards и т.д.) Burst-совместимы. Система находится в InitializationSystemGroup и выполняется один раз за забег.
+4. **EnemySpawnerSystem/SpawnInitialEnemiesSystem**: общая логика инициализации врага вынесена в `EnemySpawnUtilities.InitializeEnemy()`. `EntityUtilities.EnsureComponent()` — общий хелпер для безопасного add/set.
+5. **ColliderSize** удалён из `EnemyConfigData` и `PlayerConfigData` — в DOTS-реализации не используется (рендеринг через гибридные GO).
+6. **TeleportSystem** добавлен в SimulationSystemGroup (DevTool) — телепорт игрока по клавише T на случайную свободную клетку.
+7. **InputState.Teleport** заменён на `TeleportRequested` (bool) + `TeleportTarget` (int2) для передачи целевой клетки.
 

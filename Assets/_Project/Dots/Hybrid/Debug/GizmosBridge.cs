@@ -45,7 +45,8 @@ namespace RuntimeRoguelike.Dots.Hybrid
                     AttackPressed = input.AttackPressed,
                     RestartPressed = input.RestartPressed,
                     ToggleGizmos = false,
-                    Teleport = input.Teleport
+                    TeleportRequested = input.TeleportRequested,
+                    TeleportTarget = input.TeleportTarget
                 });
             }
         }

@@ -1,5 +1,4 @@
 using Unity.Entities;
-using Unity.Mathematics;
 
 namespace RuntimeRoguelike.Dots.Runtime
 {
@@ -13,6 +12,5 @@ namespace RuntimeRoguelike.Dots.Runtime
         public float AttackCooldown;
         public float PathRefreshInterval;
         public float IdleMoveInterval;
-        public float2 ColliderSize;
     }
 }

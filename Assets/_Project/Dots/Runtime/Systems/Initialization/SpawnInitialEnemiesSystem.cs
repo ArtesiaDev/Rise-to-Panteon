@@ -17,6 +17,8 @@ namespace RuntimeRoguelike.Dots.Runtime
             state.RequireForUpdate<EnemyConfigData>();
             state.RequireForUpdate<EnemySpawnConfigData>();
             state.RequireForUpdate<MapBlobReference>();
+            state.RequireForUpdate<PrefabConfigData>();
+            state.RequireForUpdate<RngState>();
         }
 
         public void OnUpdate(ref SystemState state)
@@ -41,10 +43,15 @@ namespace RuntimeRoguelike.Dots.Runtime
                 ? SystemAPI.GetSingleton<DifficultyState>()
                 : new DifficultyState { EnemyMultiplier = 1f };
 
-            var attempts = math.max(1, spawnConfig.SpawnAttempts);
-            var rng = Random.CreateFromIndex(runState.Seed + 1337u);
+            var prefabConfig = SystemAPI.GetSingleton<PrefabConfigData>();
 
+            // Используем общий RngState вместо отдельного RNG
+            var rngState = SystemAPI.GetSingletonRW<RngState>();
+            var rng = rngState.ValueRW.Rng;
+
+            var attempts = math.max(1, spawnConfig.SpawnAttempts);
             var occupancy = state.EntityManager.GetBuffer<CellOccupant>(SystemAPI.GetSingletonEntity<RunState>());
+
             for (var i = 0; i < spawnConfig.InitialCount; i++)
             {
                 for (var attempt = 0; attempt < attempts; attempt++)
@@ -71,69 +78,19 @@ namespace RuntimeRoguelike.Dots.Runtime
                         continue;
                     }
 
-                    var enemy = SpawnEnemy(state.EntityManager, cell, enemyConfig, difficulty.EnemyMultiplier, 0);
+                    var enemy = prefabConfig.Enemy != Entity.Null
+                        ? state.EntityManager.Instantiate(prefabConfig.Enemy)
+                        : state.EntityManager.CreateEntity();
+
+                    EnemySpawnUtilities.InitializeEnemy(state.EntityManager, enemy, cell, enemyConfig, difficulty.EnemyMultiplier, 0);
                     occupancy[index] = new CellOccupant { Value = enemy };
                     break;
                 }
             }
 
+            // Сохраняем состояние RNG обратно
+            rngState.ValueRW.Rng = rng;
             spawnState.ValueRW.InitialEnemiesSpawned = true;
-        }
-
-        private static Entity SpawnEnemy(EntityManager entityManager, int2 cell, EnemyConfigData config, float difficultyMultiplier, int damageBonus)
-        {
-            var entity = entityManager.CreateEntity();
-
-            EnsureComponent(entityManager, entity, new EnemyTag());
-            EnsureComponent(entityManager, entity, new RunTag());
-            EnsureComponent(entityManager, entity, new SpriteKeyComponent { Value = DotsSpriteKey.Enemy });
-            EnsureComponent(entityManager, entity, new GridPosition { Value = cell });
-            EnsureComponent(entityManager, entity, new PreviousGridPosition { Value = cell });
-            EnsureComponent(entityManager, entity, new RenderPosition { Value = new float2(cell.x, cell.y) });
-            EnsureComponent(entityManager, entity, new MoveSpeed { CellsPerSecond = config.MoveSpeed });
-            EnsureComponent(entityManager, entity, new MoveCooldown { Remaining = 0f });
-
-            var maxHp = math.max(1, (int)math.round(config.MaxHealth * difficultyMultiplier));
-            EnsureComponent(entityManager, entity, new Health { Max = maxHp, Current = maxHp });
-            EnsureComponent(entityManager, entity, new Damage { Value = config.BaseDamage + damageBonus });
-            EnsureComponent(entityManager, entity, new AggroRange { Value = config.AggroRange });
-            EnsureComponent(entityManager, entity, new AttackRange { Value = config.AttackRange });
-            EnsureComponent(entityManager, entity, new AttackCooldown { Remaining = 0f, Interval = config.AttackCooldown });
-            EnsureComponent(entityManager, entity, new PathRefreshCooldown { Remaining = 0f, Interval = config.PathRefreshInterval });
-            EnsureComponent(entityManager, entity, new IdleMoveCooldown { Remaining = config.IdleMoveInterval, Interval = config.IdleMoveInterval });
-            EnsureComponent(entityManager, entity, new PathIndex { Value = 0 });
-            EnsureComponent(entityManager, entity, new Target { Value = Entity.Null, HasTarget = false });
-            EnsureComponent(entityManager, entity, new HazardState { Current = HazardType.None, SpikeTickRemaining = 0f });
-
-            if (!entityManager.HasComponent<PathStep>(entity))
-            {
-                entityManager.AddBuffer<PathStep>(entity);
-            }
-            else
-            {
-                entityManager.GetBuffer<PathStep>(entity).Clear();
-            }
-
-            EnsureComponent(entityManager, entity, new MoveIntent { Direction = int2.zero });
-            entityManager.SetComponentEnabled<MoveIntent>(entity, false);
-
-            EnsureComponent(entityManager, entity, new AttackRequest());
-            entityManager.SetComponentEnabled<AttackRequest>(entity, false);
-
-            return entity;
-        }
-
-        private static void EnsureComponent<T>(EntityManager entityManager, Entity entity, T data)
-            where T : unmanaged, IComponentData
-        {
-            if (entityManager.HasComponent<T>(entity))
-            {
-                entityManager.SetComponentData(entity, data);
-            }
-            else
-            {
-                entityManager.AddComponentData(entity, data);
-            }
         }
     }
 }

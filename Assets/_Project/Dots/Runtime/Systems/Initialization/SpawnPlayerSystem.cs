@@ -46,21 +46,22 @@ namespace RuntimeRoguelike.Dots.Runtime
                 ? state.EntityManager.Instantiate(prefabConfig.Player)
                 : state.EntityManager.CreateEntity();
 
-            EnsureComponent(state.EntityManager, entity, new PlayerTag());
-            EnsureComponent(state.EntityManager, entity, new RunTag());
-            EnsureComponent(state.EntityManager, entity, new SpriteKeyComponent { Value = DotsSpriteKey.Player });
-            EnsureComponent(state.EntityManager, entity, new GridPosition { Value = startCell });
-            EnsureComponent(state.EntityManager, entity, new PreviousGridPosition { Value = startCell });
-            EnsureComponent(state.EntityManager, entity, new RenderPosition { Value = new float2(startCell.x, startCell.y) });
-            EnsureComponent(state.EntityManager, entity, new MoveSpeed { CellsPerSecond = playerConfig.MoveSpeed });
-            EnsureComponent(state.EntityManager, entity, new MoveCooldown { Remaining = 0f });
-            EnsureComponent(state.EntityManager, entity, new LastMoveDirection { Value = new int2(1, 0) });
-            EnsureComponent(state.EntityManager, entity, new Health { Current = playerConfig.MaxHealth, Max = playerConfig.MaxHealth });
-            EnsureComponent(state.EntityManager, entity, new Damage { Value = attackConfig.BaseDamage });
-            EnsureComponent(state.EntityManager, entity, new AttackCooldown { Remaining = 0f, Interval = attackConfig.AttackCooldown });
-            EnsureComponent(state.EntityManager, entity, new AttackRange { Value = attackConfig.AttackRange });
-            EnsureComponent(state.EntityManager, entity, new HazardState { Current = HazardType.None, SpikeTickRemaining = 0f });
-            EnsureComponent(state.EntityManager, entity, new PlayerStats
+            var em = state.EntityManager;
+            EntityUtilities.EnsureComponent(em, entity, new PlayerTag());
+            EntityUtilities.EnsureComponent(em, entity, new RunTag());
+            EntityUtilities.EnsureComponent(em, entity, new SpriteKeyComponent { Value = DotsSpriteKey.Player });
+            EntityUtilities.EnsureComponent(em, entity, new GridPosition { Value = startCell });
+            EntityUtilities.EnsureComponent(em, entity, new PreviousGridPosition { Value = startCell });
+            EntityUtilities.EnsureComponent(em, entity, new RenderPosition { Value = new float2(startCell.x, startCell.y) });
+            EntityUtilities.EnsureComponent(em, entity, new MoveSpeed { CellsPerSecond = playerConfig.MoveSpeed });
+            EntityUtilities.EnsureComponent(em, entity, new MoveCooldown { Remaining = 0f });
+            EntityUtilities.EnsureComponent(em, entity, new LastMoveDirection { Value = new int2(1, 0) });
+            EntityUtilities.EnsureComponent(em, entity, new Health { Current = playerConfig.MaxHealth, Max = playerConfig.MaxHealth });
+            EntityUtilities.EnsureComponent(em, entity, new Damage { Value = attackConfig.BaseDamage });
+            EntityUtilities.EnsureComponent(em, entity, new AttackCooldown { Remaining = 0f, Interval = attackConfig.AttackCooldown });
+            EntityUtilities.EnsureComponent(em, entity, new AttackRange { Value = attackConfig.AttackRange });
+            EntityUtilities.EnsureComponent(em, entity, new HazardState { Current = HazardType.None, SpikeTickRemaining = 0f });
+            EntityUtilities.EnsureComponent(em, entity, new PlayerStats
             {
                 Level = 1,
                 XpToNext = 0,
@@ -70,30 +71,17 @@ namespace RuntimeRoguelike.Dots.Runtime
                 Xp = 0
             });
 
-            EnsureComponent(state.EntityManager, entity, new MoveIntent { Direction = int2.zero });
-            state.EntityManager.SetComponentEnabled<MoveIntent>(entity, false);
+            EntityUtilities.EnsureComponent(em, entity, new MoveIntent { Direction = int2.zero });
+            em.SetComponentEnabled<MoveIntent>(entity, false);
 
-            EnsureComponent(state.EntityManager, entity, new AttackRequest());
-            state.EntityManager.SetComponentEnabled<AttackRequest>(entity, false);
+            EntityUtilities.EnsureComponent(em, entity, new AttackRequest());
+            em.SetComponentEnabled<AttackRequest>(entity, false);
 
-            var occupancy = state.EntityManager.GetBuffer<CellOccupant>(SystemAPI.GetSingletonEntity<RunState>());
+            var occupancy = em.GetBuffer<CellOccupant>(SystemAPI.GetSingletonEntity<RunState>());
             var index = MapUtilities.ToIndex(startCell, mapRef.Value.Value.Size);
             occupancy[index] = new CellOccupant { Value = entity };
 
             spawnState.ValueRW.PlayerSpawned = true;
-        }
-
-        private static void EnsureComponent<T>(EntityManager entityManager, Entity entity, T data)
-            where T : unmanaged, IComponentData
-        {
-            if (entityManager.HasComponent<T>(entity))
-            {
-                entityManager.SetComponentData(entity, data);
-            }
-            else
-            {
-                entityManager.AddComponentData(entity, data);
-            }
         }
     }
 }

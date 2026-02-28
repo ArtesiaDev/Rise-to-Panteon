@@ -2,13 +2,23 @@
 
 DevTools можно включать/выключать настройкой.
 
-Доступные действия (дефолтные хоткеи):
-- **F5** — restart забега
-- **G** — переключить отладочные gizmos
-- **T** — телепорт игрока в клетку под курсором (только если клетка
-  проходимая и не занята).
+## Реализация (DOTS)
 
-Отладочный вывод на экране:
+- **InputBridge** (MonoBehaviour) — читает ввод с клавиатуры и записывает в `InputState` singleton
+- **InputReadSystem** (SimulationSystemGroup) — обрабатывает движение и атаку
+- **TeleportSystem** (SimulationSystemGroup, после InputReadSystem) — обрабатывает телепорт
+- **RestartRequestSystem** (SimulationSystemGroup) — обрабатывает рестарт
+
+## Доступные действия (дефолтные хоткеи):
+
+- **R** — restart забега (очистка всех run-entities, перегенерация карты)
+- **G** — переключить отладочные gizmos
+- **T** — телепорт игрока на случайную свободную клетку (floor + нет occupancy).
+  InputBridge ищет свободную клетку (до 100 попыток), записывает `TeleportRequested = true`
+  и `TeleportTarget` в `InputState`. `TeleportSystem` обновляет occupancy,
+  `GridPosition`, `PreviousGridPosition` и `RenderPosition` игрока.
+
+## Отладочный вывод на экране:
 - seed
 - координаты клетки игрока
 - текущее количество врагов

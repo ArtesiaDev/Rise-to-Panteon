@@ -1,5 +1,4 @@
 using Unity.Entities;
-using Unity.Mathematics;
 
 namespace RuntimeRoguelike.Dots.Runtime
 {
@@ -7,6 +6,5 @@ namespace RuntimeRoguelike.Dots.Runtime
     {
         public int MaxHealth;
         public float MoveSpeed;
-        public float2 ColliderSize;
     }
 }

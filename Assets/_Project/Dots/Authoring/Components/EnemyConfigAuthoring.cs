@@ -1,6 +1,5 @@
 using RuntimeRoguelike.Dots.Runtime;
 using Unity.Entities;
-using Unity.Mathematics;
 using UnityEngine;
 
 namespace RuntimeRoguelike.Dots.Authoring
@@ -15,7 +14,6 @@ namespace RuntimeRoguelike.Dots.Authoring
         [SerializeField] private float _attackCooldown = 1.2f;
         [SerializeField] private float _pathRefreshInterval = 0.6f;
         [SerializeField] private float _idleMoveInterval = 2.5f;
-        [SerializeField] private Vector2 _colliderSize = new(0.8f, 0.8f);
 
         private class Baker : Baker<EnemyConfigAuthoring>
         {
@@ -31,8 +29,7 @@ namespace RuntimeRoguelike.Dots.Authoring
                     AttackRange = authoring._attackRange,
                     AttackCooldown = authoring._attackCooldown,
                     PathRefreshInterval = authoring._pathRefreshInterval,
-                    IdleMoveInterval = authoring._idleMoveInterval,
-                    ColliderSize = new float2(authoring._colliderSize.x, authoring._colliderSize.y)
+                    IdleMoveInterval = authoring._idleMoveInterval
                 });
             }
         }

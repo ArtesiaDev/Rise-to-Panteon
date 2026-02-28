@@ -1,7 +1,9 @@
 using RuntimeRoguelike.Dots.Runtime;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
+using Random = Unity.Mathematics.Random;
 
 namespace RuntimeRoguelike.Dots.Hybrid
 {
@@ -10,6 +12,7 @@ namespace RuntimeRoguelike.Dots.Hybrid
         [SerializeField] private KeyCode _attackKey = KeyCode.Space;
         [SerializeField] private KeyCode _restartKey = KeyCode.R;
         [SerializeField] private KeyCode _toggleGizmosKey = KeyCode.G;
+        [SerializeField] private KeyCode _teleportKey = KeyCode.T;
 
         private EntityManager _entityManager;
         private EntityQuery _inputQuery;
@@ -54,6 +57,16 @@ namespace RuntimeRoguelike.Dots.Hybrid
             var attackPressed = Input.GetKeyDown(_attackKey);
             var restartPressed = Input.GetKeyDown(_restartKey);
             var toggleGizmos = Input.GetKeyDown(_toggleGizmosKey);
+            var teleportPressed = Input.GetKeyDown(_teleportKey);
+
+            // Для телепорта ищем случайную свободную клетку
+            var teleportRequested = false;
+            var teleportTarget = int2.zero;
+            if (teleportPressed)
+            {
+                teleportTarget = FindRandomFreeCell();
+                teleportRequested = teleportTarget.x >= 0;
+            }
 
             if (_inputQuery.IsEmpty)
             {
@@ -63,7 +76,9 @@ namespace RuntimeRoguelike.Dots.Hybrid
                     MoveDir = move,
                     AttackPressed = attackPressed,
                     RestartPressed = restartPressed,
-                    ToggleGizmos = toggleGizmos
+                    ToggleGizmos = toggleGizmos,
+                    TeleportRequested = teleportRequested,
+                    TeleportTarget = teleportTarget
                 });
                 return;
             }
@@ -74,7 +89,55 @@ namespace RuntimeRoguelike.Dots.Hybrid
             input.AttackPressed |= attackPressed;
             input.RestartPressed |= restartPressed;
             input.ToggleGizmos |= toggleGizmos;
+            if (teleportRequested)
+            {
+                input.TeleportRequested = true;
+                input.TeleportTarget = teleportTarget;
+            }
             _entityManager.SetComponentData(inputEntity, input);
+        }
+
+        /// <summary>
+        /// Ищет случайную свободную (floor + нет occupancy) клетку на карте.
+        /// Возвращает (-1,-1) если не удалось найти.
+        /// </summary>
+        private int2 FindRandomFreeCell()
+        {
+            var runQuery = _entityManager.CreateEntityQuery(ComponentType.ReadOnly<RunState>());
+            if (runQuery.IsEmpty)
+                return new int2(-1, -1);
+
+            var runEntity = runQuery.GetSingletonEntity();
+            if (!_entityManager.HasComponent<MapBlobReference>(runEntity))
+                return new int2(-1, -1);
+
+            var mapRef = _entityManager.GetComponentData<MapBlobReference>(runEntity);
+            if (!mapRef.Value.IsCreated)
+                return new int2(-1, -1);
+
+            ref var map = ref mapRef.Value.Value;
+            var occupancy = _entityManager.GetBuffer<CellOccupant>(runEntity);
+
+            var rng = Random.CreateFromIndex((uint)(Time.frameCount + 7919));
+            const int maxAttempts = 100;
+
+            for (var i = 0; i < maxAttempts; i++)
+            {
+                var cell = new int2(
+                    rng.NextInt(1, map.Size.x - 1),
+                    rng.NextInt(1, map.Size.y - 1));
+
+                if (!MapUtilities.IsWalkable(ref map, cell))
+                    continue;
+
+                var index = MapUtilities.ToIndex(cell, map.Size);
+                if (occupancy[index].Value != Entity.Null)
+                    continue;
+
+                return cell;
+            }
+
+            return new int2(-1, -1);
         }
     }
 }

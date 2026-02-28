@@ -9,6 +9,11 @@ namespace RuntimeRoguelike.Dots.Runtime
     [UpdateAfter(typeof(PlayerAttackSystem))]
     public partial struct EnemyAttackSystem : ISystem
     {
+        public void OnCreate(ref SystemState state)
+        {
+            state.RequireForUpdate<RunState>();
+        }
+
         public void OnUpdate(ref SystemState state)
         {
             foreach (var (position, target, cooldown, range, damage) 

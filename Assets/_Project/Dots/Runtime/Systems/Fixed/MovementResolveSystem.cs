@@ -98,10 +98,8 @@ namespace RuntimeRoguelike.Dots.Runtime
                 occupancy[fromIndex] = new CellOccupant { Value = Entity.Null };
                 occupancy[toIndex] = new CellOccupant { Value = request.Entity };
 
-                if (state.EntityManager.HasComponent<PreviousGridPosition>(request.Entity))
-                    state.EntityManager.SetComponentData(request.Entity, new PreviousGridPosition { Value = request.From });
-                else
-                    state.EntityManager.AddComponentData(request.Entity, new PreviousGridPosition { Value = request.From });
+                // PreviousGridPosition уже добавляется при спавне всех entity
+                SystemAPI.SetComponent(request.Entity, new PreviousGridPosition { Value = request.From });
 
                 SystemAPI.SetComponent(request.Entity, new GridPosition { Value = request.To });
 

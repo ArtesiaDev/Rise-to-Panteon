@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -7,6 +5,8 @@ using Random = Unity.Mathematics.Random;
 
 namespace RuntimeRoguelike.Dots.Runtime
 {
+    // [BurstCompile] невозможен — система использует EntityManager напрямую (BlobBuilder, AddComponent).
+    // Внутренние статические методы (CarveRoom, CarveCorridor и т.д.) Burst-совместимы.
     [UpdateInGroup(typeof(InitializationSystemGroup))]
     public partial struct MapGenerationSystem : ISystem
     {
@@ -51,7 +51,7 @@ namespace RuntimeRoguelike.Dots.Runtime
             if (!rngState.ValueRO.IsInitialized)
             {
                 uint seed = runConfig.RandomizeSeedOnStart
-                    ? (uint)(DateTime.UtcNow.Ticks & 0xFFFFFFFF)
+                    ? Random.CreateFromIndex((uint)state.WorldUnmanaged.Time.ElapsedTime * 1000u + 1u).NextUInt(1u, uint.MaxValue)
                     : (uint)runConfig.InitialSeed;
                 if (seed == 0)
                 {
@@ -68,6 +68,7 @@ namespace RuntimeRoguelike.Dots.Runtime
             var baseLayer = new NativeArray<MapCellType>(cellCount, Allocator.Temp);
             var obstacleLayer = new NativeArray<ObstacleType>(cellCount, Allocator.Temp);
             var hazardLayer = new NativeArray<HazardType>(cellCount, Allocator.Temp);
+            var rooms = new NativeList<RoomRect>(mapConfig.RoomAttempts, Allocator.Temp);
 
             try
             {
@@ -77,130 +78,129 @@ namespace RuntimeRoguelike.Dots.Runtime
                     obstacleLayer[i] = ObstacleType.None;
                     hazardLayer[i] = HazardType.None;
                 }
+
+                for (var i = 0; i < mapConfig.RoomAttempts; i++)
+                {
+                    var roomWidth = rng.NextInt(mapConfig.MinRoomSize, mapConfig.MaxRoomSize + 1);
+                    var roomHeight = rng.NextInt(mapConfig.MinRoomSize, mapConfig.MaxRoomSize + 1);
+
+                    if (mapSize.x - roomWidth - 1 <= 1 || mapSize.y - roomHeight - 1 <= 1)
+                    {
+                        continue;
+                    }
+
+                    var roomX = rng.NextInt(1, mapSize.x - roomWidth - 1);
+                    var roomY = rng.NextInt(1, mapSize.y - roomHeight - 1);
+                    var room = new RoomRect { X = roomX, Y = roomY, Width = roomWidth, Height = roomHeight };
+
+                    if (IsOverlapping(room, ref rooms))
+                    {
+                        continue;
+                    }
+
+                    CarveRoom(baseLayer, mapSize, room);
+
+                    if (rooms.Length > 0)
+                    {
+                        var previousCenter = GetCenter(rooms[rooms.Length - 1]);
+                        var currentCenter = GetCenter(room);
+                        CarveCorridor(baseLayer, mapSize, previousCenter, currentCenter, ref rng);
+                    }
+
+                    rooms.Add(room);
+                }
+
+                if (rooms.Length == 0)
+                {
+                    var fallback = mapConfig.FallbackRoomSize;
+                    var fallbackRoom = new RoomRect
+                    {
+                        X = mapSize.x / 2 - fallback.x / 2,
+                        Y = mapSize.y / 2 - fallback.y / 2,
+                        Width = fallback.x,
+                        Height = fallback.y
+                    };
+                    CarveRoom(baseLayer, mapSize, fallbackRoom);
+                    rooms.Add(fallbackRoom);
+                }
+
+                var startCell = GetCenter(rooms[0]);
+                EnsureSafeRadius(baseLayer, obstacleLayer, hazardLayer, mapSize, startCell, mapConfig.SafeRadius);
+                SetBorderWalls(baseLayer, mapSize);
+                PopulateHazards(hazardLayer, baseLayer, obstacleLayer, mapSize, startCell, mapConfig.SafeRadius, hazardConfig, runState.ValueRO.Seed);
+
+                rngState.ValueRW.Rng = rng;
+
+                var mapEntity = SystemAPI.GetSingletonEntity<RunState>();
+                if (state.EntityManager.HasComponent<MapBlobReference>(mapEntity))
+                {
+                    var existing = state.EntityManager.GetComponentData<MapBlobReference>(mapEntity);
+                    if (existing.Value.IsCreated)
+                    {
+                        existing.Value.Dispose();
+                    }
+                }
+
+                using var builder = new BlobBuilder(Allocator.Temp);
+                ref var root = ref builder.ConstructRoot<MapBlob>();
+                root.Size = mapSize;
+                root.StartCell = startCell;
+
+                var baseBlob = builder.Allocate(ref root.BaseLayer, cellCount);
+                var obstacleBlob = builder.Allocate(ref root.ObstacleLayer, cellCount);
+                var hazardBlob = builder.Allocate(ref root.HazardLayer, cellCount);
+
+                for (var i = 0; i < cellCount; i++)
+                {
+                    baseBlob[i] = baseLayer[i];
+                    obstacleBlob[i] = obstacleLayer[i];
+                    hazardBlob[i] = hazardLayer[i];
+                }
+
+                var mapBlobRef = builder.CreateBlobAssetReference<MapBlob>(Allocator.Persistent);
+
+                if (state.EntityManager.HasComponent<MapBlobReference>(mapEntity))
+                {
+                    state.EntityManager.SetComponentData(mapEntity, new MapBlobReference { Value = mapBlobRef });
+                }
+                else
+                {
+                    state.EntityManager.AddComponentData(mapEntity, new MapBlobReference { Value = mapBlobRef });
+                }
+
+                if (!state.EntityManager.HasComponent<MapRenderRequest>(mapEntity))
+                {
+                    state.EntityManager.AddComponentData(mapEntity, new MapRenderRequest { RunId = runState.ValueRO.RunId });
+                }
+                else
+                {
+                    state.EntityManager.SetComponentData(mapEntity, new MapRenderRequest { RunId = runState.ValueRO.RunId });
+                }
+                state.EntityManager.SetComponentEnabled<MapRenderRequest>(mapEntity, true);
+
+                var occupancy = state.EntityManager.HasComponent<CellOccupant>(mapEntity)
+                    ? state.EntityManager.GetBuffer<CellOccupant>(mapEntity)
+                    : state.EntityManager.AddBuffer<CellOccupant>(mapEntity);
+
+                occupancy.Clear();
+                occupancy.ResizeUninitialized(cellCount);
+                for (var i = 0; i < cellCount; i++)
+                {
+                    occupancy[i] = new CellOccupant { Value = Entity.Null };
+                }
+
+                runState.ValueRW.MapSize = mapSize;
+                runState.ValueRW.StartCell = startCell;
+                runState.ValueRW.SafeRadius = mapConfig.SafeRadius;
+                runState.ValueRW.IsInitialized = true;
             }
             finally
             {
                 baseLayer.Dispose();
                 obstacleLayer.Dispose();
                 hazardLayer.Dispose();
+                rooms.Dispose();
             }
-
-            var rooms = new List<RoomRect>(mapConfig.RoomAttempts);
-
-            for (var i = 0; i < mapConfig.RoomAttempts; i++)
-            {
-                var roomWidth = rng.NextInt(mapConfig.MinRoomSize, mapConfig.MaxRoomSize + 1);
-                var roomHeight = rng.NextInt(mapConfig.MinRoomSize, mapConfig.MaxRoomSize + 1);
-
-                if (mapSize.x - roomWidth - 1 <= 1 || mapSize.y - roomHeight - 1 <= 1)
-                {
-                    continue;
-                }
-
-                var roomX = rng.NextInt(1, mapSize.x - roomWidth - 1);
-                var roomY = rng.NextInt(1, mapSize.y - roomHeight - 1);
-                var room = new RoomRect { X = roomX, Y = roomY, Width = roomWidth, Height = roomHeight };
-
-                if (IsOverlapping(room, rooms))
-                {
-                    continue;
-                }
-
-                CarveRoom(baseLayer, mapSize, room);
-
-                if (rooms.Count > 0)
-                {
-                    var previousCenter = GetCenter(rooms[^1]);
-                    var currentCenter = GetCenter(room);
-                    CarveCorridor(baseLayer, mapSize, previousCenter, currentCenter, ref rng);
-                }
-
-                rooms.Add(room);
-            }
-
-            if (rooms.Count == 0)
-            {
-                var fallback = mapConfig.FallbackRoomSize;
-                var fallbackRoom = new RoomRect
-                {
-                    X = mapSize.x / 2 - fallback.x / 2,
-                    Y = mapSize.y / 2 - fallback.y / 2,
-                    Width = fallback.x,
-                    Height = fallback.y
-                };
-                CarveRoom(baseLayer, mapSize, fallbackRoom);
-                rooms.Add(fallbackRoom);
-            }
-
-            var startCell = GetCenter(rooms[0]);
-            EnsureSafeRadius(baseLayer, obstacleLayer, hazardLayer, mapSize, startCell, mapConfig.SafeRadius);
-            SetBorderWalls(baseLayer, mapSize);
-            PopulateHazards(hazardLayer, baseLayer, obstacleLayer, mapSize, startCell, mapConfig.SafeRadius, hazardConfig, runState.ValueRO.Seed);
-
-            rngState.ValueRW.Rng = rng;
-
-            var mapEntity = SystemAPI.GetSingletonEntity<RunState>();
-            if (state.EntityManager.HasComponent<MapBlobReference>(mapEntity))
-            {
-                var existing = state.EntityManager.GetComponentData<MapBlobReference>(mapEntity);
-                if (existing.Value.IsCreated)
-                {
-                    existing.Value.Dispose();
-                }
-            }
-
-            using var builder = new BlobBuilder(Allocator.Temp);
-            ref var root = ref builder.ConstructRoot<MapBlob>();
-            root.Size = mapSize;
-            root.StartCell = startCell;
-
-            var baseBlob = builder.Allocate(ref root.BaseLayer, cellCount);
-            var obstacleBlob = builder.Allocate(ref root.ObstacleLayer, cellCount);
-            var hazardBlob = builder.Allocate(ref root.HazardLayer, cellCount);
-
-            for (var i = 0; i < cellCount; i++)
-            {
-                baseBlob[i] = baseLayer[i];
-                obstacleBlob[i] = obstacleLayer[i];
-                hazardBlob[i] = hazardLayer[i];
-            }
-
-            var mapBlobRef = builder.CreateBlobAssetReference<MapBlob>(Allocator.Persistent);
-
-            if (state.EntityManager.HasComponent<MapBlobReference>(mapEntity))
-            {
-                state.EntityManager.SetComponentData(mapEntity, new MapBlobReference { Value = mapBlobRef });
-            }
-            else
-            {
-                state.EntityManager.AddComponentData(mapEntity, new MapBlobReference { Value = mapBlobRef });
-            }
-
-            if (!state.EntityManager.HasComponent<MapRenderRequest>(mapEntity))
-            {
-                state.EntityManager.AddComponentData(mapEntity, new MapRenderRequest { RunId = runState.ValueRO.RunId });
-            }
-            else
-            {
-                state.EntityManager.SetComponentData(mapEntity, new MapRenderRequest { RunId = runState.ValueRO.RunId });
-            }
-            state.EntityManager.SetComponentEnabled<MapRenderRequest>(mapEntity, true);
-
-            var occupancy = state.EntityManager.HasComponent<CellOccupant>(mapEntity)
-                ? state.EntityManager.GetBuffer<CellOccupant>(mapEntity)
-                : state.EntityManager.AddBuffer<CellOccupant>(mapEntity);
-
-            occupancy.Clear();
-            occupancy.ResizeUninitialized(cellCount);
-            for (var i = 0; i < cellCount; i++)
-            {
-                occupancy[i] = new CellOccupant { Value = Entity.Null };
-            }
-
-            runState.ValueRW.MapSize = mapSize;
-            runState.ValueRW.StartCell = startCell;
-            runState.ValueRW.SafeRadius = mapConfig.SafeRadius;
-            runState.ValueRW.IsInitialized = true;
         }
 
         private static void CarveRoom(NativeArray<MapCellType> baseLayer, int2 size, RoomRect room)
@@ -254,7 +254,7 @@ namespace RuntimeRoguelike.Dots.Runtime
             return new int2(room.X + room.Width / 2, room.Y + room.Height / 2);
         }
 
-        private static bool IsOverlapping(RoomRect room, List<RoomRect> rooms)
+        private static bool IsOverlapping(RoomRect room, ref NativeList<RoomRect> rooms)
         {
             var expanded = new RoomRect
             {
@@ -264,9 +264,9 @@ namespace RuntimeRoguelike.Dots.Runtime
                 Height = room.Height + 2
             };
 
-            foreach (var rect in rooms)
+            for (var i = 0; i < rooms.Length; i++)
             {
-                if (Overlaps(expanded, rect))
+                if (Overlaps(expanded, rooms[i]))
                 {
                     return true;
                 }

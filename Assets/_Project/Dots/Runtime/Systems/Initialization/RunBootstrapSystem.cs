@@ -8,7 +8,8 @@ namespace RuntimeRoguelike.Dots.Runtime
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<FixedStepSettings>();
-            if (!SystemAPI.HasSingleton<RunState>())
+            // SystemAPI нельзя использовать в OnCreate — используем EntityManager
+            if (state.EntityManager.CreateEntityQuery(typeof(RunState)).IsEmpty)
             {
                 var entity = state.EntityManager.CreateEntity();
                 state.EntityManager.AddComponentData(entity, new RunState

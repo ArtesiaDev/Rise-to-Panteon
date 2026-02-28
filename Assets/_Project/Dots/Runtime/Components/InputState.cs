@@ -9,6 +9,7 @@ namespace RuntimeRoguelike.Dots.Runtime
         public bool AttackPressed;
         public bool RestartPressed;
         public bool ToggleGizmos;
-        public bool Teleport;
+        public bool TeleportRequested;
+        public int2 TeleportTarget;
     }
 }

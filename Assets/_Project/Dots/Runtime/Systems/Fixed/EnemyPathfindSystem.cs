@@ -10,12 +10,28 @@ namespace RuntimeRoguelike.Dots.Runtime
     [UpdateAfter(typeof(EnemyTargetAcquireSystem))]
     public partial struct EnemyPathfindSystem : ISystem
     {
+        // Предаллоцированные массивы для A* (переиспользуются между вызовами)
+        private NativeArray<int> _gScore;
+        private NativeArray<int> _fScore;
+        private NativeArray<int> _cameFrom;
+        private NativeArray<byte> _closed;
+        private NativeArray<int> _heapArray;
+        private NativeArray<int> _positions;
+        private int _allocatedSize;
+
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<RunState>();
             state.RequireForUpdate<MapBlobReference>();
+
+            _allocatedSize = 0;
         }
-        
+
+        public void OnDestroy(ref SystemState state)
+        {
+            DisposeArrays();
+        }
+
         public void OnUpdate(ref SystemState state)
         {
             var mapRef = SystemAPI.GetSingleton<MapBlobReference>();
@@ -23,6 +39,20 @@ namespace RuntimeRoguelike.Dots.Runtime
                 return;
 
             ref var map = ref mapRef.Value.Value;
+            var total = map.Size.x * map.Size.y;
+
+            // Пересоздаём массивы если размер карты изменился (например, после рестарта)
+            if (total != _allocatedSize)
+            {
+                DisposeArrays();
+                _gScore = new NativeArray<int>(total, Allocator.Persistent);
+                _fScore = new NativeArray<int>(total, Allocator.Persistent);
+                _cameFrom = new NativeArray<int>(total, Allocator.Persistent);
+                _closed = new NativeArray<byte>(total, Allocator.Persistent);
+                _heapArray = new NativeArray<int>(total, Allocator.Persistent);
+                _positions = new NativeArray<int>(total, Allocator.Persistent);
+                _allocatedSize = total;
+            }
 
             var runEntity = SystemAPI.GetSingletonEntity<RunState>();
             var occupancy = state.EntityManager.GetBuffer<CellOccupant>(runEntity);
@@ -55,7 +85,8 @@ namespace RuntimeRoguelike.Dots.Runtime
 
                 try
                 {
-                    FindPath(ref map, occupancy, start, goal, ref pathResult);
+                    FindPath(ref map, occupancy, start, goal, ref pathResult,
+                        _gScore, _fScore, _cameFrom, _closed, _heapArray, _positions);
 
                     path.Clear();
 
@@ -74,8 +105,24 @@ namespace RuntimeRoguelike.Dots.Runtime
             }
         }
 
+        private void DisposeArrays()
+        {
+            if (_allocatedSize > 0)
+            {
+                _gScore.Dispose();
+                _fScore.Dispose();
+                _cameFrom.Dispose();
+                _closed.Dispose();
+                _heapArray.Dispose();
+                _positions.Dispose();
+                _allocatedSize = 0;
+            }
+        }
+
         private static void FindPath(ref MapBlob map, DynamicBuffer<CellOccupant> occupancy, int2 start, int2 goal,
-            ref NativeList<int2> result)
+            ref NativeList<int2> result,
+            NativeArray<int> gScore, NativeArray<int> fScore, NativeArray<int> cameFrom,
+            NativeArray<byte> closed, NativeArray<int> heapArray, NativeArray<int> positions)
         {
             result.Clear();
 
@@ -90,98 +137,81 @@ namespace RuntimeRoguelike.Dots.Runtime
             }
 
             var total = map.Size.x * map.Size.y;
-            var gScore = new NativeArray<int>(total, Allocator.Temp);
-            var fScore = new NativeArray<int>(total, Allocator.Temp);
-            var cameFrom = new NativeArray<int>(total, Allocator.Temp);
-            var closed = new NativeArray<byte>(total, Allocator.Temp);
-            var heapArray = new NativeArray<int>(total, Allocator.Temp);
-            var positions = new NativeArray<int>(total, Allocator.Temp);
 
-            try
+            // Обнуляем только нужные части массивов вместо полной реаллокации
+            for (var i = 0; i < total; i++)
             {
-                for (var i = 0; i < total; i++)
-                {
-                    gScore[i] = int.MaxValue;
-                    fScore[i] = int.MaxValue;
-                    cameFrom[i] = -1;
-                    closed[i] = 0;
-                    positions[i] = -1;
-                }
-
-                var startIndex = MapUtilities.ToIndex(start, map.Size);
-                var goalIndex = MapUtilities.ToIndex(goal, map.Size);
-
-                gScore[startIndex] = 0;
-                fScore[startIndex] = Heuristic(start, goal);
-
-                var openSet = new MinHeap(heapArray, positions, fScore);
-                openSet.Push(startIndex);
-
-                while (openSet.Count > 0)
-                {
-                    var current = openSet.Pop();
-                    if (current == goalIndex)
-                    {
-                        ReconstructPath(cameFrom, current, startIndex, map.Size, ref result);
-                        return;
-                    }
-
-                    closed[current] = 1;
-                    var currentCell = ToCell(current, map.Size);
-
-                    for (var i = 0; i < 4; i++)
-                    {
-                        var neighbor = currentCell + Direction(i);
-                        if (!MapUtilities.InBounds(neighbor, map.Size))
-                        {
-                            continue;
-                        }
-
-                        if (!MapUtilities.IsWalkable(ref map, neighbor))
-                        {
-                            continue;
-                        }
-
-                        var neighborIndex = MapUtilities.ToIndex(neighbor, map.Size);
-                        if (neighborIndex != goalIndex && occupancy[neighborIndex].Value != Entity.Null)
-                        {
-                            continue;
-                        }
-
-                        if (closed[neighborIndex] != 0)
-                        {
-                            continue;
-                        }
-
-                        var tentativeG = gScore[current] + 1;
-                        if (tentativeG >= gScore[neighborIndex])
-                        {
-                            continue;
-                        }
-
-                        cameFrom[neighborIndex] = current;
-                        gScore[neighborIndex] = tentativeG;
-                        fScore[neighborIndex] = tentativeG + Heuristic(neighbor, goal);
-
-                        if (openSet.Contains(neighborIndex))
-                        {
-                            openSet.Update(neighborIndex);
-                        }
-                        else
-                        {
-                            openSet.Push(neighborIndex);
-                        }
-                    }
-                }
+                gScore[i] = int.MaxValue;
+                fScore[i] = int.MaxValue;
+                cameFrom[i] = -1;
+                closed[i] = 0;
+                positions[i] = -1;
             }
-            finally
+
+            var startIndex = MapUtilities.ToIndex(start, map.Size);
+            var goalIndex = MapUtilities.ToIndex(goal, map.Size);
+
+            gScore[startIndex] = 0;
+            fScore[startIndex] = Heuristic(start, goal);
+
+            var openSet = new MinHeap(heapArray, positions, fScore);
+            openSet.Push(startIndex);
+
+            while (openSet.Count > 0)
             {
-                gScore.Dispose();
-                fScore.Dispose();
-                cameFrom.Dispose();
-                closed.Dispose();
-                heapArray.Dispose();
-                positions.Dispose();
+                var current = openSet.Pop();
+                if (current == goalIndex)
+                {
+                    ReconstructPath(cameFrom, current, startIndex, map.Size, ref result);
+                    return;
+                }
+
+                closed[current] = 1;
+                var currentCell = ToCell(current, map.Size);
+
+                for (var i = 0; i < 4; i++)
+                {
+                    var neighbor = currentCell + Direction(i);
+                    if (!MapUtilities.InBounds(neighbor, map.Size))
+                    {
+                        continue;
+                    }
+
+                    if (!MapUtilities.IsWalkable(ref map, neighbor))
+                    {
+                        continue;
+                    }
+
+                    var neighborIndex = MapUtilities.ToIndex(neighbor, map.Size);
+                    if (neighborIndex != goalIndex && occupancy[neighborIndex].Value != Entity.Null)
+                    {
+                        continue;
+                    }
+
+                    if (closed[neighborIndex] != 0)
+                    {
+                        continue;
+                    }
+
+                    var tentativeG = gScore[current] + 1;
+                    if (tentativeG >= gScore[neighborIndex])
+                    {
+                        continue;
+                    }
+
+                    cameFrom[neighborIndex] = current;
+                    gScore[neighborIndex] = tentativeG;
+                    fScore[neighborIndex] = tentativeG + Heuristic(neighbor, goal);
+
+                    if (openSet.Contains(neighborIndex))
+                    {
+                        openSet.Update(neighborIndex);
+                    }
+                    else
+                    {
+                        openSet.Push(neighborIndex);
+                    }
+                }
             }
         }
 

@@ -1,6 +1,5 @@
 using RuntimeRoguelike.Dots.Runtime;
 using Unity.Entities;
-using Unity.Mathematics;
 using UnityEngine;
 
 namespace RuntimeRoguelike.Dots.Authoring
@@ -9,7 +8,6 @@ namespace RuntimeRoguelike.Dots.Authoring
     {
         [SerializeField] private int _maxHealth = 12;
         [SerializeField] private float _moveSpeed = 4f;
-        [SerializeField] private Vector2 _colliderSize = new(0.8f, 0.8f);
 
         private class Baker : Baker<PlayerConfigAuthoring>
         {
@@ -19,8 +17,7 @@ namespace RuntimeRoguelike.Dots.Authoring
                 AddComponent(entity, new PlayerConfigData
                 {
                     MaxHealth = authoring._maxHealth,
-                    MoveSpeed = authoring._moveSpeed,
-                    ColliderSize = new float2(authoring._colliderSize.x, authoring._colliderSize.y)
+                    MoveSpeed = authoring._moveSpeed
                 });
             }
         }
