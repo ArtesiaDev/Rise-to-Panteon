@@ -48,7 +48,7 @@
 ### Simulation системы
 
 - [ ] T008 Заменить `state.EntityManager.GetBuffer<CellOccupant>(...)` на `SystemAPI.GetSingletonBuffer<CellOccupant>()` в `Assets/_Project/Dots/Runtime/Systems/Simulation/TeleportSystem.cs`
-- [ ] T009 Заменить в RestartSystem 4 прямых вызова EntityManager на SystemAPI-эквиваленты в `Assets/_Project/Dots/Runtime/Systems/Simulation/RestartSystem.cs`: (1) `EntityManager.HasBuffer<PerkOption>` → `SystemAPI.HasBuffer<PerkOption>`, (2) `EntityManager.GetBuffer<PerkOption>.Clear()` → `SystemAPI.GetBuffer<PerkOption>.Clear()`, (3) `EntityManager.SetComponentEnabled<MapRenderRequest>` → `SystemAPI.SetComponentEnabled<MapRenderRequest>`, (4) `EntityManager.GetBuffer<CellOccupant>` → `SystemAPI.GetSingletonBuffer<CellOccupant>()`
+- [ ] T009 Заменить в RestartSystem 4 прямых вызова EntityManager на SystemAPI-эквиваленты в `Assets/_Project/Dots/Runtime/Systems/Simulation/RestartSystem.cs`: **Группа C** (3 точечных замены): (1) `EntityManager.HasBuffer<PerkOption>` → `SystemAPI.HasBuffer<PerkOption>`, (2) `EntityManager.GetBuffer<PerkOption>.Clear()` → `SystemAPI.GetBuffer<PerkOption>.Clear()`, (3) `EntityManager.SetComponentEnabled<MapRenderRequest>` → `SystemAPI.SetComponentEnabled<MapRenderRequest>`; **Группа B** (общий паттерн): (4) `EntityManager.GetBuffer<CellOccupant>` → `SystemAPI.GetSingletonBuffer<CellOccupant>()`
 
 ### Initialization системы
 
@@ -86,7 +86,7 @@
 - [ ] T024 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Fixed/LootPickupSystem.cs`
 - [ ] T025 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Fixed/DeathSystem.cs`
 - [ ] T026 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Fixed/LevelProgressSystem.cs`
-- [ ] T027 [P] [US2] Добавить `[BurstCompile]` на OnUpdate (НЕ на OnUpdate где Instantiate, только на struct) в `Assets/_Project/Dots/Runtime/Systems/Fixed/EnemySpawnerSystem.cs` — OnUpdate остаётся без атрибута из-за EntityManager.Instantiate
+- [ ] T027 [P] [US2] Проверить что `[BurstCompile]` на struct присутствует, НЕ добавлять на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Fixed/EnemySpawnerSystem.cs` — OnUpdate остаётся без атрибута из-за EntityManager.Instantiate
 
 ### Simulation системы (5 шт.)
 
@@ -107,8 +107,8 @@
 
 ### Верификация Phase 3
 
-- [ ] T036 [US2] Проверить компиляцию проекта и отсутствие Burst-ошибок в консоли Unity
-- [ ] T037 [US2] Запустить игру с seed=42 и проверить что поведение не изменилось
+- [ ] T036 [US2] Промежуточная проверка: компиляция проекта и отсутствие Burst-ошибок в консоли Unity (валидация только Phase 3 — [BurstCompile] на методах)
+- [ ] T037 [US2] Промежуточная проверка: запустить игру с seed=42 и проверить что поведение не изменилось после добавления [BurstCompile] (быстрый smoke-test)
 
 **Checkpoint**: Все системы, где возможно, имеют [BurstCompile] на OnUpdate. Burst Inspector подтверждает компиляцию. Геймплей не изменён.
 
@@ -136,11 +136,11 @@
 
 **Purpose**: Финальная верификация
 
-- [ ] T043 Запустить игру с seed=42 и пройти полный цикл (движение, атаки, лут, перки, рестарт)
-- [ ] T044 Запустить игру с seed=12345 и проверить корректность генерации карты и спавна
-- [ ] T045 Запустить игру с seed=999999 и проверить корректность
-- [ ] T046 Проверить консоль Unity на отсутствие ошибок и Burst-fallback предупреждений
-- [ ] T047 Финальная проверка: все файлы изменены корректно, нет оставшихся EntityManager вызовов в FixedStep системах (кроме EnemySpawnerSystem.Instantiate)
+- [ ] T043 Финальная верификация: запустить игру с seed=42 и пройти ПОЛНЫЙ цикл (движение, атаки, лут, перки, рестарт) — проверка после ВСЕХ фаз (код + документация)
+- [ ] T044 Финальная верификация: запустить игру с seed=12345 и проверить корректность генерации карты и спавна
+- [ ] T045 Финальная верификация: запустить игру с seed=999999 и проверить корректность
+- [ ] T046 Финальная проверка консоли Unity на отсутствие ошибок и Burst-fallback предупреждений после всех изменений (код + документация)
+- [ ] T047 Финальная проверка кодовой базы: все файлы изменены корректно, нет оставшихся EntityManager вызовов в FixedStep системах (кроме EnemySpawnerSystem.Instantiate)
 
 ---
 
