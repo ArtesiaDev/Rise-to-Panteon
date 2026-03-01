@@ -97,38 +97,55 @@ namespace RuntimeRoguelike.Dots.Hybrid
             var hazards = CreateTilemap(_gridRoot.transform, "Hazards", 2, false);
 
             var size = map.Size;
+            var cellCount = size.x * size.y;
+            var bounds = new BoundsInt(0, 0, 0, size.x, size.y, 1);
+
+            // Массовая установка тайлов через SetTilesBlock — намного быстрее поштучного SetTile
+            var groundTiles = new TileBase[cellCount];
+            var wallTiles = new TileBase[cellCount];
+            var hazardTiles = new TileBase[cellCount];
+
+            var floorTile = GetTile("floor", _floorColor);
+            var wallTile = GetTile("wall", _wallColor);
+            var obstacleTile = GetTile("obstacle", _obstacleColor);
+            var poisonTile = GetTile("poison", _poisonColor);
+            var spikeTile = GetTile("spike", _spikeColor);
+
             for (var y = 0; y < size.y; y++)
             {
                 for (var x = 0; x < size.x; x++)
                 {
                     var index = y * size.x + x;
-                    var position = new Vector3Int(x, y, 0);
 
                     if (map.BaseLayer[index] == MapCellType.Floor)
                     {
-                        ground.SetTile(position, GetTile("floor", _floorColor));
+                        groundTiles[index] = floorTile;
                     }
                     else if (map.BaseLayer[index] == MapCellType.Wall)
                     {
-                        walls.SetTile(position, GetTile("wall", _wallColor));
+                        wallTiles[index] = wallTile;
                     }
 
                     if (map.ObstacleLayer[index] != ObstacleType.None)
                     {
-                        walls.SetTile(position, GetTile("obstacle", _obstacleColor));
+                        wallTiles[index] = obstacleTile;
                     }
 
                     var hazard = map.HazardLayer[index];
                     if (hazard == HazardType.Poison)
                     {
-                        hazards.SetTile(position, GetTile("poison", _poisonColor));
+                        hazardTiles[index] = poisonTile;
                     }
                     else if (hazard == HazardType.Spike)
                     {
-                        hazards.SetTile(position, GetTile("spike", _spikeColor));
+                        hazardTiles[index] = spikeTile;
                     }
                 }
             }
+
+            ground.SetTilesBlock(bounds, groundTiles);
+            walls.SetTilesBlock(bounds, wallTiles);
+            hazards.SetTilesBlock(bounds, hazardTiles);
 
             ground.CompressBounds();
             walls.CompressBounds();
