@@ -458,23 +458,29 @@ Loot/Progress:
   - лог шагов FixedStep (tick index, input, ключевые компоненты)
   - сравнение со старой реализацией
 
-## 8) Изменения сцены
+## 8) Изменения сцены [ЗАВЕРШЁН]
 
-После готовности DOTS-логики:
+Сцена `Assets/_Project/Scenes/Main.unity` полностью настроена для DOTS:
 
-- Обновить `Assets/_Project/Scenes/Main.unity`:
-  - убрать `SceneContext` и `MainInstaller`
-  - добавить новый bootstrap Mono (Input/UI/Presentation bridges)
+- ✅ `DotsBootstrap` — 9 hybrid bridge MonoBehaviours (Input, Rendering, UI, Debug)
+  - Дочерние: WorldRoot, EntitiesRoot, PoolRoot
+- ✅ `DotsConfig` — 13 authoring MonoBehaviours (все конфиги бейкятся в ECS-сущности)
+- ✅ `Canvas` — UI (HUD panel + Perk selection panel с привязками к bridge'ам)
+- ✅ `EventSystem` — обработка UI-ввода
+- ✅ `Main Camera` + `Global Light 2D`
+- ✅ SceneContext и MainInstaller (Zenject) удалены вместе с ProjectContext.prefab
 
-## 9) Удаление старого кода
+## 9) Удаление старого кода [ЗАВЕРШЁН]
 
-После полного паритета:
+Старый код полностью удалён после подтверждения, что DOTS-код не зависит от старого namespace `RuntimeRoguelike`:
 
-- Удалить:
-  - `Assets/_Project/Scripts/Ecs`
-  - `Assets/_Project/Scripts/DI` (если Zenject не нужен)
-  - `Assets/_Project/Scripts/Map` и `Assets/_Project/Scripts/Navigation` (если полностью заменены)
-  - старый Rendering/Presentation, если не используется
+- ✅ Удалён: `Assets/_Project/Scripts/` (20 .cs файлов — все ScriptableObject конфиги, дублирующиеся enum'ы, неиспользуемые утилиты)
+- ✅ Удалён: `Assets/_Project/Configs/` (14 .asset файлов — orphaned ScriptableObject assets)
+- ✅ Удалён: `Assets/_Project/Resources/ProjectContext.prefab` (Zenject IoC контейнер — не используется DOTS-кодом)
+- ✅ Удалены пустые директории: Dots/Authoring/Bakers/, Dots/Baking/Systems/, Dots/Runtime/Navigation/
+- ✅ Создан UI Canvas: HUD (HP, XP, Level, Gold, Seed) + Perk Selection Panel (3 кнопки) с привязками к HudBridge и PerkUiBridge
+- ✅ Все ссылки на сцене проверены: CameraFollowBridge → Main Camera, SpriteRenderBridge → EntitiesRoot/PoolRoot, TilemapRenderBridge → WorldRoot
+- Zenject плагин (`Assets/Plugins/Zenject/`) оставлен — может использоваться другими частями проекта. При необходимости удалить отдельно.
 
 ## 10) Чеклист паритета (кратко)
 
@@ -501,4 +507,6 @@ Loot/Progress:
 8. **[BurstCompile] на методах ISystem**: Добавлен атрибут `[BurstCompile]` на методы `OnUpdate`/`OnCreate`/`OnDestroy` всех систем, где это возможно (ранее был только на struct). Исключения: спавн-системы (SpawnPlayerSystem, SpawnInitialEnemiesSystem, EnemySpawnerSystem) — их `OnUpdate` использует `EntityManager.Instantiate`, несовместимый с Burst. MapGenerationSystem — использует `EntityManager` напрямую (BlobBuilder).
 9. **EntityManager.GetBuffer → SystemAPI.GetSingletonBuffer**: Во всех системах, обращающихся к `DynamicBuffer<CellOccupant>` через `state.EntityManager.GetBuffer<CellOccupant>(singletonEntity)`, вызов заменён на Burst-совместимый `SystemAPI.GetSingletonBuffer<CellOccupant>()`. Затронуты: DeathSystem, PlayerAttackSystem, EnemyPathfindSystem, MovementResolveSystem, EnemySpawnerSystem, TeleportSystem, SpawnPlayerSystem, SpawnInitialEnemiesSystem. Аналогично заменены `EntityManager.HasBuffer`, `EntityManager.GetBuffer<PerkOption>`, `EntityManager.SetComponentEnabled` в RestartSystem.
 10. **EntityManager.Exists → SystemAPI.HasComponent**: В EnemyAttackSystem проверка `state.EntityManager.Exists(entity)` заменена на `SystemAPI.HasComponent<Health>(entity)` — Burst-совместимый аналог, который также покрывает случай несуществующей сущности.
+11. **Старый код полностью удалён**: `Assets/_Project/Scripts/` (20 файлов), `Assets/_Project/Configs/` (14 .asset), `Assets/_Project/Resources/ProjectContext.prefab` (Zenject). DOTS-код не зависит от старого namespace `RuntimeRoguelike`. Authoring-компоненты имеют собственные внутренние структуры (LootEntryAuthoring, PerkDefinitionAuthoring).
+12. **UI Canvas добавлен в сцену**: HUD panel (HP, XP, Level, Gold, Seed) + Perk Selection Panel (3 кнопки) с привязками к HudBridge и PerkUiBridge. Ранее UI ссылки были `{fileID: 0}`.
 

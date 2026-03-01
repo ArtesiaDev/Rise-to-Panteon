@@ -50,10 +50,13 @@ namespace RuntimeRoguelike.Dots.Runtime
             var rng = rngState.ValueRW.Rng;
 
             var attempts = math.max(1, spawnConfig.SpawnAttempts);
-            var occupancy = SystemAPI.GetSingletonBuffer<CellOccupant>();
 
             for (var i = 0; i < spawnConfig.InitialCount; i++)
             {
+                // Переполучаем buffer перед каждой итерацией — структурные изменения
+                // (CreateEntity/AddComponent) инвалидируют handles
+                var occupancy = SystemAPI.GetSingletonBuffer<CellOccupant>();
+
                 for (var attempt = 0; attempt < attempts; attempt++)
                 {
                     var cell = new int2(
@@ -83,14 +86,17 @@ namespace RuntimeRoguelike.Dots.Runtime
                         : state.EntityManager.CreateEntity();
 
                     EnemySpawnUtilities.InitializeEnemy(state.EntityManager, enemy, cell, enemyConfig, difficulty.EnemyMultiplier, 0);
+
+                    // Переполучаем buffer после структурных изменений
+                    occupancy = SystemAPI.GetSingletonBuffer<CellOccupant>();
                     occupancy[index] = new CellOccupant { Value = enemy };
                     break;
                 }
             }
 
-            // Сохраняем состояние RNG обратно
-            rngState.ValueRW.Rng = rng;
-            spawnState.ValueRW.InitialEnemiesSpawned = true;
+            // Переполучаем handles после структурных изменений
+            SystemAPI.GetSingletonRW<RngState>().ValueRW.Rng = rng;
+            SystemAPI.GetSingletonRW<RunSpawnState>().ValueRW.InitialEnemiesSpawned = true;
         }
     }
 }

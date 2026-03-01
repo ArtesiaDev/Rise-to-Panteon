@@ -35,8 +35,7 @@ namespace RuntimeRoguelike.Dots.Hybrid
 
             _entityManager = _world.EntityManager;
             _mapQuery = _entityManager.CreateEntityQuery(
-                ComponentType.ReadOnly<MapBlobReference>(),
-                ComponentType.ReadOnly<MapRenderRequest>());
+                ComponentType.ReadOnly<MapBlobReference>());
             _gridQuery = _entityManager.CreateEntityQuery(ComponentType.ReadOnly<GridConfigData>());
         }
         
@@ -45,8 +44,12 @@ namespace RuntimeRoguelike.Dots.Hybrid
             if (_world is not { IsCreated: true })
                 return;
 
+            if (_mapQuery.IsEmpty)
+                return;
+
             _mapEntity = _mapQuery.GetSingletonEntity();
-            if (!_entityManager.IsComponentEnabled<MapRenderRequest>(_mapEntity))
+            if (!_entityManager.HasComponent<MapRenderRequest>(_mapEntity) ||
+                !_entityManager.IsComponentEnabled<MapRenderRequest>(_mapEntity))
             {
                 return;
             }
