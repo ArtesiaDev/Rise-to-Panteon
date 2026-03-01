@@ -33,12 +33,14 @@ namespace RuntimeRoguelike.Dots.Runtime
             }
         }
 
+        [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<RunState>();
             state.RequireForUpdate<MapBlobReference>();
         }
 
+        [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             var mapRef = SystemAPI.GetSingleton<MapBlobReference>();
@@ -48,7 +50,7 @@ namespace RuntimeRoguelike.Dots.Runtime
             }
 
             ref var map = ref mapRef.Value.Value;
-            var occupancy = state.EntityManager.GetBuffer<CellOccupant>(SystemAPI.GetSingletonEntity<RunState>());
+            var occupancy = SystemAPI.GetSingletonBuffer<CellOccupant>();
 
             using var requests = new NativeList<MoveRequest>(Allocator.Temp);
 

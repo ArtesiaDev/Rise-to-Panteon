@@ -9,11 +9,13 @@ namespace RuntimeRoguelike.Dots.Runtime
     [UpdateAfter(typeof(HazardSystem))]
     public partial struct PoisonTickSystem : ISystem
     {
+        [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<EndSimulationEntityCommandBufferSystem.Singleton>();
         }
 
+        [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             var deltaTime = SystemAPI.Time.DeltaTime;

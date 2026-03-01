@@ -50,7 +50,7 @@ namespace RuntimeRoguelike.Dots.Runtime
             var rng = rngState.ValueRW.Rng;
 
             var attempts = math.max(1, spawnConfig.SpawnAttempts);
-            var occupancy = state.EntityManager.GetBuffer<CellOccupant>(SystemAPI.GetSingletonEntity<RunState>());
+            var occupancy = SystemAPI.GetSingletonBuffer<CellOccupant>();
 
             for (var i = 0; i < spawnConfig.InitialCount; i++)
             {

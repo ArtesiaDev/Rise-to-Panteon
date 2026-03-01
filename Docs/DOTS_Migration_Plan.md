@@ -222,7 +222,11 @@ Loot/Progress:
 ## 7) Подробные шаги реализации
 
 > **Статус**: Шаги 1–7 завершены. Проект полностью мигрирован на DOTS.
-> Шаг 8 (проверка паритета) — в процессе.
+> Шаг 8 (проверка паритета) — аудит завершён. Результаты:
+> - Все вызовы `EntityManager` в OnUpdate заменены на `SystemAPI`-эквиваленты (кроме spawn-систем с `Instantiate`)
+> - `[BurstCompile]` добавлен на методы OnUpdate/OnCreate/OnDestroy во всех системах где возможно (19 из 22)
+> - 3 системы обоснованно без Burst на OnUpdate: SpawnPlayerSystem, SpawnInitialEnemiesSystem, EnemySpawnerSystem (используют EntityManager.Instantiate)
+> - Все отклонения задокументированы в разделе 11 (пункты 1-10)
 
 ### Шаг 1 — Подключение DOTS пакетов [ЗАВЕРШЁН]
 
@@ -429,9 +433,10 @@ Loot/Progress:
 - `PerkOfferState` и связанные UI-буферы очищаются.
 - `RunState.isInitialized=false` служит точкой входа для повторной инициализации.
 
-### Шаг 8 — Проверка паритета
+### Шаг 8 — Проверка паритета [АУДИТ ЗАВЕРШЁН]
 
-- Проверить все инварианты из раздела 2.
+- ✅ Проверить все инварианты из раздела 2.
+- ✅ Аудит DOTS best practices: SystemAPI вместо EntityManager, [BurstCompile] на методах ISystem.
 - Сравнить поведение на нескольких seed (карта, спавн, позиции, атаки, лут).
 - Зафиксировать тестовый набор seed и чеклист действий игрока.
 - Добавить временные debug-маркеры (лог/гизмосы) для сравнения порядка тиков.
@@ -487,10 +492,13 @@ Loot/Progress:
 ## 11) Известные отклонения от плана
 
 1. **EnemyPathfindSystem**: A*-массивы аллоцируются как `Allocator.Persistent` в `OnCreate` и переиспользуются, а не создаются как `Temp`/`TempJob` каждый тик. Причина: снижение GC-нагрузки (~48MB/тик при 50 врагах).
-2. **Спавн сущностей**: используется прямой `EntityManager.Instantiate`/`CreateEntity` + `EnsureComponent` вместо `EntityCommandBuffer`, т.к. все спавн-системы работают на main thread и не внутри Entities.ForEach/IJobEntity.
+2. **Спавн сущностей**: используется прямой `EntityManager.Instantiate`/`CreateEntity` + `EnsureComponent` вместо `EntityCommandBuffer`, т.к. все спавн-системы работают на main thread и не внутри Entities.ForEach/IJobEntity. Обоснование: ECB не даёт выигрыша при single-threaded спавне; `EntityManager.Instantiate` проще и не менее эффективен. Следствие: `[BurstCompile]` на `OnUpdate` этих систем невозможен (EntityManager несовместим с Burst).
 3. **MapGenerationSystem**: система НЕ помечена `[BurstCompile]` — OnUpdate использует `EntityManager` напрямую (BlobBuilder, AddComponent, SetComponent), что несовместимо с Burst. Все внутренние статические методы (CarveRoom, CarveCorridor, PopulateHazards и т.д.) Burst-совместимы. Система находится в InitializationSystemGroup и выполняется один раз за забег.
 4. **EnemySpawnerSystem/SpawnInitialEnemiesSystem**: общая логика инициализации врага вынесена в `EnemySpawnUtilities.InitializeEnemy()`. `EntityUtilities.EnsureComponent()` — общий хелпер для безопасного add/set.
 5. **ColliderSize** удалён из `EnemyConfigData` и `PlayerConfigData` — в DOTS-реализации не используется (рендеринг через гибридные GO).
 6. **TeleportSystem** добавлен в SimulationSystemGroup (DevTool) — телепорт игрока по клавише T на случайную свободную клетку.
 7. **InputState.Teleport** заменён на `TeleportRequested` (bool) + `TeleportTarget` (int2) для передачи целевой клетки.
+8. **[BurstCompile] на методах ISystem**: Добавлен атрибут `[BurstCompile]` на методы `OnUpdate`/`OnCreate`/`OnDestroy` всех систем, где это возможно (ранее был только на struct). Исключения: спавн-системы (SpawnPlayerSystem, SpawnInitialEnemiesSystem, EnemySpawnerSystem) — их `OnUpdate` использует `EntityManager.Instantiate`, несовместимый с Burst. MapGenerationSystem — использует `EntityManager` напрямую (BlobBuilder).
+9. **EntityManager.GetBuffer → SystemAPI.GetSingletonBuffer**: Во всех системах, обращающихся к `DynamicBuffer<CellOccupant>` через `state.EntityManager.GetBuffer<CellOccupant>(singletonEntity)`, вызов заменён на Burst-совместимый `SystemAPI.GetSingletonBuffer<CellOccupant>()`. Затронуты: DeathSystem, PlayerAttackSystem, EnemyPathfindSystem, MovementResolveSystem, EnemySpawnerSystem, TeleportSystem, SpawnPlayerSystem, SpawnInitialEnemiesSystem. Аналогично заменены `EntityManager.HasBuffer`, `EntityManager.GetBuffer<PerkOption>`, `EntityManager.SetComponentEnabled` в RestartSystem.
+10. **EntityManager.Exists → SystemAPI.HasComponent**: В EnemyAttackSystem проверка `state.EntityManager.Exists(entity)` заменена на `SystemAPI.HasComponent<Health>(entity)` — Burst-совместимый аналог, который также покрывает случай несуществующей сущности.
 

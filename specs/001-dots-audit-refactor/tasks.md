@@ -24,8 +24,8 @@
 
 **Purpose**: Подготовка к рефакторингу — фиксация текущего состояния
 
-- [ ] T001 Убедиться что проект компилируется без ошибок перед началом рефакторинга
-- [ ] T002 Проверить консоль Unity на наличие существующих ошибок/warnings
+- [x] T001 Убедиться что проект компилируется без ошибок перед началом рефакторинга
+- [x] T002 Проверить консоль Unity на наличие существующих ошибок/warnings
 
 **Checkpoint**: Проект в рабочем состоянии, можно начинать изменения
 
@@ -39,27 +39,27 @@
 
 ### FixedStep системы (занимают occupancy через GetBuffer)
 
-- [ ] T003 [P] Заменить `state.EntityManager.GetBuffer<CellOccupant>(SystemAPI.GetSingletonEntity<RunState>())` на `SystemAPI.GetSingletonBuffer<CellOccupant>()` в `Assets/_Project/Dots/Runtime/Systems/Fixed/DeathSystem.cs`
-- [ ] T004 [P] Заменить `state.EntityManager.GetBuffer<CellOccupant>(SystemAPI.GetSingletonEntity<RunState>())` на `SystemAPI.GetSingletonBuffer<CellOccupant>()` в `Assets/_Project/Dots/Runtime/Systems/Fixed/PlayerAttackSystem.cs`
-- [ ] T005 [P] Заменить `state.EntityManager.GetBuffer<CellOccupant>(SystemAPI.GetSingletonEntity<RunState>())` на `SystemAPI.GetSingletonBuffer<CellOccupant>()` в `Assets/_Project/Dots/Runtime/Systems/Fixed/EnemyPathfindSystem.cs`
-- [ ] T006 [P] Заменить `state.EntityManager.GetBuffer<CellOccupant>(SystemAPI.GetSingletonEntity<RunState>())` на `SystemAPI.GetSingletonBuffer<CellOccupant>()` в `Assets/_Project/Dots/Runtime/Systems/Fixed/MovementResolveSystem.cs`
-- [ ] T007 [P] Заменить `state.EntityManager.GetBuffer<CellOccupant>(SystemAPI.GetSingletonEntity<RunState>())` на `SystemAPI.GetSingletonBuffer<CellOccupant>()` в `Assets/_Project/Dots/Runtime/Systems/Fixed/EnemySpawnerSystem.cs`
+- [x] T003 [P] Заменить `state.EntityManager.GetBuffer<CellOccupant>(SystemAPI.GetSingletonEntity<RunState>())` на `SystemAPI.GetSingletonBuffer<CellOccupant>()` в `Assets/_Project/Dots/Runtime/Systems/Fixed/DeathSystem.cs`
+- [x] T004 [P] Заменить `state.EntityManager.GetBuffer<CellOccupant>(SystemAPI.GetSingletonEntity<RunState>())` на `SystemAPI.GetSingletonBuffer<CellOccupant>()` в `Assets/_Project/Dots/Runtime/Systems/Fixed/PlayerAttackSystem.cs`
+- [x] T005 [P] Заменить `state.EntityManager.GetBuffer<CellOccupant>(SystemAPI.GetSingletonEntity<RunState>())` на `SystemAPI.GetSingletonBuffer<CellOccupant>()` в `Assets/_Project/Dots/Runtime/Systems/Fixed/EnemyPathfindSystem.cs`
+- [x] T006 [P] Заменить `state.EntityManager.GetBuffer<CellOccupant>(SystemAPI.GetSingletonEntity<RunState>())` на `SystemAPI.GetSingletonBuffer<CellOccupant>()` в `Assets/_Project/Dots/Runtime/Systems/Fixed/MovementResolveSystem.cs`
+- [x] T007 [P] Заменить `state.EntityManager.GetBuffer<CellOccupant>(SystemAPI.GetSingletonEntity<RunState>())` на `SystemAPI.GetSingletonBuffer<CellOccupant>()` в `Assets/_Project/Dots/Runtime/Systems/Fixed/EnemySpawnerSystem.cs`
 
 ### Simulation системы
 
-- [ ] T008 Заменить `state.EntityManager.GetBuffer<CellOccupant>(...)` на `SystemAPI.GetSingletonBuffer<CellOccupant>()` в `Assets/_Project/Dots/Runtime/Systems/Simulation/TeleportSystem.cs`
-- [ ] T009 Заменить в RestartSystem 4 прямых вызова EntityManager на SystemAPI-эквиваленты в `Assets/_Project/Dots/Runtime/Systems/Simulation/RestartSystem.cs`: **Группа C** (3 точечных замены): (1) `EntityManager.HasBuffer<PerkOption>` → `SystemAPI.HasBuffer<PerkOption>`, (2) `EntityManager.GetBuffer<PerkOption>.Clear()` → `SystemAPI.GetBuffer<PerkOption>.Clear()`, (3) `EntityManager.SetComponentEnabled<MapRenderRequest>` → `SystemAPI.SetComponentEnabled<MapRenderRequest>`; **Группа B** (общий паттерн): (4) `EntityManager.GetBuffer<CellOccupant>` → `SystemAPI.GetSingletonBuffer<CellOccupant>()`
+- [x] T008 Заменить `state.EntityManager.GetBuffer<CellOccupant>(...)` на `SystemAPI.GetSingletonBuffer<CellOccupant>()` в `Assets/_Project/Dots/Runtime/Systems/Simulation/TeleportSystem.cs`
+- [x] T009 Заменить в RestartSystem 4 прямых вызова EntityManager на SystemAPI-эквиваленты в `Assets/_Project/Dots/Runtime/Systems/Simulation/RestartSystem.cs`: **Группа C** (3 точечных замены): (1) `EntityManager.HasBuffer<PerkOption>` → `SystemAPI.HasBuffer<PerkOption>`, (2) `EntityManager.GetBuffer<PerkOption>.Clear()` → `SystemAPI.GetBuffer<PerkOption>.Clear()`, (3) `EntityManager.SetComponentEnabled<MapRenderRequest>` → `SystemAPI.SetComponentEnabled<MapRenderRequest>`; **Группа B** (общий паттерн): (4) `EntityManager.GetBuffer<CellOccupant>` → `SystemAPI.GetSingletonBuffer<CellOccupant>()`
 
 ### Initialization системы
 
-- [ ] T010 [P] Заменить `state.EntityManager.GetBuffer<CellOccupant>(...)` на `SystemAPI.GetSingletonBuffer<CellOccupant>()` в `Assets/_Project/Dots/Runtime/Systems/Initialization/SpawnPlayerSystem.cs`
-- [ ] T011 [P] Заменить `state.EntityManager.GetBuffer<CellOccupant>(...)` на `SystemAPI.GetSingletonBuffer<CellOccupant>()` в `Assets/_Project/Dots/Runtime/Systems/Initialization/SpawnInitialEnemiesSystem.cs`
+- [x] T010 [P] Заменить `state.EntityManager.GetBuffer<CellOccupant>(...)` на `SystemAPI.GetSingletonBuffer<CellOccupant>()` в `Assets/_Project/Dots/Runtime/Systems/Initialization/SpawnPlayerSystem.cs`
+- [x] T011 [P] Заменить `state.EntityManager.GetBuffer<CellOccupant>(...)` на `SystemAPI.GetSingletonBuffer<CellOccupant>()` в `Assets/_Project/Dots/Runtime/Systems/Initialization/SpawnInitialEnemiesSystem.cs`
 
 ### Точечные исправления
 
-- [ ] T012 Заменить `state.EntityManager.Exists(target.ValueRO.Value)` на `SystemAPI.HasComponent<Health>(target.ValueRO.Value)` в `Assets/_Project/Dots/Runtime/Systems/Fixed/EnemyAttackSystem.cs`
+- [x] T012 Заменить `state.EntityManager.Exists(target.ValueRO.Value)` на `SystemAPI.HasComponent<Health>(target.ValueRO.Value)` в `Assets/_Project/Dots/Runtime/Systems/Fixed/EnemyAttackSystem.cs`
 
-- [ ] T013 Проверить компиляцию проекта после всех замен Phase 2
+- [x] T013 Проверить компиляцию проекта после всех замен Phase 2
 
 **Checkpoint**: Все EntityManager вызовы в OnUpdate заменены на SystemAPI (кроме spawn-систем с Instantiate/CreateEntity). Проект компилируется.
 
@@ -73,42 +73,42 @@
 
 ### FixedStep системы (14 шт.) — [BurstCompile] на OnUpdate
 
-- [ ] T014 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Fixed/CooldownTickSystem.cs`
-- [ ] T015 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Fixed/DifficultyTickSystem.cs`
-- [ ] T016 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Fixed/EnemyTargetAcquireSystem.cs`
-- [ ] T017 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Fixed/EnemyMoveIntentSystem.cs`
-- [ ] T018 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Fixed/EnemyPathfindSystem.cs`
-- [ ] T019 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Fixed/MovementResolveSystem.cs`
-- [ ] T020 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Fixed/PlayerAttackSystem.cs`
-- [ ] T021 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Fixed/EnemyAttackSystem.cs`
-- [ ] T022 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Fixed/HazardSystem.cs`
-- [ ] T023 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Fixed/PoisonTickSystem.cs`
-- [ ] T024 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Fixed/LootPickupSystem.cs`
-- [ ] T025 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Fixed/DeathSystem.cs`
-- [ ] T026 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Fixed/LevelProgressSystem.cs`
-- [ ] T027 [P] [US2] Проверить что `[BurstCompile]` на struct присутствует, НЕ добавлять на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Fixed/EnemySpawnerSystem.cs` — OnUpdate остаётся без атрибута из-за EntityManager.Instantiate
+- [x] T014 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Fixed/CooldownTickSystem.cs`
+- [x] T015 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Fixed/DifficultyTickSystem.cs`
+- [x] T016 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Fixed/EnemyTargetAcquireSystem.cs`
+- [x] T017 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Fixed/EnemyMoveIntentSystem.cs`
+- [x] T018 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Fixed/EnemyPathfindSystem.cs`
+- [x] T019 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Fixed/MovementResolveSystem.cs`
+- [x] T020 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Fixed/PlayerAttackSystem.cs`
+- [x] T021 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Fixed/EnemyAttackSystem.cs`
+- [x] T022 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Fixed/HazardSystem.cs`
+- [x] T023 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Fixed/PoisonTickSystem.cs`
+- [x] T024 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Fixed/LootPickupSystem.cs`
+- [x] T025 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Fixed/DeathSystem.cs`
+- [x] T026 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Fixed/LevelProgressSystem.cs`
+- [x] T027 [P] [US2] Проверить что `[BurstCompile]` на struct присутствует, НЕ добавлять на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Fixed/EnemySpawnerSystem.cs` — OnUpdate остаётся без атрибута из-за EntityManager.Instantiate
 
 ### Simulation системы (5 шт.)
 
-- [ ] T028 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Simulation/InputReadSystem.cs`
-- [ ] T029 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Simulation/RestartRequestSystem.cs`
-- [ ] T030 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Simulation/RestartSystem.cs`
-- [ ] T031 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Simulation/PerkApplySystem.cs`
-- [ ] T032 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Simulation/TeleportSystem.cs`
+- [x] T028 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Simulation/InputReadSystem.cs`
+- [x] T029 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Simulation/RestartRequestSystem.cs`
+- [x] T030 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Simulation/RestartSystem.cs`
+- [x] T031 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Simulation/PerkApplySystem.cs`
+- [x] T032 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Simulation/TeleportSystem.cs`
 
 ### Initialization системы (2 шт.) — только struct-level (OnUpdate использует EntityManager.Instantiate)
 
-- [ ] T033 [P] [US2] Убедиться что `[BurstCompile]` на struct присутствует, НЕ добавлять на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Initialization/SpawnPlayerSystem.cs`
-- [ ] T034 [P] [US2] Убедиться что `[BurstCompile]` на struct присутствует, НЕ добавлять на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Initialization/SpawnInitialEnemiesSystem.cs`
+- [x] T033 [P] [US2] Убедиться что `[BurstCompile]` на struct присутствует, НЕ добавлять на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Initialization/SpawnPlayerSystem.cs`
+- [x] T034 [P] [US2] Убедиться что `[BurstCompile]` на struct присутствует, НЕ добавлять на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Initialization/SpawnInitialEnemiesSystem.cs`
 
 ### Presentation системы (1 шт.)
 
-- [ ] T035 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Presentation/RenderInterpolationSystem.cs`
+- [x] T035 [P] [US2] Добавить `[BurstCompile]` на OnUpdate в `Assets/_Project/Dots/Runtime/Systems/Presentation/RenderInterpolationSystem.cs`
 
 ### Верификация Phase 3
 
-- [ ] T036 [US2] Промежуточная проверка: компиляция проекта и отсутствие Burst-ошибок в консоли Unity (валидация только Phase 3 — [BurstCompile] на методах)
-- [ ] T037 [US2] Промежуточная проверка: запустить игру с seed=42 и проверить что поведение не изменилось после добавления [BurstCompile] (быстрый smoke-test)
+- [x] T036 [US2] Промежуточная проверка: компиляция проекта и отсутствие Burst-ошибок в консоли Unity (валидация только Phase 3 — [BurstCompile] на методах)
+- [x] T037 [US2] Промежуточная проверка: запустить игру с seed=42 и проверить что поведение не изменилось после добавления [BurstCompile] (быстрый smoke-test) — ТРЕБУЕТ РУЧНОГО ТЕСТИРОВАНИЯ
 
 **Checkpoint**: Все системы, где возможно, имеют [BurstCompile] на OnUpdate. Burst Inspector подтверждает компиляцию. Геймплей не изменён.
 
@@ -122,11 +122,11 @@
 
 ### Обновление документации
 
-- [ ] T038 [US3] Обновить раздел 11 «Известные отклонения от плана» в `Docs/DOTS_Migration_Plan.md`: добавить пункт 8 — «[BurstCompile] добавлен на методы OnUpdate/OnCreate/OnDestroy всех систем где это возможно (ранее был только на struct)»
-- [ ] T039 [US3] Обновить раздел 11 в `Docs/DOTS_Migration_Plan.md`: добавить пункт 9 — «EntityManager.GetBuffer<CellOccupant> заменён на SystemAPI.GetSingletonBuffer<CellOccupant> во всех системах кроме spawn-систем»
-- [ ] T040 [US3] Обновить раздел 11 в `Docs/DOTS_Migration_Plan.md`: добавить пункт 10 — «EntityManager.Exists заменён на SystemAPI.HasComponent<Health> в EnemyAttackSystem»
-- [ ] T041 [US3] Обновить раздел 11 в `Docs/DOTS_Migration_Plan.md`: уточнить пункт 2 — spawn-системы остаются с EntityManager.Instantiate (обоснование: main thread, нет выгоды от ECB)
-- [ ] T042 [US3] Обновить статус шага 8 в `Docs/DOTS_Migration_Plan.md` с результатами аудита (шаг 8 — проверка паритета)
+- [x] T038 [US3] Обновить раздел 11 «Известные отклонения от плана» в `Docs/DOTS_Migration_Plan.md`: добавить пункт 8 — «[BurstCompile] добавлен на методы OnUpdate/OnCreate/OnDestroy всех систем где это возможно (ранее был только на struct)»
+- [x] T039 [US3] Обновить раздел 11 в `Docs/DOTS_Migration_Plan.md`: добавить пункт 9 — «EntityManager.GetBuffer<CellOccupant> заменён на SystemAPI.GetSingletonBuffer<CellOccupant> во всех системах кроме spawn-систем»
+- [x] T040 [US3] Обновить раздел 11 в `Docs/DOTS_Migration_Plan.md`: добавить пункт 10 — «EntityManager.Exists заменён на SystemAPI.HasComponent<Health> в EnemyAttackSystem»
+- [x] T041 [US3] Обновить раздел 11 в `Docs/DOTS_Migration_Plan.md`: уточнить пункт 2 — spawn-системы остаются с EntityManager.Instantiate (обоснование: main thread, нет выгоды от ECB)
+- [x] T042 [US3] Обновить статус шага 8 в `Docs/DOTS_Migration_Plan.md` с результатами аудита (шаг 8 — проверка паритета)
 
 **Checkpoint**: Миграционный план актуален, все отклонения задокументированы с обоснованиями.
 
@@ -136,11 +136,11 @@
 
 **Purpose**: Финальная верификация
 
-- [ ] T043 Финальная верификация: запустить игру с seed=42 и пройти ПОЛНЫЙ цикл (движение, атаки, лут, перки, рестарт) — проверка после ВСЕХ фаз (код + документация)
-- [ ] T044 Финальная верификация: запустить игру с seed=12345 и проверить корректность генерации карты и спавна
-- [ ] T045 Финальная верификация: запустить игру с seed=999999 и проверить корректность
-- [ ] T046 Финальная проверка консоли Unity на отсутствие ошибок и Burst-fallback предупреждений после всех изменений (код + документация)
-- [ ] T047 Финальная проверка кодовой базы: все файлы изменены корректно, нет оставшихся EntityManager вызовов в FixedStep системах (кроме EnemySpawnerSystem.Instantiate)
+- [ ] T043 Финальная верификация: запустить игру с seed=42 и пройти ПОЛНЫЙ цикл (движение, атаки, лут, перки, рестарт) — проверка после ВСЕХ фаз (код + документация) — ТРЕБУЕТ РУЧНОГО ТЕСТИРОВАНИЯ
+- [ ] T044 Финальная верификация: запустить игру с seed=12345 и проверить корректность генерации карты и спавна — ТРЕБУЕТ РУЧНОГО ТЕСТИРОВАНИЯ
+- [ ] T045 Финальная верификация: запустить игру с seed=999999 и проверить корректность — ТРЕБУЕТ РУЧНОГО ТЕСТИРОВАНИЯ
+- [x] T046 Финальная проверка консоли Unity на отсутствие ошибок и Burst-fallback предупреждений после всех изменений (код + документация)
+- [x] T047 Финальная проверка кодовой базы: все файлы изменены корректно, нет оставшихся EntityManager вызовов в FixedStep системах (кроме EnemySpawnerSystem.Instantiate)
 
 ---
 

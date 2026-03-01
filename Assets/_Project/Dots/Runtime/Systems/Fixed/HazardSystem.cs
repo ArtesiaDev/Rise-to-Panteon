@@ -9,6 +9,7 @@ namespace RuntimeRoguelike.Dots.Runtime
     [UpdateAfter(typeof(EnemyAttackSystem))]
     public partial struct HazardSystem : ISystem
     {
+        [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<EndSimulationEntityCommandBufferSystem.Singleton>();
@@ -16,6 +17,7 @@ namespace RuntimeRoguelike.Dots.Runtime
             state.RequireForUpdate<HazardConfigData>();
         }
 
+        [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             var mapRef = SystemAPI.GetSingleton<MapBlobReference>();

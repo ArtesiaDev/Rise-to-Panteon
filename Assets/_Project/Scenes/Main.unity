@@ -205,7 +205,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3adab9c495f9845b3b19ea082a160bb2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _targetCamera: {fileID: 0}
+  _targetCamera: {fileID: 519420031}
   _offset: {x: 0, y: 0, z: -10}
 --- !u!114 &70331325
 MonoBehaviour:
@@ -219,8 +219,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ae18fe16d6ca24536ac91145295e039d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _entitiesRoot: {fileID: 0}
-  _poolRoot: {fileID: 0}
+  _entitiesRoot: {fileID: 558903911}
+  _poolRoot: {fileID: 1224665804}
   _spriteScale: 1
   _playerColor: {r: 0.9, g: 0.9, b: 0.2, a: 1}
   _enemyColor: {r: 0.85, g: 0.2, b: 0.2, a: 1}
@@ -237,7 +237,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 40b3907dad0b94bd2b8a006b39a7fc4a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _worldRoot: {fileID: 0}
+  _worldRoot: {fileID: 1955791225}
   _floorColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
   _wallColor: {r: 0.12, g: 0.12, b: 0.12, a: 1}
   _obstacleColor: {r: 0.18, g: 0.18, b: 0.18, a: 1}
@@ -271,6 +271,7 @@ MonoBehaviour:
   _attackKey: 32
   _restartKey: 114
   _toggleGizmosKey: 103
+  _teleportKey: 116
 --- !u!4 &70331329
 Transform:
   m_ObjectHideFlags: 0
@@ -727,7 +728,6 @@ MonoBehaviour:
   _attackCooldown: 1.2
   _pathRefreshInterval: 0.6
   _idleMoveInterval: 2.5
-  _colliderSize: {x: 0.8, y: 0.8}
 --- !u!114 &936415572
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -742,7 +742,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _maxHealth: 12
   _moveSpeed: 4
-  _colliderSize: {x: 0.8, y: 0.8}
 --- !u!114 &936415573
 MonoBehaviour:
   m_ObjectHideFlags: 0

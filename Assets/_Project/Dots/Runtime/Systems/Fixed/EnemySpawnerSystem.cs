@@ -52,7 +52,7 @@ namespace RuntimeRoguelike.Dots.Runtime
                 return;
             }
 
-            var occupancy = state.EntityManager.GetBuffer<CellOccupant>(SystemAPI.GetSingletonEntity<RunState>());
+            var occupancy = SystemAPI.GetSingletonBuffer<CellOccupant>();
             var rngState = SystemAPI.GetSingletonRW<RngState>();
             var rng = rngState.ValueRW.Rng;
 

@@ -9,6 +9,7 @@ namespace RuntimeRoguelike.Dots.Runtime
     [UpdateAfter(typeof(EnemyPathfindSystem))]
     public partial struct EnemyMoveIntentSystem : ISystem
     {
+        [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             var rngState = SystemAPI.GetSingletonRW<RngState>();

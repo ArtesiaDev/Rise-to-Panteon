@@ -77,7 +77,7 @@ namespace RuntimeRoguelike.Dots.Runtime
             EntityUtilities.EnsureComponent(em, entity, new AttackRequest());
             em.SetComponentEnabled<AttackRequest>(entity, false);
 
-            var occupancy = em.GetBuffer<CellOccupant>(SystemAPI.GetSingletonEntity<RunState>());
+            var occupancy = SystemAPI.GetSingletonBuffer<CellOccupant>();
             var index = MapUtilities.ToIndex(startCell, mapRef.Value.Value.Size);
             occupancy[index] = new CellOccupant { Value = entity };
 

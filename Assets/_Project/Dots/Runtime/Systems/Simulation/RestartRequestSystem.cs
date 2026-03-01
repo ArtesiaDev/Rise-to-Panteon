@@ -7,12 +7,14 @@ namespace RuntimeRoguelike.Dots.Runtime
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     public partial struct RestartRequestSystem : ISystem
     {
+        [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<RunCommand>();
             state.RequireForUpdate<InputState>();
         }
 
+        [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             var input = SystemAPI.GetSingletonRW<InputState>();
