@@ -1,18 +1,20 @@
 <!--
 Sync Impact Report
-- Version: 1.1.0 → 1.2.0 (MINOR: добавлено правило документации механик)
-- Принципы: без изменений (6 шт.)
-- Изменения в секции «Рабочий процесс разработки»:
-  - Добавлено правило «Документация механик (NON-NEGOTIABLE)»
-- Новые файлы:
-  - Docs/Mechanics/*.md — 12 файлов (по одному на механику)
-  - Docs/RuntimeRoguelike_CurrentMechanics.md — переписан как индекс
-  - CLAUDE.md — добавлена секция «Документация геймплейных механик»
+- Version: 1.2.0 → 1.2.1 (PATCH: уточнения формулировок по аудиту)
+- Принципы:
+  - IV. Burst-производительность → уточнено: обязательный комментарий
+    при отсутствии [BurstCompile]
+  - V. Дисциплина порядка систем → уточнено: RequireForUpdate —
+    SHOULD для data-driven queries
+  - Добавлен: раздел «Известные отступления от принципов» (ECB)
 - Шаблоны:
-  - .specify/templates/plan-template.md — ⚠ pending (Constitution Check)
+  - .specify/templates/plan-template.md — ✅ адаптирован под DOTS
   - .specify/templates/spec-template.md — ✅ совместим
-  - .specify/templates/tasks-template.md — ✅ совместим
-- Follow-up TODO: нет
+  - .specify/templates/tasks-template.md — ✅ адаптирован под DOTS
+- Follow-up TODO:
+  - Рефакторинг ECB в 3 системах (EnemySpawnerSystem,
+    SpawnPlayerSystem, SpawnInitialEnemiesSystem)
+  - Добавить [UpdateInGroup] к RunBootstrapSystem
 -->
 
 # Rise to Panteon — Конституция проекта
@@ -65,20 +67,27 @@ Simulation → Presentation Bridges.
 ### IV. Burst-производительность
 
 Все системы симуляции ДОЛЖНЫ компилироваться с `[BurstCompile]`.
-Компоненты НЕ ДОЛЖНЫ содержать managed-типов (string, class,
-массивы). Для коллекций — `NativeArray`, `NativeList`,
+Если `[BurstCompile]` невозможен (например, прямой вызов
+`EntityManager` в OnUpdate), система ДОЛЖНА содержать комментарий
+с обоснованием отсутствия атрибута (см. MapGenerationSystem как
+образец). Компоненты НЕ ДОЛЖНЫ содержать managed-типов (string,
+class, массивы). Для коллекций — `NativeArray`, `NativeList`,
 `BlobAssetReference`. Для строковых данных — `FixedString`.
 
 **Обоснование**: Burst обеспечивает нативную производительность;
 нарушение ограничений ведёт к fallback на Mono и деградации FPS.
+Комментарий при отсутствии Burst предотвращает неосознанные
+пропуски атрибута.
 
 ### V. Дисциплина порядка систем
 
 Каждая система ДОЛЖНА явно декларировать свою группу через
 `[UpdateInGroup]` и зависимости через `[UpdateAfter]` /
-`[UpdateBefore]`. В `OnCreate` — обязательный
-`RequireForUpdate<T>()` для всех singleton-зависимостей. В
-`OnUpdate` — ранний выход (`return`) если данные не готовы.
+`[UpdateBefore]`. В `OnCreate` — `RequireForUpdate<T>()` для
+singleton-зависимостей (MUST) и для query-компонентов (SHOULD —
+data-driven queries автоматически пропускаются при отсутствии
+совпадений). В `OnUpdate` — ранний выход (`return`) если данные
+не готовы.
 
 Текущий порядок Fixed-систем (14 шт.) является каноническим и
 изменяется ТОЛЬКО с обоснованием и обновлением документации.
@@ -153,6 +162,18 @@ PR/коммите.
   - Новая механика → новый файл + строка в таблицу индекса
   - Удалённая механика → удалить файл + строку из таблицы
 
+## Известные отступления от принципов
+
+> Этот раздел фиксирует осознанные нарушения для отслеживания
+> технического долга. Каждое отступление ДОЛЖНО иметь план
+> исправления.
+
+| Нарушение | Системы | Принцип | Статус |
+|-----------|---------|---------|--------|
+| Прямой `EntityManager` вместо ECB | EnemySpawnerSystem, SpawnPlayerSystem, SpawnInitialEnemiesSystem | Техн. ограничения (§) | TODO: рефакторинг на ECB |
+| Нет `[UpdateInGroup]` | RunBootstrapSystem | V. Порядок систем | TODO: добавить атрибут |
+| Нет `[BurstCompile]` без комментария | RunBootstrapSystem | IV. Burst | TODO: добавить комментарий |
+
 ## Governance
 
 Конституция является высшим руководящим документом проекта. Все
@@ -173,4 +194,4 @@ PR/коммите.
 принципов. Нарушения допускаются ТОЛЬКО с явным обоснованием и
 планом миграции.
 
-**Version**: 1.2.0 | **Ratified**: 2026-02-28 | **Last Amended**: 2026-03-01
+**Version**: 1.2.1 | **Ratified**: 2026-02-28 | **Last Amended**: 2026-03-01
