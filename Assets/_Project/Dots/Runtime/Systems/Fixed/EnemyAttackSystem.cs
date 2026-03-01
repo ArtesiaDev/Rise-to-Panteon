@@ -9,17 +9,19 @@ namespace RuntimeRoguelike.Dots.Runtime
     [UpdateAfter(typeof(PlayerAttackSystem))]
     public partial struct EnemyAttackSystem : ISystem
     {
+        [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<RunState>();
         }
 
+        [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             foreach (var (position, target, cooldown, range, damage) 
                      in SystemAPI.Query<RefRO<GridPosition>, RefRW<Target>, RefRW<AttackCooldown>, RefRO<AttackRange>, RefRO<Damage>>().WithAll<EnemyTag>())
             {
-                if (!target.ValueRO.HasTarget || !state.EntityManager.Exists(target.ValueRO.Value) || !SystemAPI.HasComponent<Health>(target.ValueRO.Value))
+                if (!target.ValueRO.HasTarget || !SystemAPI.HasComponent<Health>(target.ValueRO.Value))
                 {
                     target.ValueRW.HasTarget = false;
                     continue;

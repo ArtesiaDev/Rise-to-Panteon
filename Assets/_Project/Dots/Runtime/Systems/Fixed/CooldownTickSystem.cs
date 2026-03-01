@@ -9,6 +9,7 @@ namespace RuntimeRoguelike.Dots.Runtime
     [UpdateBefore(typeof(DifficultyTickSystem))]
     public partial struct CooldownTickSystem : ISystem
     {
+        [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             var deltaTime = SystemAPI.Time.DeltaTime;

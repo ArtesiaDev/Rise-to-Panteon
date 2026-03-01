@@ -9,12 +9,14 @@ namespace RuntimeRoguelike.Dots.Runtime
     [UpdateAfter(typeof(MovementResolveSystem))]
     public partial struct PlayerAttackSystem : ISystem
     {
+        [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<RunState>();
             state.RequireForUpdate<MapBlobReference>();
         }
 
+        [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             var mapRef = SystemAPI.GetSingleton<MapBlobReference>();
@@ -24,7 +26,7 @@ namespace RuntimeRoguelike.Dots.Runtime
             }
 
             ref var map = ref mapRef.Value.Value;
-            var occupancy = state.EntityManager.GetBuffer<CellOccupant>(SystemAPI.GetSingletonEntity<RunState>());
+            var occupancy = SystemAPI.GetSingletonBuffer<CellOccupant>();
 
             foreach (var (cooldown, damage, direction, position, range, stats, entity) 
                      in SystemAPI.Query< RefRW<AttackCooldown>, RefRO<Damage>, RefRO<LastMoveDirection>, RefRO<GridPosition>, RefRO<AttackRange>, RefRO<PlayerStats>>()

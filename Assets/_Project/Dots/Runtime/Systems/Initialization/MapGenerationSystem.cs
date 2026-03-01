@@ -131,6 +131,10 @@ namespace RuntimeRoguelike.Dots.Runtime
 
                 rngState.ValueRW.Rng = rng;
 
+                // Сохраняем RunId перед структурными изменениями, чтобы не обращаться к invalidated handle
+                var currentRunId = runState.ValueRO.RunId;
+                var currentSeed = runState.ValueRO.Seed;
+
                 var mapEntity = SystemAPI.GetSingletonEntity<RunState>();
                 if (state.EntityManager.HasComponent<MapBlobReference>(mapEntity))
                 {
@@ -159,6 +163,7 @@ namespace RuntimeRoguelike.Dots.Runtime
 
                 var mapBlobRef = builder.CreateBlobAssetReference<MapBlob>(Allocator.Persistent);
 
+                // Структурные изменения — после этого runState handle невалиден
                 if (state.EntityManager.HasComponent<MapBlobReference>(mapEntity))
                 {
                     state.EntityManager.SetComponentData(mapEntity, new MapBlobReference { Value = mapBlobRef });
@@ -170,11 +175,11 @@ namespace RuntimeRoguelike.Dots.Runtime
 
                 if (!state.EntityManager.HasComponent<MapRenderRequest>(mapEntity))
                 {
-                    state.EntityManager.AddComponentData(mapEntity, new MapRenderRequest { RunId = runState.ValueRO.RunId });
+                    state.EntityManager.AddComponentData(mapEntity, new MapRenderRequest { RunId = currentRunId });
                 }
                 else
                 {
-                    state.EntityManager.SetComponentData(mapEntity, new MapRenderRequest { RunId = runState.ValueRO.RunId });
+                    state.EntityManager.SetComponentData(mapEntity, new MapRenderRequest { RunId = currentRunId });
                 }
                 state.EntityManager.SetComponentEnabled<MapRenderRequest>(mapEntity, true);
 
@@ -189,10 +194,13 @@ namespace RuntimeRoguelike.Dots.Runtime
                     occupancy[i] = new CellOccupant { Value = Entity.Null };
                 }
 
-                runState.ValueRW.MapSize = mapSize;
-                runState.ValueRW.StartCell = startCell;
-                runState.ValueRW.SafeRadius = mapConfig.SafeRadius;
-                runState.ValueRW.IsInitialized = true;
+                // Переполучаем RunState после структурных изменений
+                var updatedRunState = SystemAPI.GetSingletonRW<RunState>();
+                updatedRunState.ValueRW.Seed = currentSeed;
+                updatedRunState.ValueRW.MapSize = mapSize;
+                updatedRunState.ValueRW.StartCell = startCell;
+                updatedRunState.ValueRW.SafeRadius = mapConfig.SafeRadius;
+                updatedRunState.ValueRW.IsInitialized = true;
             }
             finally
             {

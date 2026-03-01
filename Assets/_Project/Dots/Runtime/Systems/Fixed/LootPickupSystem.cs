@@ -9,11 +9,13 @@ namespace RuntimeRoguelike.Dots.Runtime
     [UpdateAfter(typeof(PoisonTickSystem))]
     public partial struct LootPickupSystem : ISystem
     {
+        [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<EndSimulationEntityCommandBufferSystem.Singleton>();
         }
 
+        [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             var hasPlayer = false;

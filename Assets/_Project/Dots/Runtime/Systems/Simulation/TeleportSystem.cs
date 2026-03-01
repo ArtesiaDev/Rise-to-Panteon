@@ -12,6 +12,7 @@ namespace RuntimeRoguelike.Dots.Runtime
     [UpdateAfter(typeof(InputReadSystem))]
     public partial struct TeleportSystem : ISystem
     {
+        [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<InputState>();
@@ -19,6 +20,7 @@ namespace RuntimeRoguelike.Dots.Runtime
             state.RequireForUpdate<MapBlobReference>();
         }
 
+        [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             var input = SystemAPI.GetSingletonRW<InputState>();
@@ -44,8 +46,7 @@ namespace RuntimeRoguelike.Dots.Runtime
                 return;
             }
 
-            var runEntity = SystemAPI.GetSingletonEntity<RunState>();
-            var occupancy = state.EntityManager.GetBuffer<CellOccupant>(runEntity);
+            var occupancy = SystemAPI.GetSingletonBuffer<CellOccupant>();
             var targetIndex = MapUtilities.ToIndex(target, map.Size);
 
             // Проверяем что целевая клетка свободна

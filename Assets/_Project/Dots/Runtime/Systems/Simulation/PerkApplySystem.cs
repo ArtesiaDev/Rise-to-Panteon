@@ -8,12 +8,14 @@ namespace RuntimeRoguelike.Dots.Runtime
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     public partial struct PerkApplySystem : ISystem
     {
+        [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<RunCommand>();
             state.RequireForUpdate<PerkOfferState>();
         }
 
+        [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             var command = SystemAPI.GetSingletonRW<RunCommand>();

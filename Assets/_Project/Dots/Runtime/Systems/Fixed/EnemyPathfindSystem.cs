@@ -19,6 +19,7 @@ namespace RuntimeRoguelike.Dots.Runtime
         private NativeArray<int> _positions;
         private int _allocatedSize;
 
+        [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<RunState>();
@@ -27,11 +28,13 @@ namespace RuntimeRoguelike.Dots.Runtime
             _allocatedSize = 0;
         }
 
+        [BurstCompile]
         public void OnDestroy(ref SystemState state)
         {
             DisposeArrays();
         }
 
+        [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             var mapRef = SystemAPI.GetSingleton<MapBlobReference>();
@@ -54,8 +57,7 @@ namespace RuntimeRoguelike.Dots.Runtime
                 _allocatedSize = total;
             }
 
-            var runEntity = SystemAPI.GetSingletonEntity<RunState>();
-            var occupancy = state.EntityManager.GetBuffer<CellOccupant>(runEntity);
+            var occupancy = SystemAPI.GetSingletonBuffer<CellOccupant>();
 
             var pathLookup = SystemAPI.GetBufferLookup<PathStep>();
             var gridLookup = SystemAPI.GetComponentLookup<GridPosition>(true);

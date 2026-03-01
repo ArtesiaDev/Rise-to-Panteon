@@ -52,9 +52,8 @@ namespace RuntimeRoguelike.Dots.Runtime
                 return;
             }
 
-            var occupancy = state.EntityManager.GetBuffer<CellOccupant>(SystemAPI.GetSingletonEntity<RunState>());
-            var rngState = SystemAPI.GetSingletonRW<RngState>();
-            var rng = rngState.ValueRW.Rng;
+            var occupancy = SystemAPI.GetSingletonBuffer<CellOccupant>();
+            var rng = SystemAPI.GetSingletonRW<RngState>().ValueRW.Rng;
 
             var attempts = math.max(1, spawnConfig.SpawnAttempts);
             for (var attempt = 0; attempt < attempts; attempt++)
@@ -90,11 +89,15 @@ namespace RuntimeRoguelike.Dots.Runtime
                     : state.EntityManager.CreateEntity();
 
                 EnemySpawnUtilities.InitializeEnemy(state.EntityManager, enemy, cell, enemyConfig, difficulty.EnemyMultiplier, 0);
+
+                // Переполучаем handles после структурных изменений (CreateEntity/AddComponent)
+                occupancy = SystemAPI.GetSingletonBuffer<CellOccupant>();
                 occupancy[index] = new CellOccupant { Value = enemy };
                 break;
             }
 
-            rngState.ValueRW.Rng = rng;
+            // Переполучаем handles после структурных изменений
+            SystemAPI.GetSingletonRW<RngState>().ValueRW.Rng = rng;
 
             var interval = spawnConfig.SpawnInterval;
             if (difficulty.SpawnRateMultiplier > 0f)
@@ -102,7 +105,7 @@ namespace RuntimeRoguelike.Dots.Runtime
                 interval = spawnConfig.SpawnInterval / difficulty.SpawnRateMultiplier;
             }
 
-            timer.ValueRW.Timer = math.max(0.05f, interval);
+            SystemAPI.GetSingletonRW<EnemySpawnState>().ValueRW.Timer = math.max(0.05f, interval);
         }
     }
 }

@@ -10,12 +10,14 @@ namespace RuntimeRoguelike.Dots.Runtime
     [UpdateBefore(typeof(EnemySpawnerSystem))]
     public partial struct DifficultyTickSystem : ISystem
     {
+        [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<DifficultyState>();
             state.RequireForUpdate<DifficultyConfigData>();
         }
 
+        [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             var config = SystemAPI.GetSingleton<DifficultyConfigData>();

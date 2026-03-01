@@ -68,20 +68,9 @@ namespace RuntimeRoguelike.Dots.Hybrid
                 teleportRequested = teleportTarget.x >= 0;
             }
 
+            // InputState создаётся в RunBootstrapSystem.OnCreate — ждём пока появится
             if (_inputQuery.IsEmpty)
-            {
-                var entity = _entityManager.CreateEntity();
-                _entityManager.AddComponentData(entity, new InputState
-                {
-                    MoveDir = move,
-                    AttackPressed = attackPressed,
-                    RestartPressed = restartPressed,
-                    ToggleGizmos = toggleGizmos,
-                    TeleportRequested = teleportRequested,
-                    TeleportTarget = teleportTarget
-                });
                 return;
-            }
 
             var inputEntity = _inputQuery.GetSingletonEntity();
             var input = _entityManager.GetComponentData<InputState>(inputEntity);

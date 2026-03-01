@@ -75,3 +75,10 @@ Assets/_Project/Dots/
 - Namespace: `RuntimeRoguelike.Dots.{Runtime|Hybrid|Authoring|Baking}`
 - Именование: PascalCase, суффиксы `System`, `Config`, `State`, `Tag`
 - Комментарии: на русском языке
+
+## Active Technologies
+- C# (.NET Standard 2.1) / Unity 2022.3 LTS + Unity.Entities 1.4.x, Unity.Burst, Unity.Collections, Unity.Mathematics (001-dots-audit-refactor)
+- BlobAssetReference<MapBlob> для данных карты, IComponentData для состояния (001-dots-audit-refactor)
+
+## Recent Changes
+- 001-dots-audit-refactor: Added C# (.NET Standard 2.1) / Unity 2022.3 LTS + Unity.Entities 1.4.x, Unity.Burst, Unity.Collections, Unity.Mathematics

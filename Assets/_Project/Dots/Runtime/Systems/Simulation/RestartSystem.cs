@@ -9,6 +9,7 @@ namespace RuntimeRoguelike.Dots.Runtime
     {
         private EntityQuery _runEntities;
 
+        [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<EndSimulationEntityCommandBufferSystem.Singleton>();
@@ -17,6 +18,7 @@ namespace RuntimeRoguelike.Dots.Runtime
             state.RequireForUpdate<RunCommand>();
         }
 
+        [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             var command = SystemAPI.GetSingletonRW<RunCommand>();
@@ -70,9 +72,9 @@ namespace RuntimeRoguelike.Dots.Runtime
             {
                 SystemAPI.SetSingleton(new PerkOfferState { IsVisible = false });
                 var mapEntity = SystemAPI.GetSingletonEntity<RunState>();
-                if (state.EntityManager.HasBuffer<PerkOption>(mapEntity))
+                if (SystemAPI.HasBuffer<PerkOption>(mapEntity))
                 {
-                    state.EntityManager.GetBuffer<PerkOption>(mapEntity).Clear();
+                    SystemAPI.GetBuffer<PerkOption>(mapEntity).Clear();
                 }
             }
 
@@ -80,7 +82,7 @@ namespace RuntimeRoguelike.Dots.Runtime
             {
                 SystemAPI.SetSingleton(new MapRenderRequest { RunId = runState.ValueRO.RunId });
                 var mapEntity = SystemAPI.GetSingletonEntity<RunState>();
-                state.EntityManager.SetComponentEnabled<MapRenderRequest>(mapEntity, true);
+                SystemAPI.SetComponentEnabled<MapRenderRequest>(mapEntity, true);
             }
 
             if (hasInput)

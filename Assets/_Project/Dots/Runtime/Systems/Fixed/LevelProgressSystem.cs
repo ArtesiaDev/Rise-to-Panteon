@@ -10,6 +10,7 @@ namespace RuntimeRoguelike.Dots.Runtime
     [UpdateAfter(typeof(DeathSystem))]
     public partial struct LevelProgressSystem : ISystem
     {
+        [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<LevelConfigData>();
@@ -17,6 +18,7 @@ namespace RuntimeRoguelike.Dots.Runtime
             state.RequireForUpdate<PerkOfferState>();
         }
 
+        [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             var levelConfig = SystemAPI.GetSingleton<LevelConfigData>();

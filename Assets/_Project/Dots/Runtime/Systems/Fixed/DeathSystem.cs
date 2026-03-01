@@ -11,6 +11,7 @@ namespace RuntimeRoguelike.Dots.Runtime
     [UpdateAfter(typeof(LootPickupSystem))]
     public partial struct DeathSystem : ISystem
     {
+        [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<EndSimulationEntityCommandBufferSystem.Singleton>();
@@ -20,6 +21,7 @@ namespace RuntimeRoguelike.Dots.Runtime
             state.RequireForUpdate<LootConfigData>();
         }
 
+        [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             var mapRef = SystemAPI.GetSingleton<MapBlobReference>();
@@ -29,7 +31,7 @@ namespace RuntimeRoguelike.Dots.Runtime
             }
 
             ref var map = ref mapRef.Value.Value;
-            var occupancy = state.EntityManager.GetBuffer<CellOccupant>(SystemAPI.GetSingletonEntity<RunState>());
+            var occupancy = SystemAPI.GetSingletonBuffer<CellOccupant>();
             var lootConfig = SystemAPI.GetSingleton<LootConfigData>();
             var lootTable = SystemAPI.GetSingletonBuffer<LootEntryData>();
             var prefabConfig = SystemAPI.HasSingleton<PrefabConfigData>()

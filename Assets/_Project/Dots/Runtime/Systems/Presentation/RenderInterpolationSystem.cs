@@ -8,6 +8,7 @@ namespace RuntimeRoguelike.Dots.Runtime
     [UpdateInGroup(typeof(PresentationSystemGroup))]
     public partial struct RenderInterpolationSystem : ISystem
     {
+        [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             foreach (var (grid, prevGrid, render, cooldown, speed) in SystemAPI
