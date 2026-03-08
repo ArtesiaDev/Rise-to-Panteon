@@ -9,6 +9,23 @@ namespace RuntimeRoguelike.Dots.Hybrid
     public class TilemapRenderBridge : MonoBehaviour
     {
         [SerializeField] private Transform _worldRoot;
+
+        [Header("Тайлы стен (16 штук по 4-bit bitmask: N=1,E=2,S=4,W=8)")]
+        [SerializeField] private Tile[] _wallTilesByMask = new Tile[16];
+
+        [Header("Тайлы пола (вариации)")]
+        [SerializeField] private Tile[] _floorVariantTiles;
+
+        [Header("Декоративные тайлы (дверные проёмы, арки)")]
+        [SerializeField] private Tile _doorHorizontalTile;
+        [SerializeField] private Tile _doorVerticalTile;
+
+        [Header("Тайлы ловушек")]
+        [SerializeField] private Tile _poisonTile;
+        [SerializeField] private Tile _spikeTile;
+        [SerializeField] private Tile _obstacleTile;
+
+        [Header("Fallback-цвета (если тайлы не назначены)")]
         [SerializeField] private Color _floorColor = new(0.25f, 0.25f, 0.25f, 1f);
         [SerializeField] private Color _wallColor = new(0.12f, 0.12f, 0.12f, 1f);
         [SerializeField] private Color _obstacleColor = new(0.18f, 0.18f, 0.18f, 1f);
@@ -21,8 +38,14 @@ namespace RuntimeRoguelike.Dots.Hybrid
         private EntityQuery _gridQuery;
         private Entity _mapEntity;
         private GameObject _gridRoot;
-        private readonly Dictionary<string, Tile> _tileCache = new();
+        private readonly Dictionary<string, Tile> _fallbackTileCache = new();
         private int _lastRunId = -1;
+
+        // Публичные ссылки на tilemaps для FogRenderBridge
+        public Tilemap GroundTilemap { get; private set; }
+        public Tilemap WallsTilemap { get; private set; }
+        public Tilemap HazardsTilemap { get; private set; }
+        public Tilemap DecorTilemap { get; private set; }
 
         private void Awake()
         {
@@ -38,7 +61,7 @@ namespace RuntimeRoguelike.Dots.Hybrid
                 ComponentType.ReadOnly<MapBlobReference>());
             _gridQuery = _entityManager.CreateEntityQuery(ComponentType.ReadOnly<GridConfigData>());
         }
-        
+
         private void Update()
         {
             if (_world is not { IsCreated: true })
@@ -95,6 +118,12 @@ namespace RuntimeRoguelike.Dots.Hybrid
             var ground = CreateTilemap(_gridRoot.transform, "Ground", 0, false);
             var walls = CreateTilemap(_gridRoot.transform, "Walls", 1, true);
             var hazards = CreateTilemap(_gridRoot.transform, "Hazards", 2, false);
+            var decor = CreateTilemap(_gridRoot.transform, "Decor", 3, false);
+
+            GroundTilemap = ground;
+            WallsTilemap = walls;
+            HazardsTilemap = hazards;
+            DecorTilemap = decor;
 
             var size = map.Size;
             var cellCount = size.x * size.y;
@@ -105,11 +134,15 @@ namespace RuntimeRoguelike.Dots.Hybrid
             var wallTiles = new TileBase[cellCount];
             var hazardTiles = new TileBase[cellCount];
 
-            var floorTile = GetTile("floor", _floorColor);
-            var wallTile = GetTile("wall", _wallColor);
-            var obstacleTile = GetTile("obstacle", _obstacleColor);
-            var poisonTile = GetTile("poison", _poisonColor);
-            var spikeTile = GetTile("spike", _spikeColor);
+            // Fallback-тайлы если спрайты не назначены
+            var fallbackFloor = GetFallbackTile("floor", _floorColor);
+            var fallbackWall = GetFallbackTile("wall", _wallColor);
+            var fallbackObstacle = GetFallbackTile("obstacle", _obstacleColor);
+            var fallbackPoison = GetFallbackTile("poison", _poisonColor);
+            var fallbackSpike = GetFallbackTile("spike", _spikeColor);
+
+            var hasWallTiles = _wallTilesByMask != null && _wallTilesByMask.Length == 16;
+            var hasFloorTiles = _floorVariantTiles != null && _floorVariantTiles.Length > 0;
 
             for (var y = 0; y < size.y; y++)
             {
@@ -119,37 +152,63 @@ namespace RuntimeRoguelike.Dots.Hybrid
 
                     if (map.BaseLayer[index] == MapCellType.Floor)
                     {
-                        groundTiles[index] = floorTile;
+                        if (hasFloorTiles)
+                        {
+                            var variant = map.FloorVariantLayer[index] % _floorVariantTiles.Length;
+                            groundTiles[index] = _floorVariantTiles[variant] != null
+                                ? _floorVariantTiles[variant]
+                                : fallbackFloor;
+                        }
+                        else
+                        {
+                            groundTiles[index] = fallbackFloor;
+                        }
                     }
                     else if (map.BaseLayer[index] == MapCellType.Wall)
                     {
-                        wallTiles[index] = wallTile;
+                        if (hasWallTiles)
+                        {
+                            var mask = map.WallMaskLayer[index] & 0x0F; // 4-bit маска
+                            wallTiles[index] = _wallTilesByMask[mask] != null
+                                ? _wallTilesByMask[mask]
+                                : fallbackWall;
+                        }
+                        else
+                        {
+                            wallTiles[index] = fallbackWall;
+                        }
                     }
 
                     if (map.ObstacleLayer[index] != ObstacleType.None)
                     {
-                        wallTiles[index] = obstacleTile;
+                        wallTiles[index] = _obstacleTile != null ? _obstacleTile : fallbackObstacle;
                     }
 
                     var hazard = map.HazardLayer[index];
                     if (hazard == HazardType.Poison)
                     {
-                        hazardTiles[index] = poisonTile;
+                        hazardTiles[index] = _poisonTile != null ? _poisonTile : fallbackPoison;
                     }
                     else if (hazard == HazardType.Spike)
                     {
-                        hazardTiles[index] = spikeTile;
+                        hazardTiles[index] = _spikeTile != null ? _spikeTile : fallbackSpike;
                     }
                 }
             }
 
+            // Декоративный слой: дверные проёмы на переходах комната↔коридор
+            var decorTiles = new TileBase[cellCount];
+            PlaceDoorDecor(ref map, decorTiles, size);
+
             ground.SetTilesBlock(bounds, groundTiles);
             walls.SetTilesBlock(bounds, wallTiles);
             hazards.SetTilesBlock(bounds, hazardTiles);
+            decor.SetTilesBlock(bounds, decorTiles);
 
             ground.CompressBounds();
             walls.CompressBounds();
             hazards.CompressBounds();
+            decor.CompressBounds();
         }
 
         private static Tilemap CreateTilemap(Transform parent, string name, int sortingOrder, bool withColliders)
@@ -173,9 +232,58 @@ namespace RuntimeRoguelike.Dots.Hybrid
             return tilemap;
         }
 
-        private Tile GetTile(string key, Color color)
+        /// <summary>
+        /// Размещает декоративные тайлы (двери/арки) на переходах комната↔коридор.
+        /// Дверь ставится на floor-клетке, у которой ровно 2 стены-соседа по одной оси
+        /// (т.е. клетка зажата стенами сверху-снизу или слева-справа — дверной проём).
+        /// </summary>
+        private void PlaceDoorDecor(ref MapBlob map, TileBase[] decorTiles, Unity.Mathematics.int2 size)
         {
-            if (_tileCache.TryGetValue(key, out var tile))
+            var hasDoorH = _doorHorizontalTile != null;
+            var hasDoorV = _doorVerticalTile != null;
+            if (!hasDoorH && !hasDoorV)
+                return;
+
+            // Ищем клетки на границах комнат: floor-клетка, у которой есть стены
+            // по одной оси (горизонтальная или вертикальная «щель» — дверной проём)
+            for (var y = 1; y < size.y - 1; y++)
+            {
+                for (var x = 1; x < size.x - 1; x++)
+                {
+                    var index = y * size.x + x;
+                    if (map.BaseLayer[index] != MapCellType.Floor)
+                        continue;
+
+                    // Соседи
+                    var north = map.BaseLayer[(y + 1) * size.x + x];
+                    var south = map.BaseLayer[(y - 1) * size.x + x];
+                    var east = map.BaseLayer[y * size.x + (x + 1)];
+                    var west = map.BaseLayer[y * size.x + (x - 1)];
+
+                    // Горизонтальный проём: стены сверху и снизу, полы слева и справа
+                    if (north == MapCellType.Wall && south == MapCellType.Wall
+                        && east == MapCellType.Floor && west == MapCellType.Floor)
+                    {
+                        if (hasDoorH)
+                            decorTiles[index] = _doorHorizontalTile;
+                    }
+                    // Вертикальный проём: стены слева и справа, полы сверху и снизу
+                    else if (east == MapCellType.Wall && west == MapCellType.Wall
+                             && north == MapCellType.Floor && south == MapCellType.Floor)
+                    {
+                        if (hasDoorV)
+                            decorTiles[index] = _doorVerticalTile;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Fallback: генерирует одноцветный тайл если pixel art спрайты не назначены.
+        /// </summary>
+        private Tile GetFallbackTile(string key, Color color)
+        {
+            if (_fallbackTileCache.TryGetValue(key, out var tile))
             {
                 return tile;
             }
@@ -190,7 +298,7 @@ namespace RuntimeRoguelike.Dots.Hybrid
             var sprite = Sprite.Create(texture, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f), 1f);
             tile = ScriptableObject.CreateInstance<Tile>();
             tile.sprite = sprite;
-            _tileCache[key] = tile;
+            _fallbackTileCache[key] = tile;
             return tile;
         }
     }

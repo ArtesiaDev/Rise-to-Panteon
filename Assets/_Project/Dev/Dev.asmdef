@@ -1,0 +1,22 @@
+{
+    "name": "Dev",
+    "rootNamespace": "",
+    "references": [
+        "Framework",
+        "VContainer",
+        "Unity.TextMeshPro",
+        "RuntimeRoguelike.Dots.Runtime",
+        "Unity.Entities",
+        "Unity.Mathematics",
+        "Unity.Collections"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

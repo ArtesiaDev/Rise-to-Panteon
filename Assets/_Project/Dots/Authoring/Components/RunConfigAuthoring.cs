@@ -1,6 +1,5 @@
 using RuntimeRoguelike.Dots.Runtime;
 using Unity.Entities;
-using Unity.Mathematics;
 using UnityEngine;
 
 namespace RuntimeRoguelike.Dots.Authoring
@@ -9,7 +8,6 @@ namespace RuntimeRoguelike.Dots.Authoring
     {
         [SerializeField] private bool _randomizeSeedOnStart = true;
         [SerializeField] private int _initialSeed;
-        [SerializeField] private Vector2Int _mapSize = new(200, 200);
 
         private class Baker : Baker<RunConfigAuthoring>
         {
@@ -19,8 +17,7 @@ namespace RuntimeRoguelike.Dots.Authoring
                 AddComponent(entity, new RunConfigData
                 {
                     RandomizeSeedOnStart = authoring._randomizeSeedOnStart,
-                    InitialSeed = authoring._initialSeed,
-                    MapSize = new int2(authoring._mapSize.x, authoring._mapSize.y)
+                    InitialSeed = authoring._initialSeed
                 });
             }
         }

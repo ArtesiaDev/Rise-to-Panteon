@@ -22,7 +22,7 @@
 | Механика | Описание | Документация |
 |----------|----------|--------------|
 | Цикл забега | Старт, рестарт без перезагрузки сцены | [RunCycle.md](Mechanics/RunCycle.md) |
-| Генерация карты | 200×200, комнаты + коридоры, safe radius | [MapGeneration.md](Mechanics/MapGeneration.md) |
+| Генерация карты | Процедурная, комнаты + MST-коридоры, bitmask auto-tiling, типы комнат | [MapGeneration.md](Mechanics/MapGeneration.md) |
 | Передвижение | WASD, 4 направления, occupancy | [Movement.md](Mechanics/Movement.md) |
 | Игрок | HP, Gold, XP/Level | [Player.md](Mechanics/Player.md) |
 | Бой | Атака игрока/врагов, кулдауны, смерть | [Combat.md](Mechanics/Combat.md) |
@@ -33,6 +33,8 @@
 | Сложность | Рост со временем и уровнем | [Difficulty.md](Mechanics/Difficulty.md) |
 | HUD | HP, XP, Level, Gold, Seed, Restart | [HUD.md](Mechanics/HUD.md) |
 | DevTools | F5, G, T — отладка | [DevTools.md](Mechanics/DevTools.md) |
+| Туман войны | Symmetric shadowcasting, 3 состояния видимости | [FogOfWar.md](Mechanics/FogOfWar.md) |
+| Миникарта | UI-оверлей, Runtime Texture2D, маркеры сущностей | [Minimap.md](Mechanics/Minimap.md) |
 
 ---
 

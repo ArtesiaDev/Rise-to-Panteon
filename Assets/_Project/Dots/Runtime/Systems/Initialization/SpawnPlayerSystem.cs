@@ -11,7 +11,6 @@ namespace RuntimeRoguelike.Dots.Runtime
     {
         public void OnCreate(ref SystemState state)
         {
-            state.RequireForUpdate<PrefabConfigData>();
             state.RequireForUpdate<RunState>();
             state.RequireForUpdate<RunSpawnState>();
             state.RequireForUpdate<PlayerConfigData>();

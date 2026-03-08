@@ -17,7 +17,6 @@ namespace RuntimeRoguelike.Dots.Runtime
             state.RequireForUpdate<EnemyConfigData>();
             state.RequireForUpdate<EnemySpawnConfigData>();
             state.RequireForUpdate<MapBlobReference>();
-            state.RequireForUpdate<PrefabConfigData>();
             state.RequireForUpdate<RngState>();
         }
 
@@ -43,7 +42,9 @@ namespace RuntimeRoguelike.Dots.Runtime
                 ? SystemAPI.GetSingleton<DifficultyState>()
                 : new DifficultyState { EnemyMultiplier = 1f };
 
-            var prefabConfig = SystemAPI.GetSingleton<PrefabConfigData>();
+            var prefabConfig = SystemAPI.HasSingleton<PrefabConfigData>()
+                ? SystemAPI.GetSingleton<PrefabConfigData>()
+                : new PrefabConfigData { Enemy = Entity.Null };
 
             // Используем общий RngState вместо отдельного RNG
             var rngState = SystemAPI.GetSingletonRW<RngState>();

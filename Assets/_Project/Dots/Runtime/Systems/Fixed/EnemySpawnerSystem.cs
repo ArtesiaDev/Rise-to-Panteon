@@ -13,7 +13,6 @@ namespace RuntimeRoguelike.Dots.Runtime
 
         public void OnCreate(ref SystemState state)
         {
-            state.RequireForUpdate<PrefabConfigData>();
             state.RequireForUpdate<DifficultyState>();
             state.RequireForUpdate<RunState>();
             state.RequireForUpdate<RunSpawnState>();

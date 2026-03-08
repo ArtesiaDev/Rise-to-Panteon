@@ -192,6 +192,17 @@ namespace RuntimeRoguelike.Dots.Hybrid
             return sprite;
         }
 
+        /// <summary>
+        /// Устанавливает видимость GO сущности (используется FogRenderBridge).
+        /// </summary>
+        public void SetEntityVisibility(Entity entity, bool visible)
+        {
+            if (_views.TryGetValue(entity, out var renderer) && renderer != null)
+            {
+                renderer.enabled = visible;
+            }
+        }
+
         private DotsSpriteKey GetKeyForColor(Sprite sprite)
         {
             foreach (var pair in _spriteCache)

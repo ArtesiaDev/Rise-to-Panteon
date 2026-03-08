@@ -13,6 +13,7 @@ namespace RuntimeRoguelike.Dots.Hybrid
         [SerializeField] private KeyCode _restartKey = KeyCode.R;
         [SerializeField] private KeyCode _toggleGizmosKey = KeyCode.G;
         [SerializeField] private KeyCode _teleportKey = KeyCode.T;
+        [SerializeField] private KeyCode _minimapToggleKey = KeyCode.Tab;
 
         private EntityManager _entityManager;
         private EntityQuery _inputQuery;
@@ -58,6 +59,13 @@ namespace RuntimeRoguelike.Dots.Hybrid
             var restartPressed = Input.GetKeyDown(_restartKey);
             var toggleGizmos = Input.GetKeyDown(_toggleGizmosKey);
             var teleportPressed = Input.GetKeyDown(_teleportKey);
+            var minimapToggle = Input.GetKeyDown(_minimapToggleKey);
+
+            // Toggle миникарты через MinimapToggleTag
+            if (minimapToggle)
+            {
+                ToggleMinimap();
+            }
 
             // Для телепорта ищем случайную свободную клетку
             var teleportRequested = false;
@@ -84,6 +92,23 @@ namespace RuntimeRoguelike.Dots.Hybrid
                 input.TeleportTarget = teleportTarget;
             }
             _entityManager.SetComponentData(inputEntity, input);
+        }
+
+        /// <summary>
+        /// Toggle состояния миникарты (MinimapToggleTag enable/disable).
+        /// </summary>
+        private void ToggleMinimap()
+        {
+            var runQuery = _entityManager.CreateEntityQuery(ComponentType.ReadOnly<RunState>());
+            if (runQuery.IsEmpty)
+                return;
+
+            var runEntity = runQuery.GetSingletonEntity();
+            if (!_entityManager.HasComponent<MinimapToggleTag>(runEntity))
+                return;
+
+            var isEnabled = _entityManager.IsComponentEnabled<MinimapToggleTag>(runEntity);
+            _entityManager.SetComponentEnabled<MinimapToggleTag>(runEntity, !isEnabled);
         }
 
         /// <summary>
