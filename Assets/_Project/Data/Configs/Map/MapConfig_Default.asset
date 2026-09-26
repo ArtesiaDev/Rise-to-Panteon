@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bb54ceaa115c149aaa3a8713e437b758, type: 3}
   m_Name: MapConfig_Default
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   MapSize: {x: 40, y: 55}
   CellSize: 1
   MinRoomSize: 3

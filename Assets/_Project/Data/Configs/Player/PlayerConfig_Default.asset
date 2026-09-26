@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d8995460ea9c34ac7b45f9d8e78a91ce, type: 3}
   m_Name: PlayerConfig_Default
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   MaxHealth: 12
   MoveSpeed: 4
   BaseDamage: 2

@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f072f2ea8b4014189a22930fc5233020, type: 3}
   m_Name: ProgressionConfig_Default
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   BaseXpToLevel: 10
   XpIncreasePerLevel: 5
   TimeToMaxDifficulty: 300

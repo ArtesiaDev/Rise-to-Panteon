@@ -11,6 +11,6 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5b08245e7ba5f451dac709e34c89af40, type: 3}
   m_Name: RunConfig_Default
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   RandomizeSeedOnStart: 1
   InitialSeed: 0
