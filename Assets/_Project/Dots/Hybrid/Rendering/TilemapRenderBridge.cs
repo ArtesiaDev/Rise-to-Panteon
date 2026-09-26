@@ -226,7 +226,7 @@ namespace RuntimeRoguelike.Dots.Hybrid
                 body.bodyType = RigidbodyType2D.Static;
                 var collider = tilemapObject.AddComponent<TilemapCollider2D>();
                 tilemapObject.AddComponent<CompositeCollider2D>();
-                collider.usedByComposite = true;
+                collider.compositeOperation = Collider2D.CompositeOperation.Merge;
             }
 
             return tilemap;

@@ -314,7 +314,7 @@ namespace RuntimeRoguelike.Editor
 
         private static void AutoAssign(Tile[] floors, Tile[] walls, Tile doorH, Tile doorV)
         {
-            var bridge = Object.FindObjectOfType<Dots.Hybrid.TilemapRenderBridge>();
+            var bridge = Object.FindAnyObjectByType<Dots.Hybrid.TilemapRenderBridge>();
             if (bridge == null)
             {
                 Debug.LogWarning("[TilesetGenerator] TilemapRenderBridge не найден в сцене — назначьте тайлы вручную.");

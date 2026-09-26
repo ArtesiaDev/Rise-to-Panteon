@@ -30,12 +30,14 @@ namespace Framework
             await _scenesLoader.LoadSceneAsync(new MainScene(), SceneLoadingMode.Additive);
             Debug.Log("[Entry] Main scene loaded");
 
-#if DEVELOPMENT_BUILD || UNITY_EDITOR
-            // Загружаем Dev сцену аддитивно (protected, только для разработки)
-            Debug.Log("[Entry] Loading Dev scene...");
-            await _scenesLoader.LoadSceneAsync(new DevScene(), SceneLoadingMode.Additive);
-            Debug.Log("[Entry] Dev scene loaded");
-#endif
+            // Загружаем Dev сцену аддитивно (protected, только для разработки).
+            // Debug.isDebugBuild == true в редакторе и в development-билде
+            if (Debug.isDebugBuild)
+            {
+                Debug.Log("[Entry] Loading Dev scene...");
+                await _scenesLoader.LoadSceneAsync(new DevScene(), SceneLoadingMode.Additive);
+                Debug.Log("[Entry] Dev scene loaded");
+            }
 
             Debug.Log("[Entry] Boot complete");
         }
