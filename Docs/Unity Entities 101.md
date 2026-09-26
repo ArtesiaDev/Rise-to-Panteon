@@ -540,6 +540,8 @@ In an IJobChunk, the Execute method parameters signal which entities in the chun
 
 ## Aspects
 
+> **Внимание**: Aspects удалены в Entities 6.5+ (проект на Entities 6.6). Раздел оставлен для справки — в проекте их НЕ использовать, вместо них работать с компонентами и `EntityQuery` напрямую.
+
 An aspect is an object-like wrapper over a subset of an entity's components. Aspects can be useful for simplifying queries and component-related code. For example, we could define a “MonsterAspect” that groups together the components that comprise a monster entity.
 
 An aspect is defined as a readonly partial struct implementing IAspect. The struct can contain fields of these types:

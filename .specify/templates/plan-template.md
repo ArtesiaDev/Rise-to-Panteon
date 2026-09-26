@@ -11,8 +11,8 @@
 
 ## Technical Context
 
-**Language/Version**: C# (.NET Standard 2.1) / Unity 2022.3 LTS
-**Primary Dependencies**: Unity.Entities 1.4.x, Unity.Burst,
+**Language/Version**: C# (.NET Standard 2.1) / Unity 6.6 (6000.6.3f1)
+**Primary Dependencies**: Unity.Entities 6.6 (core), Unity.Burst,
 Unity.Collections, Unity.Mathematics, URP 2D
 **Storage**: BlobAssetReference<MapBlob> для карты,
 IComponentData для состояния, singleton-компоненты для глобалов

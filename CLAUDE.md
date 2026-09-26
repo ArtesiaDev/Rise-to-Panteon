@@ -2,7 +2,7 @@
 
 ## Проект
 
-2D roguelike на Unity 2022.3 LTS с DOTS (Entities 1.4.x).
+2D roguelike на Unity 6.6 (6000.6.3f1) с DOTS (Entities 6.6 — core-пакет движка).
 Гибридная архитектура: ECS-симуляция + GameObject-рендеринг.
 
 ## Правила работы с ECS
@@ -28,7 +28,11 @@
 ### Официальная документация
 
 При необходимости обращайся к официальной документации:
-https://docs.unity3d.com/Packages/com.unity.entities@1.4/manual/index.html
+https://docs.unity3d.com/Packages/com.unity.entities@6.6/manual/index.html
+
+С Unity 6.4 Entities встроен в движок: `Entities.ForEach`, `Job.WithCode`
+и Aspects удалены, managed-компоненты устарели. Гайд по миграции:
+https://docs.unity3d.com/Packages/com.unity.entities@6.6/manual/upgrade-guide.html
 
 ## Конституция проекта
 
@@ -77,9 +81,10 @@ Assets/_Project/Dots/
 - Комментарии: на русском языке
 
 ## Active Technologies
-- C# (.NET Standard 2.1) / Unity 2022.3 LTS + Unity.Entities 1.4.x, Unity.Burst, Unity.Collections, Unity.Mathematics (001-dots-audit-refactor)
+- C# (.NET Standard 2.1) / Unity 6.6 (6000.6.3f1) + Unity.Entities 6.6 (core), Unity.Burst 2.0, Unity.Collections 6.6, Unity.Mathematics, URP 17.6 (unity6-upgrade)
 - BlobAssetReference<MapBlob> для данных карты, IComponentData для состояния (001-dots-audit-refactor)
 - BlobAssetReference<MapBlob> для карты, (002-map-generation-redesign)
 
 ## Recent Changes
+- unity6-upgrade: Unity 2022.3.62f2 → 6000.6.3f1, Entities 1.4.2 → 6.6.0 (core), URP 14 → 17.6, Addressables 1.22 → 2.11, TextMeshPro → uGUI 2.6
 - 001-dots-audit-refactor: Added C# (.NET Standard 2.1) / Unity 2022.3 LTS + Unity.Entities 1.4.x, Unity.Burst, Unity.Collections, Unity.Mathematics

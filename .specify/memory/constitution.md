@@ -1,16 +1,15 @@
 <!--
 Sync Impact Report
-- Version: 1.2.1 → 1.3.0 (MINOR: размер карты стал конфигурируемым)
+- Version: 1.3.0 → 1.4.0 (MINOR: переход на Unity 6.6 / Entities 6.6)
 - Принципы:
-  - IV. Burst-производительность → уточнено: обязательный комментарий
-    при отсутствии [BurstCompile]
-  - V. Дисциплина порядка систем → уточнено: RequireForUpdate —
-    SHOULD для data-driven queries
-  - Добавлен: раздел «Известные отступления от принципов» (ECB)
+  - I. DOTS-First архитектура → версия Entities 1.4.x → 6.6 (core-пакет)
+  - Технические ограничения → Unity 6.6 (6000.6.3f1), URP 17.6;
+    запрет удалённых API (Entities.ForEach, Job.WithCode, Aspects)
+  - Источники знаний → ссылка на документацию Entities 6.6
 - Шаблоны:
-  - .specify/templates/plan-template.md — ✅ адаптирован под DOTS
+  - .specify/templates/plan-template.md — ✅ версии обновлены
   - .specify/templates/spec-template.md — ✅ совместим
-  - .specify/templates/tasks-template.md — ✅ адаптирован под DOTS
+  - .specify/templates/tasks-template.md — ✅ совместим
 - Follow-up TODO:
   - Рефакторинг ECB в 3 системах (EnemySpawnerSystem,
     SpawnPlayerSystem, SpawnInitialEnemiesSystem)
@@ -24,7 +23,7 @@ Sync Impact Report
 ### I. DOTS-First архитектура
 
 Вся игровая логика ДОЛЖНА быть реализована через Unity DOTS
-(Entities 1.4.x). Компоненты — чистые `struct IComponentData` без
+(Entities 6.6). Компоненты — чистые `struct IComponentData` без
 managed-полей. Системы — `partial struct : ISystem`. GameObject и
 MonoBehaviour допускаются ТОЛЬКО в Hybrid-слое (ввод, рендеринг,
 UI) и НИКОГДА не содержат игровую логику.
@@ -121,15 +120,18 @@ PR/коммите.
 2. **Скилл unity-ecs-patterns** — проверенные паттерны и практики
    (расположен в `/.cursor/skills/unity-ecs-patterns/`)
 
-3. **Официальная документация Unity Entities 1.4**:
-   https://docs.unity3d.com/Packages/com.unity.entities@1.4/manual/index.html
+3. **Официальная документация Unity Entities 6.6**:
+   https://docs.unity3d.com/Packages/com.unity.entities@6.6/manual/index.html
 
 Ссылки внутри документов — переходить ТОЛЬКО при реальной
 необходимости получить конкретную информацию.
 
 ## Технические ограничения
 
-- **Unity**: 2022.3 LTS + Entities 1.4.x + URP 2D
+- **Unity**: 6.6 (6000.6.3f1) + Entities 6.6 (core-пакет) + URP 2D
+  (17.6)
+- **Запрещённые API**: `Entities.ForEach`, `Job.WithCode`, Aspects
+  (удалены в Entities 6.5), managed `IComponentData` (устарели в 6.6)
 - **Рендеринг**: Hybrid (Tilemap + SpriteRenderer), НЕ DOTS
   Graphics
 - **Карта**: процедурная генерация конфигурируемого размера
@@ -196,4 +198,4 @@ PR/коммите.
 принципов. Нарушения допускаются ТОЛЬКО с явным обоснованием и
 планом миграции.
 
-**Version**: 1.3.0 | **Ratified**: 2026-02-28 | **Last Amended**: 2026-03-01
+**Version**: 1.4.0 | **Ratified**: 2026-02-28 | **Last Amended**: 2026-09-26
