@@ -4,7 +4,8 @@
     "RuntimeRoguelike.Dots.Runtime",
     "Unity.Entities",
     "Unity.Mathematics",
-    "Unity.Collections"
+    "Unity.Collections",
+    "Unity.InputSystem"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

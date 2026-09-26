@@ -3,21 +3,30 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using Random = Unity.Mathematics.Random;
 
 namespace RuntimeRoguelike.Dots.Hybrid
 {
+    /// <summary>
+    /// Читает project-wide Input Actions (Assets/Settings/InputSystem_Actions, карта Player)
+    /// и пишет их в singleton InputState. Биндинги настраиваются в ассете, не в коде.
+    /// </summary>
     public class InputBridge : MonoBehaviour
     {
-        [SerializeField] private KeyCode _attackKey = KeyCode.Space;
-        [SerializeField] private KeyCode _restartKey = KeyCode.R;
-        [SerializeField] private KeyCode _toggleGizmosKey = KeyCode.G;
-        [SerializeField] private KeyCode _teleportKey = KeyCode.T;
-        [SerializeField] private KeyCode _minimapToggleKey = KeyCode.Tab;
+        // Порог отклонения стика, после которого направление считается нажатым
+        private const float MoveThreshold = 0.5f;
 
         private EntityManager _entityManager;
         private EntityQuery _inputQuery;
         private World _world;
+
+        private InputAction _move;
+        private InputAction _attack;
+        private InputAction _restart;
+        private InputAction _toggleGizmos;
+        private InputAction _teleport;
+        private InputAction _toggleMinimap;
 
         private void Awake()
         {
@@ -30,6 +39,15 @@ namespace RuntimeRoguelike.Dots.Hybrid
 
             _entityManager = _world.EntityManager;
             _inputQuery = _entityManager.CreateEntityQuery(ComponentType.ReadWrite<InputState>());
+
+            // Project-wide actions включены Input System автоматически
+            var actions = InputSystem.actions;
+            _move = actions.FindAction("Player/Move", throwIfNotFound: true);
+            _attack = actions.FindAction("Player/Attack", throwIfNotFound: true);
+            _restart = actions.FindAction("Player/Restart", throwIfNotFound: true);
+            _toggleGizmos = actions.FindAction("Player/ToggleGizmos", throwIfNotFound: true);
+            _teleport = actions.FindAction("Player/Teleport", throwIfNotFound: true);
+            _toggleMinimap = actions.FindAction("Player/ToggleMinimap", throwIfNotFound: true);
         }
 
         private void Update()
@@ -37,29 +55,13 @@ namespace RuntimeRoguelike.Dots.Hybrid
             if (_world is not { IsCreated: true })
                 return;
 
-            var move = int2.zero;
-            if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow))
-            {
-                move = new int2(0, 1);
-            }
-            else if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow))
-            {
-                move = new int2(0, -1);
-            }
-            else if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow))
-            {
-                move = new int2(-1, 0);
-            }
-            else if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow))
-            {
-                move = new int2(1, 0);
-            }
+            var move = ToGridDirection(_move.ReadValue<Vector2>());
 
-            var attackPressed = Input.GetKeyDown(_attackKey);
-            var restartPressed = Input.GetKeyDown(_restartKey);
-            var toggleGizmos = Input.GetKeyDown(_toggleGizmosKey);
-            var teleportPressed = Input.GetKeyDown(_teleportKey);
-            var minimapToggle = Input.GetKeyDown(_minimapToggleKey);
+            var attackPressed = _attack.WasPressedThisFrame();
+            var restartPressed = _restart.WasPressedThisFrame();
+            var toggleGizmos = _toggleGizmos.WasPressedThisFrame();
+            var teleportPressed = _teleport.WasPressedThisFrame();
+            var minimapToggle = _toggleMinimap.WasPressedThisFrame();
 
             // Toggle миникарты через MinimapToggleTag
             if (minimapToggle)
@@ -92,6 +94,24 @@ namespace RuntimeRoguelike.Dots.Hybrid
                 input.TeleportTarget = teleportTarget;
             }
             _entityManager.SetComponentData(inputEntity, input);
+        }
+
+        /// <summary>
+        /// Переводит вектор Move в одно из 4 направлений сетки.
+        /// Вертикаль в приоритете (как было с W/S над A/D), при равенстве осей — тоже вертикаль.
+        /// </summary>
+        private static int2 ToGridDirection(Vector2 value)
+        {
+            var absX = math.abs(value.x);
+            var absY = math.abs(value.y);
+
+            if (absY >= absX && absY > MoveThreshold)
+                return new int2(0, value.y > 0 ? 1 : -1);
+
+            if (absX > MoveThreshold)
+                return new int2(value.x > 0 ? 1 : -1, 0);
+
+            return int2.zero;
         }
 
         /// <summary>
