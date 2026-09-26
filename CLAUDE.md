@@ -76,6 +76,11 @@ Assets/_Project/Dots/
 - Системы: `partial struct : ISystem` с `[BurstCompile]`
 - Структурные изменения: только через `EntityCommandBuffer`
 - Рандом: только `Unity.Mathematics.Random` (детерминизм по seed)
+- Ввод: только Input System — project-wide actions в
+  `Assets/Settings/InputSystem_Actions.inputactions` (`InputSystem.actions`);
+  `UnityEngine.Input` и `StandaloneInputModule` не использовать
+- Enter Play Mode без перезагрузки домена: static-состояние сбрасывать
+  в `OnDestroy` или через `[RuntimeInitializeOnLoadMethod(SubsystemRegistration)]`
 - Namespace: `RuntimeRoguelike.Dots.{Runtime|Hybrid|Authoring|Baking}`
 - Именование: PascalCase, суффиксы `System`, `Config`, `State`, `Tag`
 - Комментарии: на русском языке
