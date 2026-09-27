@@ -22,7 +22,7 @@
 (`IJobEntity`/`IJobChunk`, при необходимости `IJobFor`/`IJobParallelFor*`). Отступление допускается
 только с причиной, записанной в заметке к коду строкой `Исключение ARCH-06: …` (ARCH-06).
 
-Разумные причины для исключения (по документации Entities и `ArchitectureDecisions.md`, R-04):
+Разумные причины для исключения (по документации Entities):
 
 | Ситуация | Что делать |
 | --- | --- |
@@ -90,10 +90,18 @@ using Unity.Burst;
 using Unity.Entities;
 using Unity.Mathematics;
 
-namespace RuntimeRoguelike.Dots.Runtime
+namespace RiseToPanteon.Simulation
 {
-    public struct Health : IComponentData { public int Value; public int Max; }
-    public struct Regen  : IComponentData { public int PerTick; }
+    public struct Health : IComponentData
+    {
+        public int Value;
+        public int Max;
+    }
+
+    public struct Regen : IComponentData
+    {
+        public int PerTick;
+    }
 
     [BurstCompile]
     public partial struct RegenSystem : ISystem
@@ -104,7 +112,6 @@ namespace RuntimeRoguelike.Dots.Runtime
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
-            // Неявная форма: джоб сам читает и дополняет state.Dependency.
             new RegenJob().ScheduleParallel();
         }
     }
@@ -112,7 +119,6 @@ namespace RuntimeRoguelike.Dots.Runtime
     [BurstCompile]
     public partial struct RegenJob : IJobEntity
     {
-        // Каждая сущность пишет только свои данные — параллельно и детерминированно.
         void Execute(ref Health health, in Regen regen)
         {
             health.Value = math.min(health.Value + regen.PerTick, health.Max);
@@ -120,6 +126,9 @@ namespace RuntimeRoguelike.Dots.Runtime
     }
 }
 ```
+
+`RegenSystem` планирует джоб в неявной форме: `ScheduleParallel()` сам читает и дополняет `state.Dependency`.
+В `RegenJob` каждая сущность пишет только свои данные — параллельно и детерминированно.
 
 ### IJobChunk
 
@@ -135,23 +144,26 @@ using Unity.Burst.Intrinsics;
 using Unity.Collections;
 using Unity.Entities;
 
-public struct Poison : IComponentData { public int DamagePerTick; }
+public struct Poison : IComponentData
+{
+    public int DamagePerTick;
+}
 
 [BurstCompile]
 struct PoisonJob : IJobChunk
 {
     public ComponentTypeHandle<Health> HealthHandle;
-    [ReadOnly] public ComponentTypeHandle<Poison> PoisonHandle;
+    [ReadOnly]
+    public ComponentTypeHandle<Poison> PoisonHandle;
 
-    public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex,
-                        bool useEnabledMask, in v128 chunkEnabledMask)
+    public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
     {
         var healths = chunk.GetNativeArray(ref HealthHandle);
         var poisons = chunk.GetNativeArray(ref PoisonHandle);
         var it = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
         while (it.NextEntityIndex(out int i))
         {
-            var h = healths[i];          // копия — меняем и пишем обратно
+            var h = healths[i];
             h.Value -= poisons[i].DamagePerTick;
             healths[i] = h;
         }
@@ -161,16 +173,16 @@ struct PoisonJob : IJobChunk
 [BurstCompile]
 public partial struct PoisonSystem : ISystem
 {
-    ComponentTypeHandle<Health> _health;
-    ComponentTypeHandle<Poison> _poison;
-    EntityQuery _query;
+    private ComponentTypeHandle<Health> _health;
+    private ComponentTypeHandle<Poison> _poison;
+    private EntityQuery _query;
 
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
         _health = state.GetComponentTypeHandle<Health>(isReadOnly: false);
         _poison = state.GetComponentTypeHandle<Poison>(isReadOnly: true);
-        _query  = SystemAPI.QueryBuilder().WithAllRW<Health>().WithAll<Poison>().Build();
+        _query = SystemAPI.QueryBuilder().WithAllRW<Health>().WithAll<Poison>().Build();
         state.RequireForUpdate(_query);
     }
 
@@ -184,6 +196,8 @@ public partial struct PoisonSystem : ISystem
     }
 }
 ```
+
+В `PoisonJob` элемент `healths[i]` читается копией: её меняют и пишут обратно в массив.
 
 ### Что выбрать
 
@@ -224,8 +238,6 @@ public partial struct PoisonSystem : ISystem
 [BurstCompile]
 public partial struct CountAliveJob : IJobEntity
 {
-    // В параллельном IJobEntity/IJobChunk запись в NativeArray-поле по умолчанию разрешена
-    // только в элемент с индексом текущего (нефильтрованного) чанка — ровно этот случай.
     public NativeArray<int> PerChunk;
 
     void Execute([ChunkIndexInQuery] int chunkIndex, in Health health)
@@ -238,17 +250,20 @@ public partial struct CountAliveJob : IJobEntity
 public void OnUpdate(ref SystemState state)
 {
     int chunkCount = _query.CalculateChunkCountWithoutFiltering();
-    // Живёт два кадра, освобождается автоматически, можно передавать в джобы.
     var perChunk = CollectionHelper.CreateNativeArray<int>(chunkCount, state.WorldUpdateAllocator);
 
-    // Явная форма IJobEntity: handle нужно вернуть в state.Dependency самому.
     JobHandle h = new CountAliveJob { PerChunk = perChunk }
         .ScheduleParallel(_query, state.Dependency);
-    // perChunk не отслеживается state.Dependency — зависимость по h.
     h = new SumJob { PerChunk = perChunk, Result = _result }.Schedule(h);
     state.Dependency = h;
 }
 ```
+
+- `PerChunk`: в параллельном `IJobEntity`/`IJobChunk` запись в поле-`NativeArray` по умолчанию разрешена только в
+  элемент с индексом текущего (нефильтрованного) чанка — ровно этот случай.
+- `perChunk` из `state.WorldUpdateAllocator` живёт два кадра, освобождается автоматически, его можно передавать в джобы.
+- `CountAliveJob` запланирован в явной форме: handle возвращается в `state.Dependency` вручную. `perChunk`
+  `state.Dependency` не отслеживает, поэтому `SumJob` зависит от `h` явно.
 
 ### Sync points и Complete()
 
@@ -353,22 +368,25 @@ Sync point — место, где главный поток ждёт завер�
 public partial struct FillGridJob : IJobEntity
 {
     public NativeParallelMultiHashMap<int, Entity>.ParallelWriter Grid;
-    public int CellSize;   // в тех же целых единицах, что и GridPos
-    public int GridWidth;  // ширина сетки в ячейках
+    public int CellSize;
+    public int GridWidth;
 
     void Execute(Entity e, in GridPos pos)
     {
         int key = (pos.Y / CellSize) * GridWidth + (pos.X / CellSize);
-        Grid.Add(key, e);  // порядок значений внутри ключа недетерминирован — см. раздел 6
+        Grid.Add(key, e);
     }
 }
 
-// OnUpdate: ёмкость = число сущностей, память живёт два кадра.
-var grid = new NativeParallelMultiHashMap<int, Entity>(_query.CalculateEntityCount(),
-                                                       state.WorldUpdateAllocator);
+var grid = new NativeParallelMultiHashMap<int, Entity>(_query.CalculateEntityCount(), state.WorldUpdateAllocator);
 state.Dependency = new FillGridJob { Grid = grid.AsParallelWriter(), CellSize = 4, GridWidth = w }
     .ScheduleParallel(_query, state.Dependency);
 ```
+
+- `CellSize` — в тех же целых единицах, что и `GridPos`; `GridWidth` — ширина сетки в ячейках.
+- Порядок значений внутри ключа недетерминирован (раздел 6).
+- Второй фрагмент — `OnUpdate`: ёмкость карты равна числу сущностей, память из `state.WorldUpdateAllocator` живёт
+  два кадра.
 
 Источники:
 [Collections overview](https://docs.unity3d.com/Packages/com.unity.collections@6.6/manual/collections-overview.html) · [Collection types](https://docs.unity3d.com/Packages/com.unity.collections@6.6/manual/collection-types.html) · [Allocator overview](https://docs.unity3d.com/Packages/com.unity.collections@6.6/manual/allocator-overview.html) ·
@@ -439,13 +457,16 @@ Manual 6.6: *«Ensure that floating point calculation in Burst are deterministic
 
 ### SharedStatic, function pointers, интринсики, BurstDiscard
 
+`SharedStatic<T>` — изменяемая статика, общая для C# и Burst; её инициализируют из C# до первого чтения в Burst.
+
 ```csharp
-// Изменяемая статика, общая для C# и Burst. Инициализировать из C# до первого чтения в Burst.
 public abstract class SimCounters
 {
-    public static readonly SharedStatic<int> Ticks =
-        SharedStatic<int>.GetOrCreate<SimCounters, TicksKey>();
-    private class TicksKey {}
+    public static readonly SharedStatic<int> Ticks = SharedStatic<int>.GetOrCreate<SimCounters, TicksKey>();
+
+    private class TicksKey
+    {
+    }
 }
 ```
 
@@ -481,7 +502,8 @@ Jobs › Burst › Open Inspector. Слева список целей компи
 ## 6. Детерминизм и порядок
 
 Цель: одинаковые входы (сид, ввод за тик, операции) дают побитово одинаковое авторитетное состояние
-на любом устройстве и в будущем на сервере. Архитектура: ARCH-11, `Docs/Tech/ArchitectureDecisions.md`, R-01.
+на любом устройстве и в будущем на сервере. Архитектура: ARCH-10, ARCH-11, SIM-12,
+`Docs/Tech/Architecture/Simulation.md` §11.3.
 
 ### Источники недетерминизма
 
@@ -505,7 +527,7 @@ Jobs › Burst › Open Inspector. Слева список целей компи
 - `NextInt(min, max)` — полуинтервал `[min, max)`, `NextUInt(max)` — `[0, max)`. Для авторитетной логики — только целочисленные методы, не `NextFloat*`.
 - Ловушка value type: копия `Random` в поле джоба продвигает свою копию. Исходное состояние не меняется, и следующий кадр повторит ту же последовательность. Сохраняй состояние обратно (компонент на сущности) или создавай генератор заново из `(worldSeed, stableId, tick)`.
 - Один `Random` на весь параллельный джоб — гонка и зависимость от порядка. Нужен свой генератор на сущность или на операцию.
-- Решение проекта (журнал, A-16): `Unity.Mathematics.Random`, состояние в компонентах, сиды по правилам GDD. Собственный ГСЧ не используется.
+- Правило проекта — ARCH-09, уточнения — SIM-10 (`Docs/Tech/Architecture/Simulation.md` §11.3). Собственный ГСЧ не используется.
 
 ### Рекомендуемые паттерны
 
@@ -515,8 +537,9 @@ Jobs › Burst › Open Inspector. Слева список целей компи
 4. **Свёртки:** массив частичных результатов длиной `CalculateChunkCountWithoutFiltering()`, индекс — `ChunkIndexInQuery`; затем `IJob` суммирует по порядку индексов.
 5. **Float только там, где расхождение не влияет на авторитетное состояние** (движение, визуал). Если float-реплей между устройствами всё же нужен — `[BurstCompile(FloatMode = FloatMode.Deterministic)]` на соответствующих джобах, 64-бит, и golden-тест.
 
+Детерминированное удаление погибших — порядок проигрывания не зависит от потоков:
+
 ```csharp
-// Детерминированное удаление погибших: порядок проигрывания не зависит от потоков.
 [BurstCompile]
 public partial struct DeathJob : IJobEntity
 {
@@ -528,25 +551,31 @@ public partial struct DeathJob : IJobEntity
             Ecb.DestroyEntity(sortKey, e);
     }
 }
+```
 
-// В OnUpdate системы фиксированного тика:
-var ecb = SystemAPI.GetSingleton<EndSimulationTickEcbSystem.Singleton>() // в проекте (ARCH-07)
+В `OnUpdate` системы фиксированного тика; ECB-система тика в проекте — `EndSimulationTickEcbSystem` (ARCH-07):
+
+```csharp
+var ecb = SystemAPI.GetSingleton<EndSimulationTickEcbSystem.Singleton>()
     .CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
 new DeathJob { Ecb = ecb }.ScheduleParallel();
 ```
 
+Полный порядок для сортировки — равенство только у одной и той же сущности:
+
 ```csharp
-// Полный порядок для сортировки: равенство только у одной и той же сущности.
 public struct ByDistanceThenId : IComparer<Candidate>
 {
     public int Compare(Candidate a, Candidate b)
     {
-        int c = a.DistSq.CompareTo(b.DistSq);   // int/long, не float
+        int c = a.DistSq.CompareTo(b.DistSq);
         return c != 0 ? c : a.StableId.CompareTo(b.StableId);
     }
 }
-// candidates.SortJob(new ByDistanceThenId()).Schedule(dep);
 ```
+
+- `DistSq` — `int`/`long`, не `float`.
+- Использование: `candidates.SortJob(new ByDistanceThenId()).Schedule(dep)`.
 
 Источники:
 [Float precision and determinism](https://docs.unity3d.com/6000.6/Documentation/Manual/burst/float-precision-determinism.html) · [Parallel readers and writers](https://docs.unity3d.com/Packages/com.unity.collections@6.6/manual/parallel-readers.html) · [ECB playback](https://docs.unity3d.com/Packages/com.unity.entities@6.6/manual/systems-entity-command-buffer-playback.html) ·

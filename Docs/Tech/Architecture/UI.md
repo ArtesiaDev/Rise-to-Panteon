@@ -1,28 +1,26 @@
 # UI — экраны, HUD, сенсорное управление
 
-> Документ контура UI. Канонические имена — `README.md`; причины решений — `ArchitectureDecisions.md` (A-12,
-> A-13, A-36, A-37, A-54); что показывать — GDD (`Interface.md`, U01–U08, M04). Unity 6000.6.3f1, iOS и Android,
-> альбомная ориентация. «Проверить на спайке» — API или поведение не подтверждено документацией 6.6.
-> Имена read-моделей и операций здесь рабочие, канон — `Simulation.md`.
+> Экраны, HUD и сенсорное управление. Канонические имена — `README.md`; что показывать — GDD (`Interface.md`,
+> U01–U08, M04). Ориентация — альбомная. «Проверить на спайке» — API или поведение не подтверждено
+> документацией 6.6. Имена read-моделей и операций фич, кроме базовых (README §4.3), здесь рабочие: окончательные
+> задаёт срез-владелец.
 
 ## 1. Назначение и границы
 
 Контур UI рисует всё, что лежит поверх мира в экранных координатах: HUD, экраны и меню, плашки, подсказки
 обучения, сенсорные контролы. Технология — UI Toolkit: компонент `PanelRenderer` + ассет `PanelSettings`,
-runtime data binding, пакет Localization (A-36). `UIDocument` в 6.6 помечен obsolete (в 6.5 — legacy)
-и в проекте не используется. uGUI — только исключение с записью в журнале решений.
+runtime data binding, пакет Localization (UI-01). `UIDocument` в 6.6 помечен obsolete.
 
 | UI делает | UI не делает |
 |---|---|
 | Показывает read-модели из `IWorldView` и состояние сервисов | Не ссылается на `Simulation`, `Bridge`, `Presentation`, Unity.Entities (ARCH-02) |
 | Превращает действия игрока в `Operation` через `IOperationSink` | Не меняет и не хранит состояние игры (ARCH-04, ARCH-14) |
 | Передаёт касания экранных контролов в `IInputService` | Не собирает `PlayerInputFrame` — это работа `IInputService` |
-| Открывает экраны и держит паузу, пока открыто меню (`IScreenService`) | Не рисует в мире: метки над существами, кольцо цели, указатель прицела — Представление (A-36) |
+| Открывает экраны и держит паузу, пока открыто меню (`IScreenService`) | Не рисует в мире: метки над существами, кольцо цели, указатель прицела — Представление (UI-08) |
 | Показывает текст только по ключам из `Configs/strings/` | Не содержит строк для игрока в C# и UXML (ARCH-17) |
 
-Сборка `RiseToPanteon.UI` ссылается только на Core, Contracts, Services, UI Toolkit и Localization. Dev-экраны —
-`RiseToPanteon.Dev` под `RTP_DEV` (ARCH-18); импорт строк — `RiseToPanteon.Editor`. Пакета `com.unity.localization`
-(1.5.x) в манифесте ещё нет — совместимость с 6.6 проверить на спайке.
+Ссылки сборки `RiseToPanteon.UI` и статус пакета `com.unity.localization` — `CodeStructure.md` §3.1. Dev-экраны —
+`RiseToPanteon.Dev` (UI-22); импорт строк — `RiseToPanteon.Editor`.
 
 **Панели.** Только Screen Space Overlay; world-space-панели UI Toolkit не используются.
 
@@ -81,19 +79,28 @@ public sealed class CocoonScreenController : ScreenController<CocoonViewModel>
     private readonly IWorldView _world;
     private readonly IOperationSink _ops;
     private ReadModelWatch<CocoonChoiceReadModel> _choice;
+
     public CocoonScreenController(IWorldView world, IOperationSink ops, CocoonViewModel model)
-        : base(model) { _world = world; _ops = ops; }
+        : base(model)
+    {
+        _world = world;
+        _ops = ops;
+    }
+
+    public override void Refresh()
+    {
+        if (_choice.Changed(_world, out var rm)) Model.Apply(in rm);
+    }
+
     protected override void OnBind(VisualElement root)
     {
         root.dataSource = Model;
         root.Q<Button>("cocoon-screen__confirm").clicked += ConfirmClickedHandler;
         root.Q<Button>("cocoon-screen__cancel").clicked += CancelClickedHandler;
     }
-    public override void Refresh()
-    {
-        if (_choice.Changed(_world, out var rm)) Model.Apply(in rm);
-    }
+
     private void ConfirmClickedHandler() => _ops.Enqueue(CocoonOps.ChooseVariant(Model.SelectedIndex));
+
     private void CancelClickedHandler() => _ops.Enqueue(CocoonOps.Cancel());
 }
 ```
@@ -111,13 +118,15 @@ public sealed class CocoonScreenController : ScreenController<CocoonViewModel>
 ```csharp
 public interface IScreenService
 {
+    event Action OnStackChanged;
+
+    bool IsBlockingInput { get; }
+
     bool Open<TScreen>() where TScreen : IScreenController;
     bool Open<TScreen, TArgs>(TArgs args) where TScreen : IScreenController, IScreenWithArgs<TArgs>;
     void Close<TScreen>() where TScreen : IScreenController;
     bool Back();
     bool IsOpen<TScreen>() where TScreen : IScreenController;
-    bool IsBlockingInput { get; }
-    event Action OnStackChanged;
 }
 ```
 
@@ -135,15 +144,14 @@ public interface IScreenService
 - **Приоритет.** Запрос с приоритетом ниже, чем у верхнего экрана, отклоняется. Исключение — modal, который
   открывает сам верхний экран. Так смерть в кадре открытия меню побеждает меню (U04 §10).
 - **Повторное открытие** поднимает экран наверх и передаёт аргументы: вкладка «Карта» по тапу на миникарту (U05 §7).
-- **Пауза.** Пока в стеке есть экран с `PausesGame`, сервис держит причину паузы в `IAppLifecycle` (API —
-  `Services.md`). Паузу ставит любое меню (U04 R1, U01 R18), включая настройки (U08 R3); сами экраны паузу
-  не трогают. Причина — `PauseReason.Menu` через `IAppLifecycle.AcquirePause` (A-17, ARCH-21). Пауза останавливает
-мировое время (README §3), но не `Time.timeScale`: анимации UI идут и на паузе.
+- **Пауза.** Пока в стеке есть экран с `PausesGame`, сервис держит `PauseReason.Menu` (README §3, ARCH-21).
+  Паузу ставит любое меню (U04 R1, U01 R18), включая настройки (U08 R3); сами экраны паузу не трогают.
+  `Time.timeScale` пауза не меняет, поэтому анимации UI идут и на паузе.
 - **Скрытие HUD.** Экран с `HidesHud` прячет HUD и сбрасывает сенсорные контролы (захваты отпущены, ввод
   обнулён), чтобы после паузы стик не «залипал».
 - **Сворачивание.** После возврата из фона при идущей игре и пустом стеке открывается меню паузы (U04 R3).
 - **Back** решает верхний экран (`OnBack`); смерть и кокон в фазе формирования «назад» игнорируют.
-- **Переход между локациями** (затемнение, A-51): открываются только `system`-экраны, прочие запросы отклоняются.
+- **Переход между локациями** (затемнение): открываются только `system`-экраны, прочие запросы отклоняются.
 - **Экраны, которые открывает игра.** Кокон и смерть открывает триггер фичи — `ILateTickable`, который следит
   за read-моделью (например, за флагом ожидания выбора в `CocoonChoiceReadModel`). Симуляция экраны не открывает.
 - **Порядок открытия:** проверка приоритета → причина паузы в `IAppLifecycle` → `OnOpen(args)` и `Refresh()`
@@ -180,9 +188,8 @@ public interface IScreenService
 **Отправка операций.** После `Enqueue` контрол заблокирован до новой версии нужной read-модели, поэтому
 двойных операций нет. Ограничения, видные заранее (снаряжение в бою, U04 R12), UI показывает затемнением
 с причиной по флагам read-модели; окончательная проверка — Validate в симуляции. Очки характеристик,
-снаряжение и выбор кокона отправляются на паузе (U04 R8, R9, R12), и результат должен появиться без
-снятия паузы. Поэтому симуляция на паузе выполняет «тик без времени»: применяет операции и обновляет
-read-модели без хода мирового времени (A-17, `Simulation.md` §5.3). UI результат не предсказывает.
+снаряжение и выбор кокона отправляются на паузе (U04 R8, R9, R12); результат приходит «тиком без времени»
+(README §3) без снятия паузы. UI результат не предсказывает.
 
 ## 5. HUD
 
@@ -246,9 +253,8 @@ HUD — постоянный экран слоя `hud` в `GameScope`, откр�
 ## 7. Сенсорное управление (U01, U02) и связь с IInputService
 
 Путь касания: `FloatingStick` и `TouchActionButton` → `TouchControlsController` (состояние за кадр) →
-`ITouchControlsSink` (Services: `SetStick(Vector2)`, `SetButton(PlayerButton, bool held)`, `SetPointerOverUI(bool)`)
-→ `IInputService`. Там экранный ввод сливается с действиями Input System
-(`Assets/Settings/InputSystem_Actions.inputactions`, project-wide) в `PlayerInputFrame`, который уходит в мост.
+`ITouchControlsSink` → `IInputService`, где экранный ввод сливается с действиями Input System в `PlayerInputFrame`
+(`Services.md` §6).
 
 ### 7.1. Состав и раскладка
 
@@ -280,14 +286,13 @@ HUD (U01 R2, §5). Справа — дуга кнопок вокруг атак�
   (U01 §5); аналоговая величина сохраняется для медленного шага (< 50% хода, Срез, C08).
 - `PointerUpEvent`, `PointerCancelEvent` и `PointerCaptureOutEvent` (палец ушёл за край, системный жест,
   сворачивание) сбрасывают контрол: стик в ноль, персонаж стоит (U01 §10).
-- Нажатия (тап атаки, рывок, контекст) защёлкиваются: `IInputService` держит их, пока их не заберёт тик. Кадр
-  без тика нажатие не теряет, кадр с несколькими тиками не повторяет.
+- Нажатия (тап атаки, рывок, контекст) защёлкивает `IInputService` до первого тика (`Services.md` §6).
 - Система событий UI Toolkit с Input System берёт касания из действий `UI/Point` и `UI/Click`
   (`<Touchscreen>/touch*/…`). Одновременные касания через неё — **проверить на спайке** на устройстве (стик +
   атака + способность). Запасной путь: `IInputService` читает `Touchscreen` напрямую, попадание — через
   `IPanel.Pick`, те же элементы остаются визуалом и зонами нажатия.
-- В карте действий `Player` нет привязок к `<Touchscreen>`, иначе касание стало бы и кнопкой, и игровым вводом.
-  Нынешняя карта `Player` осталась от старого прототипа и переделывается по раскладке U01 §5 (`Services.md`).
+- В карте действий `Player` нет привязок к `<Touchscreen>`, иначе касание стало бы и кнопкой, и игровым вводом
+  (состав карты — `Services.md` §6).
 
 ### 7.4. Миллиметры → пиксели
 
@@ -326,21 +331,36 @@ public float MmToPanel(float mm, IPanel panel)
 
 Тема лежит в `Assets/_Project/Code/UI/Theme/`. `RtpTheme.tss` задан как Theme Style Sheet во всех `PanelSettings`
 и подключает `Theme.uss` (токены) и `Components.uss` (общие компоненты `rtp-*`). USS экрана лежит в срезе фичи
-и пользуется только токенами.
+и пользуется только токенами. `Theme.uss` — единственное место с «сырыми» значениями; единицы — опорные px панели
+(высота 1080):
 
 ```css
-/* Theme.uss — единственное место с «сырыми» значениями. Единицы — опорные px панели (высота 1080). */
-:root {
-    --color-bg-panel: rgba(14, 11, 18, 0.92); --color-text-primary: #ECE4D2; --color-text-muted: #9C9384;
-    --color-accent: #C9A24B; --color-hp: #B8322C; --color-xp: #6FA8C9;
-    --space-1: 4px; --space-2: 8px; --space-3: 16px; --space-4: 32px; --radius-card: 12px;
-    --font-size-caption: 24px; --font-size-body: 32px; --font-size-title: 44px;
-    --size-touch-min: 120px;          /* ≈ 7 мм на телефоне 5″ — цель нажатия в меню, ориентир */
-    --touch-button-mm: 10; --touch-attack-mm: 14;   /* U01 §5; читает C# (CustomStyleProperty<float>) */
-    --touch-stick-radius-mm: 12;      /* ориентир, настраивается в прототипе */
+:root
+{
+    --color-bg-panel: rgba(14, 11, 18, 0.92);
+    --color-text-primary: #ECE4D2;
+    --color-text-muted: #9C9384;
+    --color-accent: #C9A24B;
+    --color-hp: #B8322C;
+    --color-xp: #6FA8C9;
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 16px;
+    --space-4: 32px;
+    --radius-card: 12px;
+    --font-size-caption: 24px;
+    --font-size-body: 32px;
+    --font-size-title: 44px;
+    --size-touch-min: 120px;
+    --touch-button-mm: 10;
+    --touch-attack-mm: 14;
+    --touch-stick-radius-mm: 12;
 }
 ```
 
+- **Размеры касания.** `--size-touch-min` (120 px ≈ 7 мм на телефоне 5″) — цель нажатия в меню, ориентир.
+  `--touch-button-mm` и `--touch-attack-mm` — минимумы U01 §5, их читает C# (`CustomStyleProperty<float>`).
+  `--touch-stick-radius-mm` — ориентир, настраивается в прототипе.
 - **Токены.** В USS экрана — только `var(--…)`. Токены в мм — безразмерные числа: `TouchMetrics` читает их
   в `CustomStyleResolvedEvent` через `customStyle.TryGetValue(new CustomStyleProperty<float>("--touch-button-mm"),
   out var mm)`. В USS нет `calc()`, поэтому производный размер — отдельный токен.
@@ -362,50 +382,29 @@ public float MmToPanel(float mm, IPanel panel)
 
 ## 9. Локализация
 
-Конвейер: `Configs/strings/<locale>/<table>.json` → `StringTableImporter` (Editor) → String Table Collections
-в `Assets/_Project/Localization/Tables/` → группы Addressables пакета Localization → `LocalizedString` в UXML и C#.
-
-- **Источник** — JSON в `Configs/strings/` (A-54), проверяется JSON Schema вместе с конфигами (схема —
-  `Content.md` §8). Один файл — одна таблица по категориям M04 §5: `ui`, `hints`, `barks`, `items`, `species`,
-  `nicknames`; ключ — `<table>.<rowId>.<field>`.
-- **Импорт** — `StringTableImporter`: пункт меню, шаг перед сборкой (`IPreprocessBuildWithReport`), проверка
-  в CI «таблицы актуальны». Таблицы генерируются; ручная правка запрещена, импорт их перезаписывает.
-- **Сервис** — интерфейс `ILocalizationService` лежит в Services; реализация `UnityLocalizationService` — в сборке
-  UI (единственной, что ссылается на Unity Localization) и регистрируется в `ProjectScope` UI-инсталлером
-  (`Services.md` §9). `Boot.unity` загружена всю сессию, поэтому меню и сервис живут в ней (README §4.2).
-  Комментарий строки уходит в метаданные записи, запись с `{` помечается Smart. Импортёр проверяет уникальность
-  и формат ключей, одинаковый набор подстановок во всех языках и непустой `ru`.
-- **Ключи** — `категория.объект.поле` (M04 §9), сегменты в snake_case, первый сегмент = имя таблицы:
-  `ui.cocoon.title`, `hints.control.move`, `items.resin.name`, `nicknames.n07`.
-  Шаблон: `^[a-z][a-z0-9_]*(\.[a-z0-9_]+){2,}$`.
-
-```json
-{ "table": "ui", "entries": [
-  { "key": "ui.death.lost_xp", "ru": "Ушло в Эхо: {xp} опыта", "comment": "Экран смерти, строка потерь (U04 R10)" },
-  { "key": "ui.inventory.resin_count", "ru": "{count:plural:{} живица|{} живицы|{} живиц}", "comment": "M04 §13" }
-] }
-```
+Источник строк, ключи, их проверки и импорт в String Table Collections — `Content.md` §8; сервис
+`ILocalizationService` и выбор языка — `Services.md` §9. UI берёт текст только через `LocalizedString` (UI-09).
 
 Статичный текст в UXML задаётся привязкой, атрибут `text` остаётся пустым:
 
 ```xml
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:l="UnityEngine.Localization">
-  <ui:Label name="pause-menu__title" class="pause-menu__title rtp-text--title">
-    <Bindings><l:LocalizedString property="text" table="ui" entry="ui.pause.title" /></Bindings>
-  </ui:Label>
+    <ui:Label name="pause-menu__title" class="pause-menu__title rtp-text--title">
+        <Bindings>
+            <l:LocalizedString property="text" table="ui" entry="ui.pause.title" />
+        </Bindings>
+    </ui:Label>
 </ui:UXML>
 ```
 
 - **В C#** — `label.SetBinding("text", localizedString)`. Для подстановок VM держит `LocalizedString`
   с локальными переменными (`IntVariable`, `StringVariable`) и меняет их `Value` при новой версии read-модели.
   Текст обновляется сам, в том числе при смене языка.
-- **Подстановки и множественное число.** Склейки нет (M04 R6), только именованные подстановки Smart Strings;
-  число с существительным — plural-форматтер (M04 R7; русский 1 / 2–4 / 5+; порядок форм для `ru` в SmartFormat —
-  проверить на спайке). Числа форматирует культура локали, в русском — с десятичной запятой (M04 §10).
+- **Подстановки и множественное число** — по `Content.md` §8.1 (UI-10). Числа форматирует культура локали,
+  в русском — с десятичной запятой (M04 §10).
 - **Списки** (инвентарь, Атлас): строки элементов берутся синхронно из предзагруженной таблицы и кэшируются
   до смены языка; `LocalizedString` на каждый элемент не создаётся (предзагрузку проверить на спайке).
-- **Язык.** В Прототипе только `ru`, переключателя нет (M04 §7). Позже — язык системы, если он поддержан,
-  иначе английский (M04 R11): `SystemLocaleSelector` с запасным английским.
+- **Язык.** В Прототипе только `ru`, переключателя нет (M04 §7); выбор языка — `Services.md` §9.
 - **Проверки.** Автотест «нет кириллицы в C# и UXML» (M04 §13); псевдолокаль с удлинением +30% (M04 §9,
   методы псевдолокали проверить на спайке); `UIContractValidator` ищет непустые атрибуты `text` в UXML.
 
@@ -414,7 +413,7 @@ public float MmToPanel(float mm, IPanel panel)
 **Адреса.** UXML и USS — отдельные ключи `ui/<фича>/<файл>.uxml` и `.uss` (`ui/cocoon/cocoon-screen.uxml`).
 UXML не подключает свой USS через `<Style>`: стили навешивает `ScreenService` (`root.styleSheets.Add`), общие
 USS не дублируются. `<Template>`, шрифты и спрайты из `url()` — зависимости адресного ассета; иконки из конфигов
-грузит `IAssetProvider` по id (A-56). UI-ассеты Прототипа помечены меткой `ui-preload`.
+грузит `IAssetProvider` по id (CONT-18). UI-ассеты Прототипа помечены меткой `ui-preload`.
 
 **Открытие ≤ 0,2 с (U04 §5)** на слабом телефоне:
 
@@ -496,14 +495,14 @@ UI Builder — только для просмотра: сохранение из
 
 | ID | Правило |
 |---|---|
-| UI-01 | UI — UI Toolkit на `PanelRenderer`. `UIDocument` запрещён; uGUI — только исключение с записью в журнале решений (A-36). |
-| UI-02 | `RiseToPanteon.UI` ссылается только на Core, Contracts, Services, UI Toolkit, Localization; никаких `Simulation`, `Bridge`, `Presentation`, Unity.Entities (ARCH-02). |
+| UI-01 | UI — UI Toolkit на `PanelRenderer`. `UIDocument` запрещён; uGUI — только исключение, записанное в этом документе. |
+| UI-02 | `RiseToPanteon.UI` не ссылается на `Simulation`, `Bridge`, `Presentation`, Unity.Entities (ARCH-02); разрешённые ссылки — `CodeStructure.md` §3.1. |
 | UI-03 | Действие, меняющее игру, — только `Operation` через `IOperationSink`. Не игровые действия (громкость, выход, загрузка мира) — через API сервисов (ARCH-04, ARCH-14). |
 | UI-04 | UI не хранит состояние игры. VM — проекция read-моделей и сервисов, её можно пересоздать в любой момент; локальное состояние экрана на игру не влияет. |
 | UI-05 | Read-модели опрашиваются по версии в `LateTick`, только у видимых экранов и HUD; данные копируются, ссылки на буферы не хранятся. |
 | UI-06 | Экран = UXML + USS + контроллер + VM и открывается только через `IScreenService`. Своего `PanelRenderer` у экрана нет. |
 | UI-07 | Паузу держит `IScreenService` по `PausesGame`. Любое меню ставит паузу (U04 R1); HUD, плашки и подсказки — нет. |
-| UI-08 | В мире UI не рисует: метки опасности, полосы над существами, кольцо цели, указатель прицела, искажение краёв — Представление (A-36). |
+| UI-08 | В мире UI не рисует: метки опасности, полосы над существами, кольцо цели, указатель прицела, искажение краёв — Представление. |
 | UI-09 | Текст для игрока — только `LocalizedString` по ключам из `Configs/strings/`: атрибут `text` в UXML пуст, литералов в C# нет (ARCH-17, M04 R2). |
 | UI-10 | Строки не склеиваются: именованные подстановки Smart Strings, числа с существительными — plural-форматтер (M04 R6, R7). |
 | UI-11 | Стили — только в USS, инлайн-стилей в UXML нет; цвета, отступы, шрифты и радиусы в USS экрана — только `var(--…)` из `Theme.uss`. `element.style` в коде — только для вычисляемых значений: позиция, заполнение, безопасная зона, размеры в мм. |
@@ -552,15 +551,10 @@ UI Builder — только для просмотра: сохранение из
 **Другие сборки:** `StringTableImporter`, `UIContractValidator` — Editor; `UISandbox` (стенд экранов
 с фикстурами), `ScreenOpenTimingOverlay` — Dev; `FakeWorldView` — `Tests.EditMode`.
 
-**Порты на границе контуров** (канон — README §4.3):
+**Порты на границе контуров** — `IWorldAnchorService`, `IAppearancePreviewService`, `ITouchControlsSink`
+(README §4.3); как UI их использует — §5, §6, §7.
 
-| Тип | Сборка | Реализует | Зачем UI |
-|---|---|---|---|
-| `IWorldAnchorService` | Contracts | Представление (игровая камера, интерполяция) | Точка над говорящим для реплики (U03 R8) |
-| `IAppearancePreviewService` | Contracts | Представление (сцена превью в `RenderTexture`) | Превью облика на карточках кокона (U04 R8, §7) |
-| `ITouchControlsSink` | Services | `IInputService` | Приём стика, кнопок `PlayerButton` и флага «указатель над UI» |
-
-**Read-модели фич**, которые читает UI (владельцы — срезы по `CodeStructure.md`; базовые — README §4.3): `PlayerReadModel`, `AbilityBarReadModel`,
-`MinimapReadModel`, `MapReadModel`, `BossBarReadModel`, `CharacterReadModel`, `AtlasReadModel`,
-`InventoryReadModel`, `CocoonChoiceReadModel`, `DeathReportReadModel`; операции — из §5–§6; операции на паузе
-применяются «тиком без времени» (A-17, `Simulation.md` §5.3).
+**Read-модели фич**, которые читает UI (владельцы — срезы по `CodeStructure.md` §7.4; базовые — README §4.3):
+`PlayerReadModel`, `AbilityBarReadModel`, `MinimapReadModel`, `MapReadModel`, `BossBarReadModel`,
+`CharacterReadModel`, `AtlasReadModel`, `InventoryReadModel`, `CocoonChoiceReadModel`, `DeathReportReadModel`;
+операции — из §5–§6.

@@ -7,7 +7,9 @@ from . import context
 from .common import DEFAULT_LAYERS, GDD_RULE_REF, LAYERS, RULE_ID
 from .index import Index, analyze
 
-RRF_K = 60
+RRF_K = 20
+BM25_WEIGHT = 2.0
+DENSE_WEIGHT = 1.0
 POOL = 60
 
 
@@ -49,9 +51,9 @@ class Searcher:
         if refresh:
             self.index.refresh(embed=True)
         scores = defaultdict(float)
-        for ranking in (self.bm25(query, layers), self.dense(query, layers)):
+        for weight, ranking in ((BM25_WEIGHT, self.bm25(query, layers)), (DENSE_WEIGHT, self.dense(query, layers))):
             for rank, cid in enumerate(ranking):
-                scores[cid] += 1.0 / (RRF_K + rank + 1)
+                scores[cid] += weight / (RRF_K + rank + 1)
         ranked = sorted(scores, key=lambda c: -scores[c])
         hits, per_doc = [], defaultdict(int)
         for cid in ranked:

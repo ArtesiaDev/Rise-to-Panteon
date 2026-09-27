@@ -65,12 +65,13 @@ ECS в проекте — **только симуляция игровой ло�
 
 ### 2.4 Создание мира вручную
 
+`SimulationWorldHost` — владелец мира: его создаёт и уничтожает композиционный корень (VContainer), не статика.
+
 ```csharp
 using System;
 using System.Collections.Generic;
 using Unity.Entities;
 
-// Владелец мира. Создаётся и уничтожается композиционным корнем (VContainer), не статикой.
 public sealed class SimulationWorldHost : IDisposable
 {
     public World World { get; }
@@ -78,21 +79,24 @@ public sealed class SimulationWorldHost : IDisposable
     public SimulationWorldHost(string name, IReadOnlyList<Type> systemTypes)
     {
         World = new World(name, WorldFlags.Game);
-        // Создаёт Initialization/Simulation/PresentationSystemGroup и системы из списка
-        // (с учётом [CreateAfter]/[CreateBefore]), раскладывает по [UpdateInGroup], сортирует группы.
         DefaultWorldInitialization.AddSystemsToRootLevelSystemGroups(World, systemTypes);
-        // Не вызывайте, если мир тикается вручную через World.Update() (сервер, тесты).
         ScriptBehaviourUpdateOrder.AppendWorldToCurrentPlayerLoop(World);
     }
 
     public void Dispose()
     {
         if (!World.IsCreated) return;
-        ScriptBehaviourUpdateOrder.RemoveWorldFromCurrentPlayerLoop(World); // Dispose этого не делает
+        ScriptBehaviourUpdateOrder.RemoveWorldFromCurrentPlayerLoop(World);
         World.Dispose();
     }
 }
 ```
+
+- `AddSystemsToRootLevelSystemGroups` создаёт `InitializationSystemGroup`, `SimulationSystemGroup`,
+  `PresentationSystemGroup` и системы из списка (с учётом `[CreateAfter]`/`[CreateBefore]`), раскладывает системы
+  по `[UpdateInGroup]` и сортирует группы.
+- `AppendWorldToCurrentPlayerLoop` не вызывайте, если мир тикается вручную через `World.Update()` (сервер, тесты).
+- `RemoveWorldFromCurrentPlayerLoop` в `Dispose` обязателен: `World.Dispose()` мир из PlayerLoop не убирает (§2.1).
 
 Что обязательно положить в список: в нём оказывается **только** то, что перечислено.
 
@@ -136,29 +140,30 @@ public sealed class SimulationWorldHost : IDisposable
 ### 3.2 Создание в рантайме
 
 ```csharp
-// Архетип создаём один раз (например, в OnCreate или в фабрике), дальше — батчами.
 EntityArchetype unitArchetype = em.CreateArchetype(
     typeof(UnitId), typeof(Health), typeof(Position2D), typeof(Velocity2D));
 
-// Батч-создание дешевле поштучного: одна структурная операция.
 using NativeArray<Entity> units = em.CreateEntity(unitArchetype, count, Allocator.Temp);
 ```
 
+- Архетип создаётся один раз (например, в `OnCreate` или в фабрике), дальше сущности создаются батчами. Батч-создание
+  дешевле поштучного: это одна структурная операция.
 - Chunk = 16 KiB, максимум 128 сущностей в чанке (`TypeManager.MaximumChunkCapacity`). Большие компоненты уменьшают ёмкость.
 - Создание, уничтожение, add/remove компонента и смена shared-значения — структурные изменения (§7).
 
 ### 3.3 Сущности-префабы (без baking)
 
 ```csharp
-// Префаб — обычная сущность с тегом Prefab: запросы её не видят, системы не обрабатывают.
 var prefab = em.CreateEntity(em.CreateArchetype(
     typeof(Prefab), typeof(UnitId), typeof(Health), typeof(Velocity2D)));
-em.SetComponentData(prefab, new Health { Value = cfg.MaxHp }); // значения из JSON-конфига
+em.SetComponentData(prefab, new Health { Value = cfg.MaxHp });
 
-// Инстансы получают все компоненты префаба, кроме Prefab.
 using var spawned = em.Instantiate(prefab, spawnCount, Allocator.Temp);
 ```
 
+- Префаб — обычная сущность с тегом `Prefab`: запросы её не видят, системы не обрабатывают. Значения его компонентов
+  берутся из JSON-конфига.
+- Инстансы получают все компоненты префаба, кроме `Prefab`.
 - Запросы по умолчанию исключают сущности с `Prefab` и `Disabled`. Чтобы видеть их, нужны `EntityQueryOptions.IncludePrefab` / `IncludeDisabledEntities`.
 - `EntityCommandBuffer.CreateEntity(archetype)` с `Prefab` в архетипе **бросает исключение при playback** (из документации метода в `EntityCommandBuffer.cs`). Префабы создавайте через `EntityManager`.
 - Enableable-компоненты инстанса копируют enabled-состояние префаба. Cleanup-компоненты не копируются.
@@ -196,10 +201,14 @@ using var spawned = em.Instantiate(prefab, spawnCount, Allocator.Temp);
 ### 4.2 Динамические буферы
 
 ```csharp
-[InternalBufferCapacity(8)] // до 8 элементов лежат прямо в чанке
-public struct PathNode : IBufferElementData { public int2 Cell; }
+[InternalBufferCapacity(8)]
+public struct PathNode : IBufferElementData
+{
+    public int2 Cell;
+}
 ```
 
+- `[InternalBufferCapacity(8)]`: до 8 элементов лежат прямо в чанке.
 - Ёмкость по умолчанию — сколько элементов влезает в 128 байт (`TypeManager.DefaultBufferCapacityNumerator`).
 - Если длина превысила ёмкость, данные переезжают в кучу **навсегда**: внутреннее место в чанке теряется, каждое чтение даёт промах кэша.
 - Для буферов сильно переменной длины ставьте `InternalBufferCapacity(0)`.
@@ -255,8 +264,17 @@ Singleton — компонент, который в мире есть ровно
 Blob — иммутабельные unmanaged данные одним блоком с относительными смещениями. Безопасны для параллельного чтения. Подходят для статических конфигов (таблицы урона, карта, навигация).
 
 ```csharp
-public struct EnemyTable { public BlobArray<EnemyDef> Defs; }
-public struct EnemyDef { public int Id; public float Hp; public BlobString Name; }
+public struct EnemyTable
+{
+    public BlobArray<EnemyDef> Defs;
+}
+
+public struct EnemyDef
+{
+    public int Id;
+    public float Hp;
+    public BlobString Name;
+}
 
 public static BlobAssetReference<EnemyTable> Build(IReadOnlyList<EnemyJson> src)
 {
@@ -269,11 +287,11 @@ public static BlobAssetReference<EnemyTable> Build(IReadOnlyList<EnemyJson> src)
         arr[i].Hp = src[i].Hp;
         builder.AllocateString(ref arr[i].Name, src[i].Name);
     }
-    // Копирует данные в итоговый блок; builder после этого не нужен.
     return builder.CreateBlobAssetReference<EnemyTable>(Allocator.Persistent);
 }
 ```
 
+- `CreateBlobAssetReference` копирует данные в итоговый блок; builder после этого не нужен.
 - Доступ **только по ref**: `ref EnemyTable t = ref blobRef.Value;`. Копия `BlobArray`/`BlobString`/`BlobPtr` по значению ломает смещения. Не передавайте `BlobAssetReference<T>` параметром с `in`, если нужен `.Value`.
 - До `CreateBlobAssetReference` у `BlobArray` `Length == 0`: читайте длину из `BlobBuilderArray`.
 - Есть `BlobArray<T>.AsSpan()` и `BlobString.AsSpan()` (`ReadOnlySpan`); в 1.4.4 их не было.
@@ -299,30 +317,33 @@ using Unity.Entities;
 using Unity.Mathematics;
 
 [UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
-public partial struct MoveSystem : ISystem // partial обязателен: SystemAPI — source generation
+public partial struct MoveSystem : ISystem
 {
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
-        state.RequireForUpdate<SimulationConfig>(); // не обновляться, пока нет конфига
+        state.RequireForUpdate<SimulationConfig>();
     }
 
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
-        // Schedule без аргументов сам берёт и записывает state.Dependency.
-        new MoveJob { Dt = SystemAPI.Time.DeltaTime }.ScheduleParallel();
+        new MoveJob { DeltaTime = SystemAPI.Time.DeltaTime }.ScheduleParallel();
     }
 }
 
 [BurstCompile]
 public partial struct MoveJob : IJobEntity
 {
-    public float Dt;
-    void Execute(ref Position2D pos, in Velocity2D vel) => pos.Value += vel.Value * Dt;
+    public float DeltaTime;
+
+    void Execute(ref Position2D pos, in Velocity2D vel) => pos.Value += vel.Value * DeltaTime;
 }
 ```
 
+- `partial` у системы обязателен: `SystemAPI` работает через source generation.
+- `RequireForUpdate<SimulationConfig>()` — система не обновляется, пока нет конфига.
+- `ScheduleParallel()` без аргументов сам берёт и записывает `state.Dependency`.
 - `OnCreate`/`OnUpdate`/`OnDestroy` имеют пустые default-реализации в интерфейсе. `[BurstCompile]` ставится на методы. `IJobEntity` по умолчанию **не** Burst-компилируется, нужен `[BurstCompile]` на struct.
 - `ISystemStartStop` добавляет `OnStartRunning`/`OnStopRunning`: вызываются при смене «работает/не работает» (Enabled, RequireForUpdate).
 - В ISystem нельзя хранить managed-поля. Состояние хранится в полях struct (unmanaged, включая NativeContainer'ы, которые освобождаются в `OnDestroy`) или в компонентах/синглтонах.
@@ -339,7 +360,8 @@ public partial struct MoveJob : IJobEntity
 [UpdateInGroup(typeof(PresentationSystemGroup))]
 public partial class ViewSyncBridgeSystem : SystemBase
 {
-    IViewService _views; // OOP-сервис
+    private IViewService _views;
+
     public void Construct(IViewService views) => _views = views;
 
     protected override void OnUpdate()
@@ -348,9 +370,10 @@ public partial class ViewSyncBridgeSystem : SystemBase
             _views.SetPosition(id.ValueRO.Value, pos.ValueRO.Value);
     }
 }
-// В host'е после создания мира:
-// world.GetExistingSystemManaged<ViewSyncBridgeSystem>().Construct(views);
 ```
+
+`_views` — OOP-сервис. Host после создания мира вызывает
+`world.GetExistingSystemManaged<ViewSyncBridgeSystem>().Construct(views)`.
 
 `SystemAPI.Query` в главном потоке **завершает** зависимые jobs (sync). Размещайте мосты там, где это дёшево, обычно в `PresentationSystemGroup`.
 
@@ -412,11 +435,12 @@ PresentationSystemGroup        (конец фазы PreLateUpdate)
 
 ```csharp
 var fixedGroup = world.GetExistingSystemManaged<FixedStepSimulationSystemGroup>();
-fixedGroup.Timestep = 1f / 30f;   // clamp в [0.0001, 10]
-// Альтернатива без «догоняния»: ровно один апдейт на кадр с фиксированным dt
-// fixedGroup.RateManager = new RateUtils.FixedRateSimpleManager(1f / 30f);
+fixedGroup.Timestep = 1f / 30f;
 ```
 
+- `Timestep` зажимается в `[0.0001, 10]`.
+- Альтернатива без «догоняния» — ровно один апдейт на кадр с фиксированным dt:
+  `fixedGroup.RateManager = new RateUtils.FixedRateSimpleManager(1f / 30f)`.
 - `VariableRateSimulationSystemGroup`: по умолчанию ~15 Гц (`VariableRateManager`, 66 мс).
 - Детерминизм симуляции: фиксированный шаг, `Unity.Mathematics.Random` из состояния в компоненте и детерминированный порядок ECB (§7.4). Время кадра (`UnityEngine.Time`) в правила не пускаем.
 
@@ -430,22 +454,25 @@ fixedGroup.Timestep = 1f / 30f;   // clamp в [0.0001, 10]
 
 ```csharp
 foreach (var (hp, regen, e) in SystemAPI.Query<RefRW<Health>, RefRO<Regen>>()
-             .WithAll<Alive>()
-             .WithNone<Stunned>()
-             .WithEntityAccess())                 // Entity — последний элемент кортежа
+    .WithAll<Alive>()
+    .WithNone<Stunned>()
+    .WithEntityAccess())
 {
     hp.ValueRW.Value = math.min(hp.ValueRO.Value + regen.ValueRO.PerTick, hp.ValueRO.Max);
 }
 ```
 
+- С `WithEntityAccess()` `Entity` — последний элемент кортежа.
 - Типы-параметры (до 7): `RefRO<T>`, `RefRW<T>`, `T` (копия, read-only), `DynamicBuffer<T>`, `EnabledRefRO<T>`, `EnabledRefRW<T>`, unmanaged shared-компонент.
 - Цепочки (до 3 типов в вызове): `WithAll`, `WithAny`, `WithNone`, `WithDisabled`, `WithPresent`, `WithAbsent`, `WithChangeFilter`, `WithSharedComponentFilter`, `WithOptions`, `WithEntityAccess`.
 - `foreach` выполняется в главном потоке и завершает зависимости. Тяжёлую работу выносите в `IJobEntity`.
 
 ### 6.2 EntityQuery и builder
 
+Запрос строится один раз в `OnCreate` и кэшируется в поле системы; `SystemAPI.QueryBuilder()` делает то же и
+кэширует сам.
+
 ```csharp
-// В OnCreate: кэшируем запрос. SystemAPI.QueryBuilder() делает то же и кэширует сам.
 _query = new EntityQueryBuilder(Allocator.Temp)
     .WithAllRW<Health>()
     .WithAll<Alive>()
@@ -487,15 +514,21 @@ _query = new EntityQueryBuilder(Allocator.Temp)
 [BurstCompile]
 public partial struct AttackJob : IJobEntity
 {
-    [ReadOnly] public ComponentLookup<Position2D> PosLookup;
+    [ReadOnly]
+    public ComponentLookup<Position2D> PosLookup;
+
     void Execute(ref AttackState atk, in Target target)
     {
-        if (PosLookup.TryGetComponent(target.Value, out var targetPos)) { /* ... */ }
+        if (PosLookup.TryGetComponent(target.Value, out var targetPos))
+        {
+            atk.TargetPosition = targetPos.Value;
+        }
     }
 }
-// В OnUpdate:
-// new AttackJob { PosLookup = SystemAPI.GetComponentLookup<Position2D>(true) }.ScheduleParallel();
 ```
+
+Планирование в `OnUpdate`:
+`new AttackJob { PosLookup = SystemAPI.GetComponentLookup<Position2D>(true) }.ScheduleParallel();`.
 
 - `ComponentLookup<T>`: индексатор, `HasComponent`, `TryGetComponent`, `EntityExists`, `GetRefRO`/`GetRefRW`, `TryGetRefRO`/`TryGetRefRW` (1.4+; `TryGetRefRW` корректно поднимает change version), `IsComponentEnabled`/`SetComponentEnabled`, `GetEnabledRefRW<T>`, `DidChange`, `Update(ref state)`. `GetRefRWOptional`/`GetRefROOptional` устарели, используйте `TryGetRef*`.
 - `BufferLookup<T>`: индексатор, `HasBuffer`, `TryGetBuffer`, `EntityExists`, `IsBufferEnabled`/`SetBufferEnabled`, `Update`.
@@ -526,17 +559,17 @@ public partial struct AttackJob : IJobEntity
 
 ```csharp
 var ecb = new EntityCommandBuffer(Allocator.TempJob);
-Entity e = ecb.CreateEntity(archetype);          // РЕАЛЬНАЯ сущность уже сейчас (6.6)
+Entity e = ecb.CreateEntity(archetype);
 ecb.SetComponent(e, new Health { Value = 10 });
-ecb.AddComponent(other, new Target { Value = e }); // ссылку можно класть в данные
-// ... job.Schedule(); state.Dependency.Complete();
-ecb.Playback(state.EntityManager);                // один раз; повтор → исключение
+ecb.AddComponent(other, new Target { Value = e });
+ecb.Playback(state.EntityManager);
 ecb.Dispose();
 ```
 
-- **6.6: плейсхолдеров больше нет.** `CreateEntity`/`Instantiate` (и в `ParallelWriter`) возвращают валидный `Entity` во время записи. Его можно хранить, передавать в другие буферы и класть в поля компонентов: ремаппинг не нужен. До `Playback` у сущности нет чанка, и `EntityManager`/запросы её не видят. Проверки «`Index < 0` = временная сущность» больше не работают.
+- **6.6: плейсхолдеров больше нет.** `CreateEntity`/`Instantiate` (и в `ParallelWriter`) возвращают валидный (реальный) `Entity` уже во время записи. Его можно хранить, передавать в другие буферы и класть в поля компонентов (`new Target { Value = e }`): ремаппинг не нужен. До `Playback` у сущности нет чанка, и `EntityManager`/запросы её не видят. Проверки «`Index < 0` = временная сущность» больше не работают.
+- Если буфер пишут джобы, между записью и `Playback` их планируют и завершают (`job.Schedule()`, `state.Dependency.Complete()`).
 - При `ecb.Instantiate(prefab)` с `LinkedEntityGroup` заранее выделяется **только корень**. Дети появляются при playback, их читают из `LinkedEntityGroup` корня после playback.
-- **`PlaybackPolicy` obsolete целиком.** Любой ECB проигрывается ровно один раз. Чтобы повторить команды, запишите их в новый ECB.
+- **`PlaybackPolicy` obsolete целиком.** Любой ECB проигрывается ровно один раз, повторный `Playback` бросает исключение. Чтобы повторить команды, запишите их в новый ECB.
 - Команды по `EntityQuery` (`AddComponent`, `RemoveComponent`, `DestroyEntity`, …) передавайте с `EntityQueryCaptureMode.AtPlayback`: перегрузки без него и режим `AtRecord` obsolete. Если нужна семантика «на момент записи», передайте `NativeArray<Entity>`.
 - ECB не объединяет одинаковые команды. Для массовых операций используйте батч-перегрузки: `CreateEntity(archetype, NativeArray<Entity>)`, `Instantiate(e, NativeArray<Entity>)`.
 - Методы ECB: `CreateEntity`, `Instantiate`, `DestroyEntity`, `AddComponent`, `SetComponent`, `RemoveComponent`, `AddBuffer`/`SetBuffer`/`AppendToBuffer`, `SetComponentEnabled`, `AddSharedComponent`/`SetSharedComponent`, `SetName`. Чтения нет.
@@ -549,13 +582,12 @@ ecb.Dispose();
 public void OnUpdate(ref SystemState state)
 {
     var ecb = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>()
-                       .CreateCommandBuffer(state.WorldUnmanaged);
+        .CreateCommandBuffer(state.WorldUnmanaged);
     new DeathJob { Ecb = ecb.AsParallelWriter() }.ScheduleParallel();
-    // Playback и Dispose сделает EndSimulationEntityCommandBufferSystem. Сами НЕ вызываем.
 }
 ```
 
-- `GetSingleton<…Singleton>()` регистрирует зависимость. ECB-система при своём апдейте завершит jobs, проиграет буферы в порядке создания и освободит их.
+- `GetSingleton<…Singleton>()` регистрирует зависимость. ECB-система при своём апдейте завершит jobs, проиграет буферы в порядке создания и освободит их: `Playback` и `Dispose` такого буфера сделает `EndSimulationEntityCommandBufferSystem`, сами их **не** вызываем.
 - Дефолтные ECB-системы: `Begin/EndInitialization…`, `Begin/EndFixedStepSimulation…`, `Begin/EndVariableRateSimulation…`, `Begin/EndSimulation…`, `BeginPresentation…`. `EndPresentation` нет: вместо него `BeginInitialization` следующего кадра.
 - Каждая ECB-система — отдельная sync point. Используйте минимальный набор, обычно `EndSimulation` + `EndFixedStepSimulation`.
 
@@ -566,13 +598,15 @@ public void OnUpdate(ref SystemState state)
 public partial struct DeathJob : IJobEntity
 {
     public EntityCommandBuffer.ParallelWriter Ecb;
+
     void Execute(Entity e, [ChunkIndexInQuery] int sortKey, in Health hp)
     {
-        if (hp.Value <= 0) Ecb.DestroyEntity(sortKey, e); // sortKey — первый аргумент
+        if (hp.Value <= 0) Ecb.DestroyEntity(sortKey, e);
     }
 }
 ```
 
+- Sort key — первый аргумент команд `ParallelWriter`.
 - Порядок **записи** из потоков недетерминирован. При playback команды сортируются по sort key, а большие ключи идут позже. Ключ должен не зависеть от планирования: `[ChunkIndexInQuery]` в `IJobEntity`, `unfilteredChunkIndex` в `IJobChunk`.
 - **Один ECB на один job.** Два job'а с одинаковыми `ChunkIndexInQuery` в одном буфере перемешают команды.
 - Значения `Entity`, выданные `ParallelWriter.CreateEntity/Instantiate`, берутся из per-thread пулов и зависят от потока. Порядок команд детерминирован, **номера сущностей — нет** (§3.1).
@@ -598,11 +632,18 @@ public partial struct DeathJob : IJobEntity
 public struct Health : IComponentData, IDebugOnAdded, IDebugOnRemoved
 {
     public float Value;
-    public static void OnAdded(Entity entity, in Health c)   { /* breakpoint → call stack */ }
-    public static void OnRemoved(Entity entity, in Health c) { }
+
+    public static void OnAdded(Entity entity, in Health c)
+    {
+    }
+
+    public static void OnRemoved(Entity entity, in Health c)
+    {
+    }
 }
 ```
 
+- Точка останова в `OnAdded`/`OnRemoved` показывает call stack добавления или удаления компонента.
 - Колбэки есть только в редакторе и development-сборках. В release они исключены, если не задан `UNITY_DOTS_DEBUG`.
 - Вызываются при реальном добавлении или удалении компонента, включая `DestroyEntity`, по разу на сущность. Не вызываются при create-with-archetype, enable/disable, записи значения и для `IBufferElementData`.
 - Для изменений из ECB call stack показывает playback, а не систему-автора.
@@ -621,14 +662,14 @@ using Unity.Mathematics;
 public abstract class EcsTestFixture
 {
     protected World World;
-    protected EntityManager Em;
+    protected EntityManager EntityManager;
 
     [SetUp]
     public virtual void SetUp()
     {
-        World = new World("Test World");          // не трогаем DefaultGameObjectInjectionWorld
-        Em = World.EntityManager;
-        World.SetTime(new TimeData(elapsedTime: 0, deltaTime: 1f / 30f)); // детерминированное время
+        World = new World("Test World");
+        EntityManager = World.EntityManager;
+        World.SetTime(new TimeData(elapsedTime: 0, deltaTime: 1f / 30f));
     }
 
     [TearDown]
@@ -636,8 +677,8 @@ public abstract class EcsTestFixture
     {
         if (World is { IsCreated: true })
         {
-            Em.CompleteAllTrackedJobs();
-            World.Dispose();                        // вызовет OnDestroy систем (освобождение блобов)
+            EntityManager.CompleteAllTrackedJobs();
+            World.Dispose();
         }
     }
 }
@@ -645,21 +686,25 @@ public abstract class EcsTestFixture
 public class MoveSystemTests : EcsTestFixture
 {
     [Test]
-    public void Moves_By_Velocity()
+    public void Update_WithVelocity_PositionMoves()
     {
         var sys = World.CreateSystem<MoveSystem>();
-        Em.CreateSingleton(new SimulationConfig());          // для RequireForUpdate
-        var e = Em.CreateEntity(typeof(Position2D), typeof(Velocity2D));
-        Em.SetComponentData(e, new Velocity2D { Value = new float2(3, 0) });
+        EntityManager.CreateSingleton(new SimulationConfig());
+        var e = EntityManager.CreateEntity(typeof(Position2D), typeof(Velocity2D));
+        EntityManager.SetComponentData(e, new Velocity2D { Value = new float2(3, 0) });
 
-        sys.Update(World.Unmanaged);                          // один апдейт одной системы
-        Em.CompleteAllTrackedJobs();                          // дождаться ScheduleParallel
+        sys.Update(World.Unmanaged);
+        EntityManager.CompleteAllTrackedJobs();
 
-        Assert.AreEqual(0.1f, Em.GetComponentData<Position2D>(e).Value.x, 1e-5f);
+        Assert.AreEqual(0.1f, EntityManager.GetComponentData<Position2D>(e).Value.x, 1e-5f);
     }
 }
 ```
 
+- Фикстура создаёт свой `World` и не трогает `DefaultGameObjectInjectionWorld`. Время детерминировано: `SetTime` с
+  фиксированным шагом. `World.Dispose()` в `TearDown` вызывает `OnDestroy` систем, где освобождаются блобы.
+- В тесте синглтон `SimulationConfig` создаётся ради `RequireForUpdate`; `sys.Update(World.Unmanaged)` — один апдейт
+  одной системы; `CompleteAllTrackedJobs()` дожидается джобов `ScheduleParallel`.
 - `World.CreateSystem<T>()` создаёт систему **вне групп**. Её обновляют через `SystemHandle.Update(world.Unmanaged)`, либо собирают мир как в проде (`AddSystemsToRootLevelSystemGroups`) и вызывают `World.Update()`. Во втором случае не добавляйте `UpdateWorldTimeSystem`: время задаётся `SetTime`.
 - Документация `SystemHandle.Update` предупреждает: не обновляйте одну обрабатывающую данные систему из другой, это ломает версии и change filters. В тестах вызывайте из теста.
 - Перед assert'ами вызывайте `CompleteAllTrackedJobs()`.

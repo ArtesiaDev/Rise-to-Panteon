@@ -23,8 +23,8 @@ def searcher():
 @mcp.tool()
 def search(query: str, layers: list[str] | None = None, k: int = 6) -> str:
     """Поиск по смыслу и ключевым словам (векторы + BM25) с дотягиванием связанных документов по графу.
-    layers — фильтр слоёв: gdd, gdd-feature, gdd-reference, arch, reference, harness, roadmap, note, decisions.
-    По умолчанию всё, кроме decisions (журналы решений). Возвращает фрагменты целиком с путём и разделом."""
+    layers — фильтр слоёв: gdd, gdd-feature, gdd-reference, arch, reference, harness, roadmap, note (по умолчанию все).
+    Возвращает фрагменты целиком с путём и разделом."""
     from .search import format_hits
     hits = searcher().search(query, layers=[l for l in (layers or []) if l in LAYERS] or None, k=k)
     return format_hits(query, hits)

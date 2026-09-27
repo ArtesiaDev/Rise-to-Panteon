@@ -1,8 +1,7 @@
 # Архитектура Rise to Panteon
 
-> Главный технический документ проекта. Описывает, **как устроен** код и **по каким правилам**
-> его писать. Почему принято то или иное решение — в журнале `Docs/Tech/ArchitectureDecisions.md`
-> (ссылки вида A-xx). Что игра должна делать — в GDD (`Docs/GDD/`).
+> Как устроен код и по каким правилам его писать. Причина неочевидного решения записана рядом с ним
+> строкой «Почему: …». Что игра должна делать — GDD (`Docs/GDD/`).
 >
 > Имена, введённые в этом файле (сборки, типы, группы, сервисы), — канонические. Документы контуров
 > используют их без изменений. Новое имя верхнего уровня появляется сначала здесь.
@@ -20,17 +19,22 @@
 | `CodeStructure.md` | Папки, сборки, неймспейсы, именование, пошаговое «как добавить фичу» | Перед созданием любого файла |
 
 Справочники по API: `Docs/Tech/Reference/Unity/Entities.md`, `Docs/Tech/Reference/Unity/JobsAndBurst.md`.
+GDD: `Docs/GDD/README.md`, реестр фич `Docs/GDD/Features.md`, спецификации `Docs/GDD/Features/`.
 Как агенты находят знание, заметки к коду, правила документов — `Docs/Tech/Harness.md`. Статус реализации —
 `Docs/Roadmap.md`.
 `Docs/Tech/Reference/WO_ProductionArchitecture.md` — чужой проект, только референс.
 
-Приоритет при расхождении: этот документ → документ контура → журнал решений → справочники.
+Приоритет при расхождении: этот документ → документ контура → справочники.
 
 ## 2. Картина целиком
 
-Игра одиночная (A-02), платформы iOS и Android (A-03). Код разделён на **контуры** — области с
-собственной ответственностью и технологией. Контуры обмениваются только данными из сборки
-`Contracts`.
+Игра одиночная: сервера и мультиплеера нет, архитектура не несёт затрат «под сервер»; если они понадобятся,
+решение принимается тогда. Платформы — iOS и Android (только ARM64, Vulkan с запасным GLES3); минимальные
+версии ОС — минимум Unity 6.6 для этой конфигурации, уточняется при настройке сборки. Движок — Unity
+6000.6.3f1, Entities 6.6 и Burst 2.0 встроены в движок.
+
+Код разделён на **контуры** — области с собственной ответственностью и технологией. Контуры обмениваются
+только данными из сборки `Contracts`.
 
 ```mermaid
 flowchart LR
@@ -76,9 +80,10 @@ flowchart LR
 
 ## 3. Кадр и тик
 
-Симуляция идёт фиксированным тиком 30 Гц (A-15) внутри `FixedStepSimulationSystemGroup`, поэтому
+Симуляция идёт фиксированным тиком 30 Гц внутри `FixedStepSimulationSystemGroup`, поэтому
 за один кадр бывает 0, 1 или несколько тиков. Представление рисует каждый кадр, интерполируя между
-двумя последними снимками.
+двумя последними снимками. Почему 30 Гц: этого достаточно, чтобы мир выглядел живым, и это бережёт батарею;
+ИИ может думать реже (`Simulation.md` §3.4).
 
 ```mermaid
 sequenceDiagram
@@ -101,15 +106,15 @@ sequenceDiagram
     Pr->>Pr: сравнение по StableId, интерполяция, анимация, VFX, звук
 ```
 
-**Пауза.** Единственный источник паузы — `IAppLifecycle.AcquirePause(PauseReason)`: игра стоит, пока жива
-хотя бы одна причина (`Menu`, `Background`, `AwaitingResume`, `SaveBarrier`, `Dev`). Меню берёт
-`PauseReason.Menu` через `IScreenService`, сворачивание — `Background` (GDD U04, M01).
+**Пауза.** Единственный источник паузы — `IAppLifecycle.AcquirePause(PauseReason)` (ARCH-21): игра стоит,
+пока жива хотя бы одна причина (`Services.md` §8). Меню берёт `PauseReason.Menu` через `IScreenService`,
+сворачивание — `Background` (GDD U04, M01).
 
-На паузе мировое время не идёт, но операции меню (экипировка, выбор при эволюции) должны примениться и
-сразу отразиться в UI. Поэтому `WorldHost` выполняет **тик без времени**: только `CommandIntakeGroup`,
-`EndSimulationTickEcbSystem` и `ExportGroup`, без продвижения `SimClock` и без остальных групп.
-Представление замирает на последнем снимке. После снятия паузы накопитель фиксированного шага
-сбрасывается — догоняющих тиков нет (GDD E08, U04 §13).
+На паузе мировое время не идёт, но операции меню (экипировка, выбор при эволюции) применяются сразу:
+`WorldHost` выполняет **тик без времени** (§5; состав — `Simulation.md` §5.3). Почему: GDD ставит игру на
+паузу в любом меню, а действия в меню — операции, и их результат должен сразу отображаться. Представление
+замирает на последнем снимке. После снятия паузы догоняющих тиков нет (GDD E08, U04 §13; механизм —
+`Simulation.md` §2.3).
 
 ## 4. Каркас
 
@@ -119,49 +124,46 @@ sequenceDiagram
 `Assets/_Project/Code/<Контур>/`, код фич — в `Assets/_Project/Features/<Фича>/<Контур>/` и
 вливается в сборку контура через `.asmref` (подробно — `CodeStructure.md`).
 
-| Сборка | Содержит | Может ссылаться на |
-|---|---|---|
-| `RiseToPanteon.Core` | Общие примитивы: `StableId`, fixed-point, хеши, утилиты; `IFeatureInstaller`, `FeatureInstallerAttribute`, `InstallScope`; `IBootNode`, `IGameStartNode` | Unity.Mathematics, Unity.Collections, VContainer, UniTask |
-| `RiseToPanteon.Contracts` | Типы контракта контуров: `PlayerInputFrame`, `PlayerButton`, `Operation`, `SimEvent`, `ViewState`, `ViewKey`, `AnimState`, `ViewFlags`, read-модели, `IWorldView`, `IOperationSink`; порты представления для других контуров: `IWorldAnchorService`, `IAppearancePreviewService`, `IPointerProjector` | Core, Unity.Collections, Unity.Mathematics |
-| `RiseToPanteon.Simulation` | Компоненты, системы, джобы, blob-структуры конфигов, генерация мира | Core, Contracts, Entities, Collections, Burst, Mathematics |
-| `RiseToPanteon.Bridge` | `WorldHost`, мостовые системы, `WorldViewPublisher`, привязка конфигов и секций сохранения к ECS. `allowUnsafeCode`; `[assembly: DisableAutoCreation]` | Core, Contracts, Simulation, Services, Entities, VContainer, UniTask |
-| `RiseToPanteon.Services` | Сервисы инфраструктуры и их интерфейсы, в т. ч. `ISceneFlow`, `GameStartRequest`, `ILoadingProgress`, `ITouchControlsSink`, `ILocalizationService`, `ISettingsService`, `ILog` | Core, Contracts, VContainer, UniTask, Addressables, Input System |
-| `RiseToPanteon.Presentation` | Вьюхи, пулы, анимация, рендер мира, камера, маршрутизация событий в VFX и звук; реализации портов `IWorldAnchorService`, `IAppearancePreviewService`, `IPointerProjector` | Core, Contracts, Services, VContainer, UniTask, Collections, Mathematics, URP, 2D Animation, 2D Tilemap |
-| `RiseToPanteon.UI` | Экраны, HUD, view-модели, сенсорное управление; реализация `ILocalizationService` | Core, Contracts, Services, VContainer, UniTask, UI Toolkit, Localization |
-| `RiseToPanteon.App` | Корень композиции: скоупы VContainer, `BootGraph`, `SceneFlow`, каталог инсталлеров | Все сборки выше, **кроме** `Simulation` и Unity.Entities |
-| `RiseToPanteon.Dev` | Dev-инструменты, читы, оверлеи, системы dev-операций (только с define `RTP_DEV`) | Все сборки выше, включая `Simulation` |
-| `RiseToPanteon.Editor` | Редактор комнат, сборщик пака конфигов, DTO конфигов, валидаторы, импорт локализации | Все сборки выше, Newtonsoft Json (только Editor) |
-| `RiseToPanteon.Tests.EditMode` / `.PlayMode` | Тесты, в т. ч. архитектурные (проверка ссылок сборок, неймспейсов, диапазонов id) | Все сборки выше |
+| Сборка | Содержит |
+|---|---|
+| `RiseToPanteon.Core` | Общие примитивы: `StableId`, fixed-point, хеши, утилиты; `IFeatureInstaller`, `FeatureInstallerAttribute`, `InstallScope`; `IBootNode`, `IGameStartNode` |
+| `RiseToPanteon.Contracts` | Типы контракта контуров: `PlayerInputFrame`, `PlayerButton`, `Operation`, `SimEvent`, `ViewState`, `ViewKey`, `AnimState`, `ViewFlags`, read-модели, `IWorldView`, `IOperationSink`; порты представления для других контуров: `IWorldAnchorService`, `IAppearancePreviewService`, `IPointerProjector` |
+| `RiseToPanteon.Simulation` | Компоненты, системы, джобы, blob-структуры конфигов, генерация мира |
+| `RiseToPanteon.Bridge` | `WorldHost`, мостовые системы, `WorldViewPublisher`, привязка конфигов и секций сохранения к ECS |
+| `RiseToPanteon.Services` | Сервисы инфраструктуры и их интерфейсы, в т. ч. `ISceneFlow`, `GameStartRequest`, `ILoadingProgress`, `ITouchControlsSink`, `ILocalizationService`, `ISettingsService`, `ILog` |
+| `RiseToPanteon.Presentation` | Вьюхи, пулы, анимация, рендер мира, камера, маршрутизация событий в VFX и звук; реализации портов `IWorldAnchorService`, `IAppearancePreviewService`, `IPointerProjector` |
+| `RiseToPanteon.UI` | Экраны, HUD, view-модели, сенсорное управление; реализация `ILocalizationService` |
+| `RiseToPanteon.App` | Корень композиции: скоупы VContainer, `BootGraph`, `SceneFlow`, каталог инсталлеров |
+| `RiseToPanteon.Dev` | Dev-инструменты, читы, оверлеи, системы dev-операций (только с define `RTP_DEV`) |
+| `RiseToPanteon.Editor` | Редактор комнат, сборщик пака конфигов, DTO конфигов, валидаторы, импорт локализации |
+| `RiseToPanteon.Tests.EditMode` / `.PlayMode` | Тесты, в т. ч. архитектурные (проверка ссылок сборок, неймспейсов, диапазонов id) |
 
-Пакеты, которых ещё нет в `Packages/manifest.json` и которые добавляются при реализации:
-`com.unity.localization`, `com.unity.nuget.newtonsoft-json` (явно), MemoryPack (после спайка, A-53).
+Ссылки и пакеты каждой сборки, настройки asmdef — `CodeStructure.md` §3.1, §3.2.
 
-Запрещённые направления: `Simulation` → `Services`/`Bridge`/`Presentation`/`UI`/`App`;
-`Presentation`/`UI`/`App` → `Simulation`/Unity.Entities; `Presentation`/`UI` → `Bridge`;
-`Presentation` ↔ `UI` (связь только через порты в `Contracts` и сервисы). Проверяется архитектурными
-тестами (`CodeStructure.md`).
+Запрещённые направления (ARCH-02): `Simulation` → `Services`/`Bridge`/`Presentation`/`UI`/`App`;
+`Services`/`Presentation`/`UI`/`App` → `Simulation`/Unity.Entities/Unity.Entities.Hybrid;
+`Presentation`/`UI` → `Bridge`; `Presentation` ↔ `UI` (связь только через порты в `Contracts` и сервисы).
+Проверяются компилятором и архитектурными тестами (`CodeStructure.md` §3.4).
 
-Старый прототип (`Assets/_Project/Dots`, `Framework`, `Main`, `Dev`, `Editor`) к новой архитектуре
-не относится: новый код на него не ссылается, приведение — отдельный этап (A-05).
+Код прототипа к архитектуре не относится — `CodeStructure.md` §2.4.
 
 ### 4.2. Сцены и скоупы VContainer
 
-| Сцена | Скоуп | Что регистрируется |
+| Сцена | Скоуп | Живёт |
 |---|---|---|
-| `Scenes/Boot.unity` | `ProjectScope` (живёт всю сессию) | Сервисы: конфиги, ассеты, сохранения, ввод, аудио, локализация, жизненный цикл, логирование, загрузчик сцен, граф загрузки |
-| `Scenes/Game.unity` | `GameScope` (дочерний `ProjectScope`) | `WorldHost`, `WorldViewPublisher`, мостовые системы, `WorldPresenter`, рендер локации, камера, экраны игры |
-| `Scenes/Dev.unity` | `DevScope` (дочерний `GameScope`, только `RTP_DEV`) | Dev-инструменты |
+| `Scenes/Boot.unity` | `ProjectScope` | Всю сессию приложения: корень VContainer, загрузка конфигов, главное меню (экран UI) |
+| `Scenes/Game.unity` | `GameScope` (дочерний `ProjectScope`) | От входа в игру до выхода в меню; грузится аддитивно, выгружается вместе с `GameScope` и ECS-миром |
+| `Scenes/Dev.unity` | `DevScope` (дочерний `GameScope`) | Только в dev-сборках (`RTP_DEV`); грузится аддитивно, выгружается при выходе в меню |
 
-`Boot.unity` остаётся загруженной всю сессию; `Game.unity` и `Dev.unity` грузятся аддитивно и
-выгружаются при выходе в меню (вместе с `GameScope` и ECS-миром). Главное меню — экран UI в `ProjectScope`.
-Отдельной сцены Unity на локацию нет: локации строятся из данных (A-51).
+Что регистрирует каждый скоуп — `Services.md` §2.1. Отдельной сцены Unity на локацию нет: локации строятся
+из данных (`Simulation.md` §8).
 
 ### 4.3. Ключевые типы
 
 | Тип | Сборка | Назначение |
 |---|---|---|
 | `StableId` | Core | 64-битный id сущности, стабильный между тиками и в сохранениях. Выдаётся счётчиком `StableIdAllocator` из сохранения |
-| `ViewKey` | Contracts | Числовой индекс визуала (`ushort`). Строковый id визуала из конфигов = адрес Addressables (A-56) |
+| `ViewKey` | Contracts | Числовой индекс визуала (`ushort`) в паке конфигов; строковый id визуала — §5 |
 | `PlayerInputFrame` | Contracts | Ввод игрока за тик: вектор движения, прицел, битовая маска `PlayerButton`. Заполняет `IInputService` |
 | `Operation` | Contracts | Дискретная команда `{ Type, Seq, Tick, Payload }`: действия меню, выбор эволюции, предметы, читы. Unmanaged, payload фиксированного размера |
 | `IOperationSink` | Contracts | Куда UI и сервисы кладут `Operation` |
@@ -171,10 +173,10 @@ sequenceDiagram
 | Read-модель (`*ReadModel`) | Contracts | Blittable-структура для UI и представления: статы игрока, инвентарь, карта, раскладка локации |
 | `SimClock` | Simulation | Синглтон: номер тика. Длительность тика — `SimConstants.DT` (1/30 с) |
 | `OpQueue` + `OpRequest` | Simulation | Синглтон с буфером операций текущего тика |
-| `SimEventBuffer` | Simulation | Синглтон с `NativeList<SimEvent>` текущего тика (`SimEvent` — не компонент: Contracts не ссылается на Entities) |
+| `SimEventBuffer` | Simulation | Синглтон с `NativeList<SimEvent>` текущего тика (`Simulation.md` §6.1) |
 | `WorldHost` | Bridge | Создаёт, обновляет, ставит на паузу и уничтожает ECS-мир |
 | `WorldViewPublisher` | Bridge | Двойной буфер снимка; реализует `IWorldView` |
-| `IConfigPackProvider` | Services | Даёт пак конфигов: цепочка источников «редактор → скачанный → встроенный», проверка версии приложения, схемы, версий blob-таблиц и хеша. UI и представление читают из пака только списки id и таблицу визуалов, blob — никогда |
+| `IConfigPackProvider` | Services | Даёт пак конфигов сессии; источники и проверки — `Content.md` §4.5, §6; что из пака читают UI и представление — CONT-14 |
 | `IConfigTableBinder` | Bridge | Превращает таблицу пака в blob и синглтон ECS (по одному на таблицу, в срезе фичи) |
 | `ISaveService` / `ISaveSection` | Services | Снимок сохранения, атомарная запись; секции фич читают и пишут свою часть |
 | `IAssetProvider` | Services | Загрузка ассетов Addressables по адресу с подсчётом ссылок |
@@ -222,15 +224,11 @@ SaveCaptureGroup (вне тика; обновляется хостом вруч�
     захват снимка мира в данные секций сохранения
 ```
 
-Системы находятся автоматически по `[UpdateInGroup]`: `WorldHost` берёт
-`DefaultWorldInitialization.GetAllSystems(...)`, **фильтрует по белому списку сборок** (`RiseToPanteon.*` и
-нужные системы Unity.Entities — список в `Simulation.md`; системы старого прототипа и лишние пакеты не
-попадают) и передаёт в `AddSystemsToRootLevelSystemGroups(...)`. Мир по умолчанию не создаётся
-(define `UNITY_DISABLE_AUTOMATIC_SYSTEM_BOOTSTRAP_RUNTIME_WORLD`).
-
-`[DisableAutoCreation]` носят только: мостовые `SystemBase` (их создаёт VContainer, хост добавляет через
-`World.AddSystemManaged` в нужную группу) и ручные группы `LocationTransitionGroup`, `SaveCaptureGroup`
-(хост создаёт их до `AddSystemsToRootLevelSystemGroups` и обновляет сам).
+Системы находятся автоматически по `[UpdateInGroup]` из **белого списка сборок**, без центрального списка;
+системы прототипа и лишних пакетов в мир не попадают. Мир по умолчанию не создаётся
+(define `UNITY_DISABLE_AUTOMATIC_SYSTEM_BOOTSTRAP_RUNTIME_WORLD`). `[DisableAutoCreation]` носят только
+мостовые `SystemBase` (их создаёт VContainer) и ручные группы `LocationTransitionGroup`, `SaveCaptureGroup`
+(их обновляет хост). Сборка мира и белый список — `Simulation.md` §2.1, §2.2.
 
 ## 5. Глоссарий
 
@@ -248,8 +246,8 @@ SaveCaptureGroup (вне тика; обновляется хостом вруч�
 | Свёрнутая локация | Локация, хранимая числами: популяции видов, часы, журнал изменений, именованные сущности |
 | Шаг мира | Дискретное продвижение свёрнутых локаций по мировому времени (GDD L01, L03) |
 | Мировое время | Поглощённый опыт в долях стоимости уровня (GDD L01); не реальное время |
-| Пак конфигов | Бинарный файл, собранный из `Configs/` (A-23): blob-таблицы, списки id и таблица визуалов, заголовок с версиями и хешем |
-| Визуал (id) | Строковый id ассета в конфигах; равен адресу в Addressables |
+| Пак конфигов | Бинарный файл, собранный из `Configs/`: blob-таблицы, списки id и таблица визуалов, заголовок с версиями и хешем (`Content.md` §4) |
+| Визуал (id) | Строковый id ассета в конфигах; равен адресу в Addressables (`Content.md` §9.4) |
 | Тик без времени | Шаг на паузе: применяются операции и обновляется экспорт, мировое время стоит |
 
 ## 6. Правила верхнего уровня
@@ -266,7 +264,7 @@ SaveCaptureGroup (вне тика; обновляется хостом вруч�
 | ARCH-06 | Системы симуляции — `ISystem` + `[BurstCompile]`; работа по умолчанию — в джобах (`ScheduleParallel`). Исключение записывается в заметку к коду строкой `Исключение ARCH-06: причина` (`CodeStructure.md` §6.4). |
 | ARCH-07 | Структурные изменения в тике — только через `EndSimulationTickEcbSystem` (или ECB своей группы с обоснованием). |
 | ARCH-08 | Время в симуляции — только `SimClock` и `SimConstants.DT`. |
-| ARCH-09 | Случайность — `Unity.Mathematics.Random`, состояние в компонентах, сиды по правилам GDD (A-16). |
+| ARCH-09 | Случайность — `Unity.Mathematics.Random`, состояние в компонентах, сиды по правилам GDD. |
 | ARCH-10 | Всё, что сохраняется или на что ссылаются дольше тика, адресуется `StableId`. `Entity` не попадает в сохранения, события, read-модели и операции. |
 | ARCH-11 | Шаг мира детерминирован: целые и fixed-point, фиксированный порядок правил, обход по возрастанию id (GDD L03). |
 | ARCH-12 | Числа баланса — только в `Configs/` по JSON Schema. В коде — только технические константы. |
@@ -277,11 +275,19 @@ SaveCaptureGroup (вне тика; обновляется хостом вруч�
 | ARCH-17 | Текст для игрока — только ключи локализации из `Configs/strings/`. |
 | ARCH-18 | Dev-код — только в сборке `RiseToPanteon.Dev` (define `RTP_DEV`); читы меняют игру операциями dev-типов, не напрямую. |
 | ARCH-19 | Бюджеты GDD обязательны: 40 существ в комнате без просадки FPS на слабом телефоне, переход ≤ 1 с (≤ 2 с на слабых), шаг мира ≤ 100 мс, генерация локации ≤ 0,5 с. Нарушение — баг. |
-| ARCH-20 | Изменение механики → GDD. Изменение архитектуры → журнал решений и документ контура, затем код. |
+| ARCH-20 | Изменение механики → GDD. Изменение архитектуры → этот документ или документ контура, затем код. |
 | ARCH-21 | Пауза — только `IAppLifecycle.AcquirePause(reason)`; `Time.timeScale` для паузы не используется. |
 | ARCH-22 | Двухбуквенные аббревиатуры в именах пишутся заглавными: `UI`, `AI` (`UIPanelHost`, `AIBrain`). |
 
-## 7. Ссылки
-- Журнал решений: `Docs/Tech/ArchitectureDecisions.md`
-- GDD: `Docs/GDD/README.md`, реестр фич `Docs/GDD/Features.md`, спецификации `Docs/GDD/Features/`
-- Справочники: `Docs/Tech/Reference/Unity/Entities.md`, `Docs/Tech/Reference/Unity/JobsAndBurst.md`
+## 7. Открытые вопросы
+
+| ID | Вопрос |
+|---|---|
+| O-01 | Эталонные слабые устройства (Android и iPhone), на которых проверяются бюджеты ARCH-19 и спайк «40 существ в комнате». Без них бюджеты не проверяемы. |
+| O-02 | Толкования GDD, принятые в `Simulation.md` до подтверждения владельцем GDD: порядок шага мира L03 R3 прочитан как «подшаг → правило → локации по возрастанию id» (§7.4); в L01 R6 («кроме текущей») из шага смерти исключается локация смерти, а не возрождения (§7.3). |
+| O-03 | Где лежит набор анимаций вида (`AnimSet`): в ассете вида по адресу визуала (`Presentation.md` §5.2, `Content.md` §9.4) или в конфигах (`Presentation.md` §5.3, PRES-12)? |
+| O-04 | Newtonsoft.Json только в `RiseToPanteon.Editor` (CONT-04, `Content.md` §4.2, `CodeStructure.md` §3.1), но `SaveJsonDumper` в Dev пишет `world.json` через Newtonsoft (`Services.md` §5.8). Разрешить Newtonsoft в Dev или дампить другим сериализатором? |
+| O-05 | Кто работает с Input System напрямую: только `Services` (CODE-12, `SourceRulesTests` в `CodeStructure.md` §3.4) или ещё карта `UI` в контуре UI и Dev (SVC-14)? |
+| O-06 | Отказ операции «нужен идущий тик»: общая инфраструктурная причина `NEEDS_RUNNING_TICK` (`CodeStructure.md` §7.1) или код причины каждой фичи (`Simulation.md` §5.3)? |
+| O-07 | `RiseToPanteon.Editor` и тестовые сборки не ссылаются на `RiseToPanteon.Dev` (`CodeStructure.md` §3.1): Dev компилируется только с `RTP_DEV`, и ссылка сломала бы Editor и тесты в релизном профиле. Подтвердить. |
+| O-08 | Подтвердить решения, принятые ведущей сессией без явного согласия владельца: анимация существ через Playables и `AnimationPlayer` вместо Animator Controller (`Presentation.md` §5.2); `StableId`, детерминизм шага мира и сортировка по `StableId` (ARCH-10, ARCH-11); снимок сохранения джобом экспорта в DTO без состояния ИИ (`Simulation.md` §10.2); Burst-джобы по умолчанию и пространственная сетка (ARCH-06, `Simulation.md` §9.2). |

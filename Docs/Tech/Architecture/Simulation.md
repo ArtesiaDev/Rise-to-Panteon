@@ -1,9 +1,8 @@
 # Симуляция — контур ECS
 
-> Документ контура «Симуляция» (README §1). Как устроены ECS-мир, тик, данные мира, команды, события, экспорт,
-> шаг мира, генерация и переходы — и по каким правилам писать системы. Канонические имена взяты из `README.md`
-> (§4.3, §4.4, §5) без изменений; имена, введённые здесь, перечислены в §14. Приоритет: README → этот документ →
-> журнал решений (A-xx, R-xx) → справочники. Поведение задаёт GDD: «GDD L03 R3» = фича L03, правило R3.
+> ECS-мир, тик, данные мира, команды, события, экспорт, шаг мира, генерация и переходы; правила систем.
+> Имена README (§4.3, §4.4, §5) используются без изменений, новые — §14. Поведение задаёт GDD: «GDD L03 R3» =
+> фича L03, правило R3.
 > API сверено с исходниками `Library/PackageCache/com.unity.entities@de96d69a35c5/` (Entities 6.6) и
 > `com.unity.collections@10fff0607388/`. Непроверенное помечено «проверить на спайке».
 
@@ -20,8 +19,11 @@
 | `ISystem` + Burst-джобы; группы систем и их `IRateManager` | `UnityEngine.Time/Input/Random`, `SystemAPI.Time`, `System.Random`, `DateTime`, потоки и `Thread` |
 | Генератор планировки, шаг мира, свёртка и развёртка локаций | Файлы, сеть, сервисы, VContainer, `IOperationSink`, `IWorldView`, `ISaveSection` |
 | Системы захвата и восстановления данных сохранения (`*SaveData`) | Сериализация в байты, формат файла, решение «когда сохранять» (мост и сервисы) |
-| Экспорт снимка, событий и read-моделей в память, которую выдал мост | Managed-компоненты, managed shared, Aspects, SubScenes и baking (A-14), Transforms (`LocalTransform`), Unity Physics |
+| Экспорт снимка, событий и read-моделей в память, которую выдал мост | Managed-компоненты, managed shared, Aspects, SubScenes и baking, Transforms (`LocalTransform`), Unity Physics |
 | Технические константы (`SimConstants`) | Числа баланса (ARCH-12), строки для игрока (ARCH-17), `World.DefaultGameObjectInjectionWorld` (ARCH-05) |
+
+Почему без SubScenes и baking: ECS-мир наполняется в рантайме из пака конфигов, генерации по seed и сохранений;
+авторские комнаты — данные (`Content.md` §7), а не сцены.
 
 Шов с мостом — только компоненты-синглтоны Simulation. Внутрь: `PlayerInput`, `OpQueue` + `OpRequest` (§5),
 `…Config` (§10.1), `…SaveData` (§10.2), `LocationTransitionRequest`, который исполняет хост (§8.2). Наружу:
@@ -45,7 +47,7 @@
    3. `DefaultWorldInitialization.AddSystemsToRootLevelSystemGroups(world, types)` — корневые группы, все системы,
       раскладка по `[UpdateInGroup]`, рекурсивная сортировка корневых групп;
    4. `SortSystems()` у ручных групп — ошибки порядка всплывают при старте, а не при первом переходе;
-   5. `FixedStepSimulationSystemGroup.Timestep = SimConstants.DT` (1/30 с, A-15), `world.MaximumDeltaTime` (§3.3);
+   5. `FixedStepSimulationSystemGroup.Timestep = SimConstants.DT` (1/30 с), `world.MaximumDeltaTime` (§3.3);
    6. проверка обязательного состава (§2.2) с исключением: ошибки `OnCreate` при создании списком только логируются.
 3. Мостовые `SystemBase` (`[DisableAutoCreation]`, созданы VContainer): `world.AddSystemManaged(system)` →
    `group.AddSystemToUpdateList(system)` для группы из их `[UpdateInGroup]` → `group.SortSystems()`.
@@ -54,7 +56,7 @@
 ### 2.2. Состав мира
 
 `GetAllSystems(Default)` возвращает системы **всех** загруженных сборок: кроме нужных — `Unity.Scenes`
-(SceneSystemGroup и др.), `Unity.Transforms`, companion-системы `Unity.Entities.Hybrid` и системы старого прототипа
+(SceneSystemGroup и др.), `Unity.Transforms`, companion-системы `Unity.Entities.Hybrid` и системы прототипа
 `RuntimeRoguelike.Dots.*` (есть в `Assets/_Project/Dots`). Поэтому белый список обязателен:
 
 | Источник | Что берём |
@@ -81,7 +83,7 @@ ECB-системы пакета создаются, но симуляция их
 
 | Действие | Как |
 |---|---|
-| Пауза (меню, сворачивание — GDD U04, M01; README §3) | Источник — только `IAppLifecycle.AcquirePause(PauseReason)` (A-17, ARCH-21); мост по сигналу ставит `SimulationTickGroup.Enabled = false`. `FixedStepSimulationSystemGroup` продолжает «догонять» время пустыми итерациями, поэтому накопленного долга нет |
+| Пауза (меню, сворачивание — GDD U04, M01; README §3) | Источник — ARCH-21; мост по сигналу ставит `SimulationTickGroup.Enabled = false`. `FixedStepSimulationSystemGroup` продолжает «догонять» время пустыми итерациями, поэтому накопленного долга нет |
 | Операции на паузе | «Тик без времени» (§5.3) |
 | Переход, шаг мира, новый мир, загрузка | Тик на паузе → хост ставит `LocationTransitionRequest` (или его поставил тик) → `LocationTransitionGroup.Update()`, пока `Kind != None` → `EntityManager.CompleteAllTrackedJobs()` (§8.2) |
 | Снимок сохранения | Тик на паузе или между кадрами → `SaveCaptureGroup.Update()` → `CompleteAllTrackedJobs()` → секции читают `*SaveData` (§10.2) |
@@ -142,7 +144,7 @@ SaveCaptureGroup                          ручная; мост обновля�
 
 ### 3.3. Фиксированная частота
 
-Тик — 30 Гц (A-15): `FixedStepSimulationSystemGroup` с `FixedRateCatchUpManager` выполняет тик 0..N раз за кадр
+Тик — 30 Гц (README §3): `FixedStepSimulationSystemGroup` с `FixedRateCatchUpManager` выполняет тик 0..N раз за кадр
 и ограничивает догон значением `world.MaximumDeltaTime` (по умолчанию 1/3 с ≈ 10 тиков). Хост ставит
 `MaximumDeltaTime` в 3–4 тика (0,1–0,133 с): на слабом телефоне игра замедляется, а не уходит в спираль
 отставания (значение — проверить на спайке). Представление интерполирует; `Alpha` считает мост.
@@ -153,7 +155,7 @@ SaveCaptureGroup                          ручная; мост обновля�
 
 ### 3.4. Пониженная частота ИИ
 
-По GDD B02 §5 (I38) частота ИИ снижается только по замеру. Механизм заложен сразу:
+По GDD B02 §5 частота ИИ снижается только по замеру. Механизм заложен сразу:
 `AIBrain.ThinkPeriod` (из конфига, по умолчанию 1) и `AIBrain.ThinkPhase` = `StableId mod ThinkPeriod`.
 Решение FSM и восприятие выполняются, когда `(SimClock.Tick + ThinkPhase) % ThinkPeriod == 0` — нагрузка размазана
 по тикам; движение, столкновения, бой и статусы идут каждый тик по последнему решению. Больший период дальним от
@@ -198,7 +200,7 @@ SaveCaptureGroup                          ручная; мост обновля�
 
 ### 4.3. Локации: свёрнутая и развёрнутая
 
-Все локации — сущности в свёрнутом виде (A-57, GDD W01 R5, L03 R2); развёрнута только текущая.
+Все локации — сущности в свёрнутом виде (GDD W01 R5, L03 R2); развёрнута только текущая.
 
 ```mermaid
 flowchart LR
@@ -221,7 +223,7 @@ flowchart LR
 | `Identity` | `StableId` локации | ARCH-10 |
 | `LocationInfo` | Статические параметры из графа: ярус, этаж, индекс, `Key` (упакованные ярус·этаж·индекс), прямоугольник, плотность среды, отрезки переходов. Выводится из seed, в сохранении — только `Key` ↔ `StableId` | W01 R14, R20; W02 R2; M01 R8 |
 | `LocationClock` | Время мира последнего догона (raw, §7.2) | L01 R9 |
-| `LocationLayout` | Ссылка на неизменяемый blob планировки; отсутствует, пока локация не построена (Срез, I32) | W02 R3 |
+| `LocationLayout` | Ссылка на неизменяемый blob планировки; отсутствует, пока локация не построена | W02 R3, M02 R6 |
 | `SpeciesPopulation` | Вид, численность с дробным остатком, съеденное видом-хищником | L03 R2, R8–R9 |
 | `NamedCreatureRecord` | Поимённые (мини-боссы; в Срезе — носитель Эха и др.): `StableId`, вид, ступень, логово, съеденное, жив | L03 R13–R16; M01 |
 | `ObjectRecord` | Состояние объектов: индекс объекта в blob или динамический объект (предмет на полу, Эхо), `StableId`, состояние | W10 R11; D02 R8 |
@@ -266,7 +268,7 @@ flowchart LR
 Мостовая система приёма (`CommandIntakeGroup`, `OrderFirst`) пишет последний `PlayerInputFrame` кадра (вектор
 движения, прицел, битовая маска `PlayerButton` из Contracts) в синглтон
 `PlayerInput { PlayerInputFrame Frame; }` перед каждым тиком. Одноразовые нажатия засчитываются только в первом
-тике кадра (мост сбрасывает их после). Системы читают `PlayerInput` только на чтение: управление игроком — в
+тике кадра (`Services.md` §6). Системы читают `PlayerInput` только на чтение: управление игроком — в
 `MovementGroup` и `CombatGroup`, контекстная кнопка — в системах фич. Без тика (пауза) ввод не применяется.
 
 ### 5.2. Операции: Validate → Apply
@@ -289,8 +291,7 @@ flowchart LR
 
 ### 5.3. Операции на паузе
 
-Любое меню ставит игру на паузу (GDD C01 R18, U04), а экипировка, выбор варианта кокона (E08 R16) и предметы —
-операции. Чтобы UI сразу видел результат, хост на паузе выполняет «тик без времени»: `CommandIntakeGroup.Update()`
+«Тик без времени» (README §3; GDD C01 R18, E08 R16) — хост на паузе выполняет `CommandIntakeGroup.Update()`
 → `EndSimulationTickEcbSystem.Update()` → `ExportGroup.Update()`. `TickBeginSystem` не выполняется — `SimClock`
 не растёт, ИИ, движение, бой и мир стоят. Обработчик, которому нужно прошедшее время, отказывает с кодом причины
 своей фичи «нужен тик», либо фича делает операцию отложенной до ближайшего тика.
@@ -327,17 +328,17 @@ Contracts не ссылается на Entities, поэтому `SimEventBuffer 
 
 | Система | Что пишет |
 |---|---|
-| `ViewExportSystem` | Строка `ViewState { StableId, ViewKey, Position, Facing, AnimState, Flags }` (`AnimState = { Id, Restart }` — счётчик `Restart` позволяет проиграть то же состояние заново; `Flags` — `ViewFlags`, биты задаёт `Presentation.md`) на каждую сущность с `Identity` + `ViewSource` + `Position2D`. Список заранее `ResizeUninitialized(count)`, строка пишется по `[EntityIndexInQuery]` — без `ParallelWriter`, порядок детерминирован |
+| `ViewExportSystem` | Строка `ViewState` (README §4.3; `AnimState` и `Flags` — `Presentation.md` §1.2) на каждую сущность с `Identity` + `ViewSource` + `Position2D`. Список заранее `ResizeUninitialized(count)`, строка пишется по `[EntityIndexInQuery]` — без `ParallelWriter`, порядок детерминирован |
 | Экспорт read-моделей фич | Своя read-модель (`*ReadModel`, Contracts) в свой `…ReadModelTarget`; перезапись и `Version++` только при изменении (`[WithChangeFilter]` / `DidChange` источника) |
 | `SimEventExportSystem` | События тика — в список событий кадра (дописывание; кадр может содержать несколько тиков) |
 
-Базовые read-модели README §4.3 — это read-модели фич, их экспортируют срезы-владельцы (`CodeStructure.md`) тем же
-механизмом `…ReadModelTarget`: `LocationLayoutReadModel` (в `PublishStageGroup`, раз на развёртку),
-`CellStateReadModel`, `FogReadModel`, `AppearanceReadModel`, `CameraReadModel`, `PlayerReadModel`.
+Базовые read-модели README §4.3 — read-модели фич: их экспортируют срезы-владельцы (`CodeStructure.md` §7.4) тем же
+механизмом `…ReadModelTarget`. Раскладка локации — большая и меняется только при переходе — публикуется в
+`PublishStageGroup` (§8.2), раз на развёртку; изменения клеток в тике — `CellStateReadModel` по изменению буфера
+`CellState`.
 
 Заголовок `ExportTarget` несёт номер тика и `PendingTransition` (вид ожидающего запроса): так хост узнаёт о запросе
-без чтения ECS; номер тика мост отдаёт наружу как `IWorldView.CurrentTick`. Раскладка локации — большая и меняется только при переходе — публикуется в `PublishStageGroup`
-(§8.2); изменения клеток в тике — отдельной read-моделью по изменению буфера `CellState`.
+без чтения ECS; номер тика мост отдаёт наружу как `IWorldView.CurrentTick`.
 
 ### 6.3. Передача памяти мосту
 
@@ -362,7 +363,7 @@ Contracts не ссылается на Entities, поэтому `SimEventBuffer 
   кокон), `Enter` (переход) или `Death` с минимумом и режимом (кокон — `max(накопленное, минимум)`; смерть —
   недостающая часть только размножением, L01 R6). Нулевое накопленное без минимума шага не даёт (L01 R8).
 - Шаг считается вне тика, в `WorldStepGroup` внутри `LocationTransitionGroup`: тик на паузе, событие прикрыто своей
-  анимацией или затемнением, бюджет ≤ 100 мс (L01 §5).
+  анимацией или затемнением; бюджет — §7.6.
 
 ### 7.2. Числа
 
@@ -386,7 +387,7 @@ Contracts не ссылается на Entities, поэтому `SimEventBuffer 
   при K итерациях локация с k подшагами участвует в [K − k, K), соседи шагают в близком времени.
 - Минимальная часть смерти — отдельная итерация с маской «только размножение» (в Срезе + восстановление запаса)
   и величиной недостающей части; часы она не двигает (L01 R6, L03 R39). Из этой итерации исключается локация
-  смерти, а не возрождения — толкование «кроме текущей» ждёт подтверждения владельца GDD (журнал O-02).
+  смерти, а не возрождения — толкование «кроме текущей» ждёт подтверждения владельца GDD (O-02, README §7).
 - Предыстория (L01 R19, L03 R38) — тот же конвейер: 5–8 ед. от нулевых часов; продление, если мини-боссы
   не выросли (M02 §10), — детерминированное правило фичи. Ленивый догон ярусов (Гл1) — исключение из плана.
 - Случайность в шаге — только `SeedMath.Derive(Seed, домен правила, LocationInfo.Key, часы локации на начало
@@ -411,7 +412,7 @@ flowchart TD
   `WorldStepPlan.Iteration`.
 - Восемь групп фаз задают порядок L03 R3. Правило фичи — система в группе своей фазы: читает план в `OnUpdate`,
   выходит, если фазы нет в маске итерации, и планирует **однопоточный** `IJob` по локациям итерации в порядке `Key`
-  через `ComponentLookup`/`BufferLookup`. Порядок «подшаг → фаза → локации по Key» — интерпретация L03 R3 (ждёт подтверждения владельца GDD, журнал O-02); с ним
+  через `ComponentLookup`/`BufferLookup`. Порядок «подшаг → фаза → локации по Key» — интерпретация L03 R3 (ждёт подтверждения владельца GDD, O-02, README §7); с ним
   межлокационные ограничения (страховка вида в ярусе L03 R29, лимит мини-боссов на этаж B03 R9) детерминированы
   без сортировок. Параллелить — только по независимым ярусам, если потребует профиль, с golden-тестом.
 - `WorldStepCommitSystem` (`OrderLast`) фиксирует часы и агрегированную `LocationChange` (L03 R5–R6). Текущая
@@ -433,7 +434,7 @@ flowchart TD
 
 ### 8.1. Генератор планировки
 
-- Вход (W02 R2): `Seed`, `GeneratorVersion`, `LocationInfo`, шаблоны особых комнат из `Configs/` (A-50) как
+- Вход (W02 R2): `Seed`, `GeneratorVersion`, `LocationInfo`, шаблоны особых комнат из `Configs/` (`Content.md` §7) как
   blob-конфиг; не порядок посещения и не состояние игрока. Граф (W01 R20) строит статическая Burst-функция из seed —
   при создании мира и при загрузке (M01 R8); ярусы адресуются номером, не порядком вызова (W01 §10).
 - Сиды: `SeedMath.Derive(Seed, домен «планировка», Key)`, попытка k — `SeedMath.Derive(сид локации, k)`; соли мира
@@ -543,15 +544,14 @@ sequenceDiagram
 
 ### 10.1. Конфиги
 
-- Blob-структуры таблиц (`…Blob`) и синглтоны (`…Config { BlobAssetReference<…Blob> Blob; }`) объявлены в
-  Simulation в срезе фичи. `IConfigTableBinder` (Bridge) строит blob из таблицы пака и создаёт синглтон до первого
-  тика; система, которой нужен конфиг, делает `state.RequireForUpdate<…Config>()`.
-- Чтение — по ссылке: `var cfg = SystemAPI.GetSingleton<XConfig>(); ref var table = ref cfg.Blob.Value;`, в джоб —
+- Blob-структуры таблиц и синглтоны `<Table>Config { Table }` (§4.1) объявлены в Simulation в срезе фичи; blob и
+  синглтон до первого тика создаёт `IConfigTableBinder` (`Content.md` §4.6). Система, которой нужен конфиг, делает
+  `state.RequireForUpdate<…Config>()`.
+- Чтение — по ссылке: `var cfg = SystemAPI.GetSingleton<XConfig>(); ref var table = ref cfg.Table.Value;`, в джоб —
   копия `BlobAssetReference`. Ссылку на blob конфига не копируют в компоненты сущностей: сущность хранит индекс.
-- Владение: blob освобождает тот, кто вызвал `CreateBlobAssetReference`. Blob'ы конфигов — binder, после
-  `world.Dispose()`. Горячая замена в редакторе (A-23): `CompleteAllTrackedJobs()` → запись нового blob в синглтон →
-  `Dispose` старого. Runtime-blob'ы планировок — только `LayoutBlobRegistrySystem.OnDestroy`; замена варианта
-  планировки (Гл1, W10 R16) — сначала перенаправить ссылки, затем освободить.
+- Владение: blob освобождает тот, кто его создал. Blob'ы конфигов и их горячая замена в редакторе —
+  `ConfigBlobStore` (`Content.md` §4.6, §5). Runtime-blob'ы планировок — только `LayoutBlobRegistrySystem.OnDestroy`;
+  замена варианта планировки (Гл1, W10 R16) — сначала перенаправить ссылки, затем освободить.
 
 ### 10.2. Сохранения
 
@@ -560,7 +560,7 @@ sequenceDiagram
   - захват — в `SaveCaptureGroup`: читает ECS и заполняет `…SaveData` Burst-джобами;
   - восстановление — в `RestoreStageGroup`: создаёт сущности и записи из `…SaveData`, заполненного секцией.
 - Захват — только с тиком на паузе или между кадрами, поэтому снимок согласован; байты и запись вне главного
-  потока — сервис (A-53, M01 R15). Состав — по M01: мир, все локации (планировка целиком — байты blob, M01 R14),
+  потока — сервис (`Services.md` §5, M01 R15). Состав — по M01: мир, все локации (планировка целиком — байты blob, M01 R14),
   снимок текущей локации, поимённые, персонаж, Эхо; технические поля — `SimClock`, `StableIdAllocator`, `Key` ↔ `StableId`.
 - Не сохраняются: ИИ (`AIBrain`, пути, восприятие — M01 R17), флаг «в бою», снаряды, `StableIdIndex`, `SpatialGrid`,
   граф (из seed). Таймеры (статусы, перезарядки, тела) — остатком в тиках, не абсолютным тиком.
@@ -570,16 +570,16 @@ sequenceDiagram
 
 ### 11.1. Бюджеты
 
+Общие бюджеты — ARCH-19; шаг мира — §7.6, генерация — §8.1, переход по этапам — §8.2. Сверх них:
+
 | Что | Бюджет | Источник |
 |---|---|---|
-| Активных существ в локации | 30–40; 40 в одной комнате без просадки FPS на слабом телефоне | B02 §5, ARCH-19 |
-| Тик симуляции | Ориентир ≤ 4 мс CPU на слабом телефоне при 40 существах, из них главный поток ≤ 1,5 мс; проверить на спайке | A-15, R-03 |
-| Шаг мира | ≤ 100 мс | L01 §5, ARCH-19 |
-| Генерация | ≤ 0,5 с на локацию; мир Прототипа ≤ 5 с с предысторией | W02 §5, W10 §13 |
-| Переход | ≤ 1 с, ≤ 2 с на слабых | W16 §5 |
+| Активных существ в локации | 30–40 | B02 §5 |
+| Тик симуляции | Ориентир ≤ 4 мс CPU на слабом телефоне при 40 существах, из них главный поток ≤ 1,5 мс; проверить на спайке | оценка |
 
 ### 11.2. Правила производительности
 
+Оптимизация — с первого дня: Burst-джобы и эффективные алгоритмы даже там, где нагрузки пока нет (ARCH-06).
 Базовые правила — SIM-03…SIM-07, SIM-21 и `JobsAndBurst.md` §7. Дополнительно: мелкие компоненты под систему,
 параметры вида — в blob; `[EntityIndexInQuery]` — только где нужен плотный индекс (экспорт); замеры — на
 устройстве (Development Build), Burst Safety Checks выключены, после прогрева.
@@ -641,15 +641,15 @@ EditMode-тесты (`RiseToPanteon.Tests.EditMode`): мир — `SimulationWorl
 |---|---|
 | SIM-01 | У каждой системы и группы — `[UpdateInGroup]` с группой из дерева §3.1. Система вне групп контура — баг. |
 | SIM-02 | `UpdateBefore/After` — только между членами одной группы и одной корзины `OrderFirst`/—/`OrderLast`; фича ссылается только на свои типы и на инфраструктуру этого документа. |
-| SIM-03 | Система — `partial struct : ISystem` с `[BurstCompile]` на struct и `OnCreate/OnUpdate/OnDestroy`; работа — `IJobEntity`/`IJobChunk` c `ScheduleParallel`. Иначе — строка `Исключение ARCH-06: причина` в записи системы в заметке (`CodeStructure.md` §6.4). `SystemBase` — только мост и группы. |
+| SIM-03 | Форма системы по ARCH-06: `partial struct : ISystem` с `[BurstCompile]` на struct и `OnCreate/OnUpdate/OnDestroy`; джобы — `IJobEntity`/`IJobChunk`. `SystemBase` — только мост и группы. |
 | SIM-04 | В тике нет `Complete()`, `Run()`, структурных изменений через `EntityManager`. |
-| SIM-05 | Время — только `SimClock` и `SimConstants.DT`; `SystemAPI.Time` и `UnityEngine.Time` запрещены; длительности — в тиках (`int`). |
-| SIM-06 | Структурные изменения тика — только через `EndSimulationTickEcbSystem`; ECB-системы пакета не используются; sort key — `[ChunkIndexInQuery]`/`unfilteredChunkIndex`; один ECB на джоб. |
+| SIM-05 | Сверх ARCH-08: `SystemAPI.Time` и `UnityEngine.Time` запрещены; длительности — в тиках (`int`). |
+| SIM-06 | Сверх ARCH-07: ECB-системы пакета не используются; sort key — `[ChunkIndexInQuery]`/`unfilteredChunkIndex`; один ECB на джоб. |
 | SIM-07 | Частые смены состояния — `IEnableableComponent`; add/remove тегов в тике — только для редких событий жизни сущности. |
-| SIM-08 | Ссылка дольше тика — `StableId`, разрешение через `StableIdIndex`. `Entity` не хранится в компонентах, живущих дольше тика, в `SimEvent`, `ViewState`, read-моделях, `…SaveData`, операциях. |
+| SIM-08 | Сверх ARCH-10: `StableId` разрешается через `StableIdIndex`; `Entity` не хранится и в компонентах, живущих дольше тика, и в `ViewState`. |
 | SIM-09 | `StableId` выдаёт только `StableIdAllocator` в однопоточном коде в детерминированном порядке; из параллельного джоба id не выдаётся. |
-| SIM-10 | Случайность — `Unity.Mathematics.Random`, состояние в `RandomState` или генератор из `SeedMath.Derive(seed, домен, стабильные ключи)`; сид ≠ 0; в авторитетной логике — только `NextInt/NextUInt`. В бою случайности нет. |
-| SIM-11 | Шаг мира и генерация — только целые и fixed-point (§7.2); `float`/`double` там запрещены. |
+| SIM-10 | Сверх ARCH-09: состояние — в `RandomState` или генератор из `SeedMath.Derive(seed, домен, стабильные ключи)`; сид ≠ 0; в авторитетной логике — только `NextInt/NextUInt`. В бою случайности нет. |
+| SIM-11 | Сверх ARCH-11: генерация — тоже только целые и fixed-point (§7.2); `float`/`double` в шаге мира и генерации запрещены. |
 | SIM-12 | Авторитетный результат не зависит от обхода хеш-карт, от `ParallelWriter` и от нестабильной сортировки: ключи сортируются, последний ключ компаратора — `StableId`. |
 | SIM-13 | Шаг мира: порядок фаз L03 R3 через группы фаз; правило — однопоточный `IJob` по локациям плана в порядке `LocationInfo.Key`; локация события (текущая) не шагается. |
 | SIM-14 | Итог правила шага, меняющий видимое, пишется в `LocationChange`; правило без следа не реализуется (L03 R5–R6). |
@@ -657,14 +657,14 @@ EditMode-тесты (`RiseToPanteon.Tests.EditMode`): мир — `SimulationWorl
 | SIM-16 | Операция: одна `…OpSystem` на диапазон фичи; `Validate` — только чтение, затем `Apply`, по возрастанию `Seq`; симуляция не пишет в `OpQueue`; непринятая операция — `Rejected(UNHANDLED)`. |
 | SIM-17 | `SimEventBuffer` — только выход: системы его не читают. Параллельные производители — `SimEventWriter` + `SimEventMergeJob`; `ParallelWriter` в `Events` запрещён. |
 | SIM-18 | Экспорт — только в `ExportGroup` (раскладка — в `PublishStageGroup`); игровые компоненты — только на чтение; запись — только в `ExportTarget` и `…ReadModelTarget`; версия read-модели растёт только при изменении. |
-| SIM-19 | Конфиг читается из синглтона `…Config` по ссылке (`ref …Blob.Value`); ссылка на blob конфига не копируется в компоненты сущностей. |
-| SIM-20 | Blob освобождает тот, кто его создал: конфиги — binder после `world.Dispose()`; планировки — только `LayoutBlobRegistrySystem`; замена — сначала перенаправить ссылки, затем `Dispose`. |
+| SIM-19 | Конфиг читается из синглтона `…Config` по ссылке (`ref …Table.Value`); ссылка на blob конфига не копируется в компоненты сущностей. |
+| SIM-20 | Blob освобождает тот, кто его создал: конфиги — `ConfigBlobStore` (`Content.md` §4.6); планировки — только `LayoutBlobRegistrySystem`; замена — сначала перенаправить ссылки, затем `Dispose`. |
 | SIM-21 | Контейнер, общий для систем, лежит только в синглтоне; владелец — одна система (`OnCreate`/`OnDestroy`); кадровая память — `state.WorldUpdateAllocator`. |
 | SIM-22 | `IBufferElementData` объявляет `[InternalBufferCapacity]` явно (0 — для длинных и переменных). |
 | SIM-23 | Сохранения: система захвата — в `SaveCaptureGroup`, восстановления — в `RestoreStageGroup`, данные — `…SaveData`; состояние ИИ не сохраняется; таймеры — остатком в тиках. |
 | SIM-24 | Частота ИИ снижается только через `AIBrain.ThinkPeriod/ThinkPhase` из конфига; движение, бой и статусы — каждый тик. |
-| SIM-25 | Хост собирает мир только через `SimulationWorldBuilder` с белым списком сборок; системы старого прототипа и `Unity.Scenes`/`Unity.Transforms` в мир не попадают. |
-| SIM-26 | Никакого статического доступа к миру (`World.DefaultGameObjectInjectionWorld`, статические поля с `World`/`EntityManager`). |
+| SIM-25 | Хост собирает мир только через `SimulationWorldBuilder` с белым списком сборок; системы прототипа и `Unity.Scenes`/`Unity.Transforms` в мир не попадают. |
+| SIM-26 | Сверх ARCH-05: статических полей с `World`/`EntityManager` нет. |
 | SIM-27 | У каждой системы с правилом — EditMode-тест; у шага мира и генерации — golden-тесты §12.2; golden меняется только вместе с версией и причиной. |
 | SIM-28 | Бюджеты §11.1 проверяются perf-тестами; превышение — баг (ARCH-19). |
 

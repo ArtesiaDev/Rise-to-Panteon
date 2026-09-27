@@ -22,9 +22,9 @@ VContainer и сервисы — `Services.md`.
 ```
 Rise to Panteon/
 ├── Assets/             проект Unity (§2.2)
-├── Configs/            submodule rise-to-panteon-configs (A-20): схемы, данные, комнаты, строки и свои tools/ (Content.md)
+├── Configs/            submodule rise-to-panteon-configs: схемы, данные, комнаты, строки и свои tools/ (Content.md §2)
 ├── Tools/rag/          база знаний и проверки агентов (Python, uv; Docs/Tech/Harness.md); .venv/ и .index/ не в git
-├── Docs/               GDD/, Tech/ (Architecture/, ArchitectureDecisions.md, Reference/)
+├── Docs/               GDD/, Tech/ (Architecture/, Harness.md, Reference/), Roadmap.md
 ├── Packages/  ProjectSettings/  CLAUDE.md  .gitmodules
 ```
 
@@ -56,19 +56,19 @@ Assets/
 ├── Settings/                         URP, Renderer2D, InputSystem_Actions, PanelSettings, AudioMixer, профили сборки
 ├── StreamingAssets/Configs/          встроенный пак конфигов; генерируется, не в git (Content.md)
 ├── AddressableAssetsData/            настройки Addressables (путь Unity по умолчанию)
-└── Plugins/                          плагины прототипа; новое использование — через журнал решений
+└── Plugins/                          плагины прототипа; новое использование — только с записью в этом документе
 ```
 
 ### 2.3. Что куда класть
 
 | Что | Где | Почему |
 |---|---|---|
-| C#-код инфраструктуры / фичи | `Code/<Сборка>/` / `Features/<Фича>/<Сборка>/` | Срезы фич (A-52) |
+| C#-код инфраструктуры / фичи | `Code/<Сборка>/` / `Features/<Фича>/<Сборка>/` | Срезы фич (README §4.1) |
 | UXML и USS экрана или виджета фичи | Рядом с контроллером в `Features/<Фича>/UI/` | Меняются вместе с кодом экрана |
 | Тема, токены, общие USS и компоненты `rtp-*` | `Code/UI/Theme/` | Инфраструктура UI (`UI.md` §8) |
 | PanelSettings | `Assets/Settings/` | Корневые настройки (исключение ARCH-13) |
-| Графика, префабы вьюх, VFX, шейдеры, иконки, шрифты, звук | `Art/**` по `Content.md` §9 | Контент общий для фич и грузится по адресу = visual id (A-56), а не по папке |
-| Числа баланса, шаблоны комнат, строки | `Configs/` | A-20, ARCH-12, ARCH-17. `ScriptableObject` с балансом запрещён |
+| Графика, префабы вьюх, VFX, шейдеры, иконки, шрифты, звук | `Art/**` по `Content.md` §9 | Контент общий для фич и грузится по адресу = visual id (CONT-18), а не по папке |
+| Числа баланса, шаблоны комнат, строки | `Configs/` | ARCH-12, ARCH-17, CONT-01. `ScriptableObject` с балансом запрещён |
 | Сгенерированное (DTO, пак, таблицы строк) | `Code/Editor/Configs/Generated/`, `StreamingAssets/Configs/`, `Localization/Tables/` | Руками не правится (`Content.md`) |
 | Тестовые данные фичи | `Features/<Фича>/Tests/EditMode/Data/` | Рядом с тестами |
 
@@ -76,14 +76,15 @@ Assets/
 
 `Assets/_Project/{Dots, Framework, Main, Dev, Editor, Data}` и `Art/Tiles` — прототип старой концепции
 (сборки `RuntimeRoguelike.*`, `Framework`, `Dev`; неймспейсы `RuntimeRoguelike.*`, `Framework.*`). Новый код
-на них не ссылается, новые файлы туда не кладутся, правки — только на этапе приведения (A-05). Системы
+на них не ссылается, новые файлы туда не кладутся, правки — только на отдельном этапе приведения к архитектуре,
+после её каркаса. Системы
 прототипа не должны попасть в мир `WorldHost`; как хост их отсекает, определяет `Simulation.md`.
 
 ## 3. Сборки и .asmref
 
 ### 3.1. Сборки
 
-Состав и направления ссылок — README §4.1. Колонка «Наши ссылки» — полный разрешённый список.
+Назначение сборок и запрещённые направления — README §4.1. Колонка «Наши ссылки» — полный разрешённый список.
 
 | Сборка | Наши ссылки | Пакеты | Платформы · define | unsafe |
 |---|---|---|---|---|
@@ -92,20 +93,24 @@ Assets/
 | `RiseToPanteon.Simulation` | Core, Contracts | Unity.Entities, Unity.Collections, Unity.Burst, Unity.Mathematics | все | да |
 | `RiseToPanteon.Bridge` | Core, Contracts, Simulation, Services | Unity.Entities, Unity.Entities.Hybrid, Unity.Collections, Unity.Burst, Unity.Mathematics, VContainer, UniTask | все | да |
 | `RiseToPanteon.Services` | Core, Contracts | VContainer, UniTask, Unity.Addressables, Unity.ResourceManager, Unity.InputSystem, Unity.Collections, Unity.Mathematics | все | нет |
-| `RiseToPanteon.Presentation` | Core, Contracts, Services | Unity.RenderPipelines.Universal.Runtime, Unity.RenderPipelines.Core.Runtime, Unity.2D.Animation.Runtime, Unity.2D.Tilemap (прототип пола, A-31), Unity.Burst, Unity.Collections, Unity.Mathematics, VContainer, UniTask | все | нет |
+| `RiseToPanteon.Presentation` | Core, Contracts, Services | Unity.RenderPipelines.Universal.Runtime, Unity.RenderPipelines.Core.Runtime, Unity.2D.Animation.Runtime, Unity.2D.Tilemap (прототип пола, `Presentation.md` §6.5), Unity.Burst, Unity.Collections, Unity.Mathematics, VContainer, UniTask | все | нет |
 | `RiseToPanteon.UI` | Core, Contracts, Services | Unity.Localization (после установки пакета), Unity.Mathematics, VContainer, UniTask | все | нет |
 | `RiseToPanteon.App` | Core, Contracts, Bridge, Services, Presentation, UI | VContainer, UniTask | все | нет |
 | `RiseToPanteon.Dev` | Core, Contracts, Simulation, Bridge, Services, Presentation, UI, App | Unity.Entities, Unity.Collections, Unity.Burst, Unity.Mathematics, VContainer, UniTask | все · `RTP_DEV` | да |
-| `RiseToPanteon.Editor` | все выше, кроме Dev | те же + `*.Editor`-сборки пакетов | Editor | да |
+| `RiseToPanteon.Editor` | все выше, кроме Dev | те же + `*.Editor`-сборки пакетов, Newtonsoft Json (только здесь, `Content.md` §4.2) | Editor | да |
 | `RiseToPanteon.Tests.EditMode` | все выше, кроме Dev | те же + UnityEngine.TestRunner, UnityEditor.TestRunner, `nunit.framework.dll` | Editor · `UNITY_INCLUDE_TESTS` | да |
 | `RiseToPanteon.Tests.PlayMode` | все рантайм-сборки, кроме Dev | те же + UnityEngine.TestRunner, `nunit.framework.dll` | все · `UNITY_INCLUDE_TESTS` | да |
 
-Запреты (README §4.1, ARCH-02): `Simulation` не ссылается на `Services`, `Bridge`, `Presentation`, `UI`, `App`;
-`Services`, `Presentation`, `UI`, `App` — на `Simulation`, Unity.Entities и Unity.Entities.Hybrid; `Presentation` и
-`UI` — друг на друга. `Dev` ссылается на `Simulation` только ради dev-обработчиков операций `<Фича>DevOpSystem`
-(`Simulation.md` §5.4); остальной dev-код ECS не трогает и меняет игру только dev-операциями (ARCH-18).
+Пакеты, которых ещё нет в `Packages/manifest.json` и которые добавляются при реализации: `com.unity.localization`
+(1.5.x; совместимость с 6.6 — проверить на спайке), `com.unity.nuget.newtonsoft-json` явно (сейчас 3.2.1
+транзитивно), MemoryPack (после спайка, `Services.md` §5.3), `com.unity.test-framework.performance` (при первом
+perf-тесте, §9).
 
-Извне симуляции к ECS обращается только `Bridge` (и dev-обработчики). Публичный API моста для `App` без типов Entities: иначе
+`Dev` ссылается на `Simulation` только ради dev-обработчиков операций
+`<Фича>DevOpSystem` (`Simulation.md` §5.4); остальной dev-код ECS не трогает и меняет игру только dev-операциями
+(ARCH-18).
+
+Извне симуляции к ECS обращается только `Bridge` (и dev-обработчики, ARCH-02). Публичный API моста для `App` без типов Entities: иначе
 `App` не скомпилируется без ссылки на Entities, и это правильная ошибка. На графе стрелка — «ссылается на»;
 транзитивные ссылки из таблицы разрешены, но прописываются в asmdef явно.
 
@@ -128,7 +133,7 @@ flowchart BT
 - `allowUnsafeCode` — по §3.1 (блобы, `UnsafeUtility`, буферы снимка). `overrideReferences: false`; у тестовых
   сборок — `true` + `precompiledReferences: ["nunit.framework.dll"]`.
 - `defineConstraints`: `RTP_DEV` у Dev, `UNITY_INCLUDE_TESTS` у тестов. `includePlatforms: ["Editor"]` у Editor и
-  Tests.EditMode. `versionDefines` не используются (только для опционального пакета, через журнал решений). Burst
+  Tests.EditMode. `versionDefines` не используются (только для опционального пакета, с записью в этом документе). Burst
   флага не требует: он компилирует `ISystem` и джобы в любой сборке со ссылкой на Unity.Burst.
 - В каждой `Code/<X>/` лежит `AssemblyInfo.cs`: `[assembly: InternalsVisibleTo("RiseToPanteon.Tests.EditMode")]`
   (и `.PlayMode`/`.Editor` по необходимости); в рантайм-сборках — `[assembly: AlwaysLinkAssembly]` (`Services.md`
@@ -226,7 +231,7 @@ Defines проекта: `UNITY_DISABLE_AUTOMATIC_SYSTEM_BOOTSTRAP_RUNTIME_WORLD`
 | Перечисления и их члены | PascalCase | `RenderMode.FullLighting` |
 | Параметры и локальные переменные | camelCase | `int counter = 0;` |
 
-- Аббревиатуры в PascalCase: из двух букв — заглавные (`UI`, `AI`, `IO`); из трёх и больше — как слово (`Hud`,
+- Аббревиатуры в PascalCase: из двух букв — заглавные (ARCH-22; `IO` тоже); из трёх и больше — как слово (`Hud`,
   `Npc`, `Vfx`). В UPPER_CASE — заглавные (`CAMERA_FOV`).
 - Один тип верхнего уровня на файл, имя файла = имя типа (для MonoBehaviour этого требует Unity). В каждом файле
   объявлен неймспейс. Вложенный тип выносится в свой файл: внешний тип объявляется `partial`, файл называется
@@ -439,7 +444,7 @@ block: 0x20
   использовать, если зависимость объявлена в `depends` и граф срезов остаётся ацикличным.
 - Ссылка на чужой срез — только через `using RiseToPanteon.<Срез>.<Контур>;`: полные имена не видит `FeatureGraphTests`.
 - Если нужен цикл, общие данные переносятся в нижележащий срез; данные, нужные почти всем (`StableId`, позиция), —
-  в инфраструктуру с записью в журнал решений.
+  в инфраструктуру правкой README §4.3 или документа контура.
 - По умолчанию типы среза `internal`, для чужих срезов — `public`. Срезы одной сборки `internal` не изолирует —
   изоляцию проверяет `FeatureGraphTests`.
 
@@ -466,7 +471,9 @@ block: 0x20
 
 ### 7.2. Правила
 
-1. Срез берёт блок из §7.4 в том же коммите, в котором создаётся, и меняет статус с «план» на «создан».
+1. Имя и блок среза закреплены строкой §7.4 со статусом «план» — папка среза может существовать и без id. Статус
+   меняется на «создан» тем же коммитом, что и первый тип среза с `[FeatureIdBlock]` (`*OpTypes`, `*EventTypes`,
+   `*RejectReasons`, `*DevOpTypes`): `IdBlockTests` сверяет «создан» именно с атрибутом.
    Новый срез занимает первый свободный блок в диапазоне своей буквы GDD, при исчерпании — из `0xC0–0xEF`.
 2. Выданный id не меняется и не переиспользуется. Устаревшая константа остаётся с `[Obsolete]`.
 3. Id — только `public const ushort` в классах `*OpTypes`, `*EventTypes`, `*RejectReasons`, `*DevOpTypes`; литерал id
@@ -580,7 +587,7 @@ N `0x90–0x9F`, U `0xA0–0xAF`, M `0xB0–0xBF`; `0xC0–0xEF` — резер�
 ## 8. Регистрация без центральных файлов
 
 Фича входит в проект только через файлы своего среза. Правка `App`, скоупов, сцен и общих списков ради фичи
-запрещена (A-52, ARCH-15).
+запрещена (ARCH-15).
 
 | Что | Как находится | Где объявляется |
 |---|---|---|
@@ -592,38 +599,12 @@ N `0x90–0x9F`, U `0xA0–0xAF`, M `0xB0–0xBF`; `0xC0–0xEF` — резер�
 | Экран, вкладка, виджет HUD | `ScreenDefinition` по `UI.md` §11 | `<Фича>UIInstaller` |
 | Сервис, dev-панель | Регистрация в инсталлере своего контура | `<Фича>{Services,Dev}Installer` |
 
-`AbsorptionBridgeInstaller` регистрирует мост среза «Поглощение» в игровом скоупе:
-
-```csharp
-using RiseToPanteon.Bridge;
-using RiseToPanteon.Core;
-using RiseToPanteon.Services;
-using UnityEngine.Scripting;
-using VContainer;
-
-namespace RiseToPanteon.Absorption.Bridge
-{
-    [Preserve, FeatureInstaller(InstallScope.Game)]
-    public sealed class AbsorptionBridgeInstaller : IFeatureInstaller
-    {
-        public void Install(IContainerBuilder builder)
-        {
-            builder.RegisterBridgeSystem<AbsorptionIntakeSystem>();
-            builder.Register<IConfigTableBinder, AbsorptionConfigBinder>(Lifetime.Singleton);
-            builder.Register<ISaveSection, AbsorptionSaveSection>(Lifetime.Singleton);
-        }
-    }
-}
-```
-
-- `IFeatureInstaller`, `FeatureInstallerAttribute(InstallScope scope)` со свойством `Order` и `InstallScope { Project,
-  Game, Dev }` лежат в `RiseToPanteon.Core` (`Services.md` §2.2). Допустимые скоупы (проверяет
-  `InstallerCatalogTests`): Services и UI — `Project` или `Game`; Bridge и Presentation — `Game`; Dev — `Dev`.
-  В Simulation, Contracts и Editor инсталлеров нет. `Order` фич — 0 (диапазоны инфраструктуры — `Services.md`).
-- `FeatureInstallerCatalog` (App) один раз отражением собирает неабстрактные `IFeatureInstaller` из сборок
-  `RiseToPanteon.*`, сортирует по `(Order, FullName)` и ставит их в свои скоупы. На `Dev` `App` не ссылается:
-  dev-инсталлеры находятся, только когда Dev скомпилирована (`RTP_DEV`).
-- `[Preserve]` обязателен: на IL2CPP на инсталлер никто не ссылается напрямую, и стриппинг его вырежет.
+- Допустимые скоупы инсталлеров по контурам (проверяет `InstallerCatalogTests`): Services и UI — `Project` или
+  `Game`; Bridge и Presentation — `Game`; Dev — `Dev`. В Simulation, Contracts и Editor инсталлеров нет. `Order`
+  фич — 0.
+- Атрибут, пример инсталлера среза (`AbsorptionBridgeInstaller`), поиск каталогом, порядок, диапазоны `Order` и
+  `[Preserve]` — `Services.md` §2.2. На `Dev` `App` не ссылается: dev-инсталлеры находятся, только когда Dev
+  скомпилирована (`RTP_DEV`).
 
 ## 9. Тесты: где и какие
 
@@ -635,7 +616,7 @@ namespace RiseToPanteon.Absorption.Bridge
 | Конфиги | EditMode · `Config` | `Code/Tests/EditMode/Configs/`; биндер — в срезе | Пак собирается из `Configs/`; у каждой таблицы есть конвертер и биндер; `ConfigBlobLayoutTests` (`Content.md`); биндер строит блоб из тестовой таблицы |
 | Схемы JSON | Node | `Configs/tools/` | `npm --prefix Configs run validate` (ajv и семантика, `Content.md`) |
 | Сохранения, view-модели UI | EditMode · `Save`, `UI` | `Features/<Фича>/Tests/EditMode/` | Круговой прогон секции: ECS → `*SaveData` → байты → ECS. Read-модель → view-модель; действие → ожидаемая `Operation` |
-| Производительность | EditMode · `Perf` | Рядом с кодом | Бюджеты ARCH-19 как ориентир в редакторе; `com.unity.test-framework.performance` добавляется в манифест явно при первом perf-тесте |
+| Производительность | EditMode · `Perf` | Рядом с кодом | Бюджеты ARCH-19 как ориентир в редакторе (пакет — §3.1) |
 | Smoke | PlayMode · `Smoke` | `Code/Tests/PlayMode/Smoke/` | Boot → Game, скоупы собираются, N тиков без ошибок в логе |
 
 - Тест симуляции наследует `EcsTestFixture` (`Code/Tests/EditMode/Fixtures/`, паттерн — `Reference/Unity/Entities.md`
@@ -647,7 +628,7 @@ namespace RiseToPanteon.Absorption.Bridge
 
 ## 10. Git и коммиты
 
-- **Сейчас (A-04):** все коммиты идут в `main`.
+- **Сейчас:** все коммиты идут в `main`.
 - **Позже:** ветка `feature/<GDD-id>-<slug>` (`feature/E01-absorption`; при нескольких id — id первого реализуемого
   правила), `tech/<slug>` для инфраструктуры, `fix/<slug>` для исправлений. Ветка вливается в `preprod` после
   чеклиста §12, `preprod` в `main` — когда сборка играбельна.
@@ -674,7 +655,7 @@ Co-Authored-By: <строка агента>
 1. **Спецификация.** Прочитать `Docs/GDD/Features/<ID>-<Name>.md` целиком (правила, параметры, «Связи»), README
    архитектуры и документы затронутых контуров. Есть открытые вопросы по реализуемым правилам — остановиться и спросить.
 2. **Владелец** — по §7.4. Срез создан — работа идёт в нём. Нет — взять имя и блок из строки «план» (или добавить
-   строку с первым свободным блоком, §7.2) и поставить статус «создан».
+   строку с первым свободным блоком, §7.2); статус «создан» — по §7.2, п. 1.
 3. **Срез.** Скопировать `Features/_Template~/` в `Features/<Фича>/` без `~`, заменить плейсхолдеры (§6.3), удалить
    ненужные контурные папки, заполнить заметку `README.md` (§6.4). Дать Unity создать `.meta`, проверить компиляцию.
 4. **Contracts.** Операции (`<Фича>OpTypes` + `*Op`), события (`<Фича>EventTypes`), read-модели (`*ReadModel`) —
@@ -696,9 +677,8 @@ Co-Authored-By: <строка агента>
 11. **Тесты** (§9) на каждую новую или изменённую систему, операцию (Validate и Apply), биндер, секцию сохранения,
     view-модель; правила из «Проверки в прототипе» спецификации, проверяемые без глаз, — тоже.
 12. **Документы.** Заметка среза — запись о каждом новом и изменённом типе (§6.4); строка фичи в `Docs/Roadmap.md`.
-    Изменилась механика — файл фичи в `Docs/GDD/Features/` и статус в
-    `Docs/GDD/Features.md`. Изменилась архитектура — `ArchitectureDecisions.md`, документ контура, этот документ
-    (ARCH-20). Выданный блок — в §7.4 тем же коммитом.
+    Изменилась механика или архитектура — по ARCH-20 (механика — ещё и статус в `Docs/GDD/Features.md`). Выданный
+    блок — в §7.4 тем же коммитом.
 13. **Чеклист §12, коммит §10.**
 
 ## 12. Чеклист перед коммитом
@@ -728,7 +708,7 @@ Co-Authored-By: <строка агента>
 | CODE-06 | У каждого id GDD один владелец (§6.1, §7.4). Шапка заметки среза перечисляет id, которыми срез владеет (`gdd`) и в которых участвует (`participates`). |
 | CODE-07 | Зависимости между срезами объявлены в `depends` заметки, оформлены через `using` и образуют ациклический граф. |
 | CODE-08 | Числовые id берутся только из блока среза и объявляются только в `*OpTypes`, `*EventTypes`, `*RejectReasons`, `*DevOpTypes`. Выданные id не меняются и не переиспользуются. |
-| CODE-09 | Фича регистрируется только инсталлерами своего среза с `[FeatureInstaller]` и `[Preserve]`. Править `App`, скоупы, сцены и общие списки ради фичи запрещено. |
+| CODE-09 | Сверх ARCH-15: инсталлеры фичи (SVC-02) лежат только в её срезе (§8). Править `App`, скоупы, сцены и общие списки ради фичи запрещено. |
 | CODE-10 | Системы находятся по `[UpdateInGroup]` в группах README §4.4. Срез может добавить подгруппу, но не группу верхнего уровня. |
 | CODE-11 | Изменяемое `static`-состояние в `Simulation` запрещено. В остальных сборках оно сбрасывается методом с `[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]` или в `OnDestroy`. |
 | CODE-12 | Ввод читается только через `IInputService`. Input System (project-wide actions, `InputSystem.actions`) используется только в `Services`; `UnityEngine.Input` и `StandaloneInputModule` запрещены. |
@@ -736,6 +716,6 @@ Co-Authored-By: <строка агента>
 | CODE-14 | Тесты среза лежат в `Features/<Фича>/Tests/`. Каждая новая или изменённая система, операция, биндер, секция сохранения и view-модель покрыты EditMode-тестом. Коммит с красным архитектурным тестом запрещён. |
 | CODE-15 | Новый файл или папка коммитятся с `.meta`, `.meta` не копируются. `Features/_Template~` копируется без `~`, чтобы Unity его импортировал, и обновляется тем же коммитом, что и API контуров. |
 | CODE-16 | Коммит атомарный, формат — §10. Сейчас работа идёт в `main`; после перехода на ветки — `feature/<GDD-id>-<slug>` → `preprod` → `main`. |
-| CODE-17 | Изменение механики → GDD. Изменение архитектуры → журнал решений, документ контура и этот документ. Выдача блока → §7.4 тем же коммитом. Изменение реализации фичи → строка в `Docs/Roadmap.md` тем же коммитом. |
+| CODE-17 | Сверх ARCH-20: выдача блока → §7.4 тем же коммитом; изменение реализации фичи → строка в `Docs/Roadmap.md` тем же коммитом. |
 | CODE-18 | В коде нет комментариев: ни в `.cs` (включая XML-doc `///`), ни в `.uss`, `.uxml` и шейдерах. Разрешены только `#pragma`, `// ReSharper disable` и `// ReSharper restore`. Всё, что стоило бы написать комментарием, записывается в заметку (§6.4). Исключение — сгенерированный код (`*.g.cs`, `Code/Editor/Configs/Generated/`): его не правят руками, и заметка к нему не нужна. |
 | CODE-19 | Каждый `.cs` в `Code/` и `Features/` описан в своей заметке — записью `### <Тип>` или строкой таблицы (§6.4). Запись обновляется тем же коммитом, что и код; запись о несуществующем типе удаляется. |

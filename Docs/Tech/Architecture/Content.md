@@ -1,7 +1,6 @@
 # Контент: конфиги, комнаты, строки, ассеты
 
-> Документ контура «Контент». Канонические имена — из `README.md`; решения — A-20…A-23, A-37, A-50, A-54, A-56 в `Docs/Tech/ArchitectureDecisions.md`; что игра должна делать — GDD (`Docs/GDD/`).
-> Читатель — агент, который добавляет таблицу конфигов, поле, шаблон комнаты, ассет или строку. Пошаговые инструкции — §10, правила — §11, типы — §12.
+> Конфиги, шаблоны комнат, строки и ассеты: как добавить таблицу, поле, шаблон, ассет или строку. Канонические имена — `README.md`; что игра должна делать — GDD (`Docs/GDD/`). Пошаговые инструкции — §10, правила — §11, типы — §12.
 > «Проверить на спайке» — утверждение не проверено на Unity 6000.6.3f1 и уточняется первым спайком контура.
 
 ## 1. Назначение и границы
@@ -10,7 +9,7 @@
 
 | Вид | Источник истины | Кто правит | Как попадает в билд | Кто читает в рантайме |
 |---|---|---|---|---|
-| Конфиги баланса | `Configs/data/*.json` | агенты, дизайнер; позже админка (A-21) | бинарный пак (§4) | симуляция, через мост (blob-синглтоны) |
+| Конфиги баланса | `Configs/data/*.json` | агенты, дизайнер; позже админка (§3.3) | бинарный пак (§4) | симуляция, через мост (blob-синглтоны) |
 | Авторские комнаты и лагерь | `Configs/rooms/**/*.json` | редактор комнат (§7) | тот же пак, таблица `rooms` | генератор локаций в симуляции |
 | Строки | `Configs/strings/<locale>/*.json` | агенты, дизайнер | импорт в String Tables Unity Localization (§8) | UI, через пакет Localization |
 | Ассеты | `Assets/_Project/Art/**` | художник, агенты | Addressables (§9) | представление и UI, через `IAssetProvider` |
@@ -19,13 +18,13 @@
 
 Не входит: какие таблицы нужны фиче и как системы их читают — GDD и `Simulation.md`; построение вьюхи из визуала, анимация, порядок предзагрузки — `Presentation.md`; привязка строк к UI Toolkit, шрифты, проверка вёрстки — `UI.md`; внутренности `IAssetProvider`, `ISaveService`, граф загрузки — `Services.md`; папки срезов и `.asmref` — `CodeStructure.md`.
 
-Главный принцип: **данные пишутся в одном месте, проверяются до игры и доходят до игры в одном формате.** JSON есть только в репозитории конфигов и в редакторе; в плеере JSON-парсера нет.
+JSON есть только в репозитории конфигов и в редакторе; в плеер данные попадают бинарным паком (CONT-04).
 
 ## 2. Репозиторий конфигов
 
 ### 2.1. Раскладка
 
-`rise-to-panteon-configs` подключён git submodule в `Configs/` в корне репозитория игры (A-20). Каталог вне `Assets/`: Unity не создаёт `.meta` и не импортирует JSON как ассеты.
+Формат конфигов — JSON; отдельный репозиторий `rise-to-panteon-configs` подключён git submodule в `Configs/` в корне репозитория игры. Каталог вне `Assets/`: Unity не создаёт `.meta` и не импортирует JSON как ассеты.
 
 ```text
 Configs/
@@ -82,7 +81,7 @@ CI конфиг-репозитория (GitHub Actions): `npm ci` → `fmt:check
 1. Правь только `data/`, `strings/`, `rooms/` (комнаты — через редактор, §7); `schemas/` — только вместе с версией (§3.4).
 2. После правки — `npm run fmt && npm run validate`; коммитится только зелёное.
 3. Id стабилен навсегда: не переименовывать, не переиспользовать; удалённый — в `retired-ids.json`.
-4. В JSON только готовые числа, без выражений и формул (A-21); единица — в имени поля.
+4. В JSON только готовые числа, без выражений и формул (§3.3); единица — в имени поля.
 5. Пояснения — в поле `note`; комментариев в JSON нет.
 6. Ассеты — только visual id (§9.4); путей, GUID и имён файлов Unity в данных нет.
 7. Текст для игрока — только в `strings/` (ARCH-17).
@@ -91,7 +90,7 @@ CI конфиг-репозитория (GitHub Actions): `npm ci` → `fmt:check
 ### 2.5. Работа с сабмодулем
 
 - Клон: `git clone --recurse-submodules`, в существующем клоне — `git submodule update --init`; рекомендуется `git config submodule.recurse true`.
-- После `update` сабмодуль в detached HEAD; перед правкой — `git -C Configs switch main`. Ветки — по A-04: сейчас всё в `main`.
+- После `update` сабмодуль в detached HEAD; перед правкой — `git -C Configs switch main`. Ветки — по `CodeStructure.md` §10.
 - **Порядок коммитов:** сначала коммит и push в конфиг-репозиторий, затем в игре отдельный коммит указателя: `git add Configs && git commit -m "configs: bump to <sha7> — <что>"`. Код, которому нужны новые конфиги, — в том же коммите или после.
 - **Варианты баланса** — ветки `balance/<имя>`: `git -C Configs switch balance/fast-molt`, редактор пересоберёт пак сам (§5); возврат — `git -C Configs switch main`. Указатель на коммит варианта в `main` игры не попадает.
 - **Билд падает**, если сабмодуль грязный, его HEAD не запушен (`git -C Configs branch -r --contains HEAD` пусто) или не равен указателю в коммите игры. Dev-сборка обходит это флагом `RTP_ALLOW_DIRTY_CONFIGS`; пак получает флаг `Dirty`, релиз с ним не собирается.
@@ -159,7 +158,7 @@ CI конфиг-репозитория (GitHub Actions): `npm ci` → `fmt:check
 - **Единица** — в имени поля и в `x-unit`: `cooldownSec`, `rangeTiles`, `speedTilesPerSec`, `fleeChance`. Вероятности — 0..1, не проценты. Время — в секундах; в тики переводит конвертер (§4.3).
 - **Числа баланса обязательны** (`required`), `default` не используется: значение всегда видно в данных. Необязательны только `note` и ссылки, которые по смыслу могут отсутствовать.
 - **Enum** — строки `lower_snake`. Варианты — `oneOf` из `$ref`, в каждом `kind: { "const": "…" }`.
-- **Никаких выражений** (A-21): только готовые значения; кривые — явные массивы.
+- **Никаких выражений**: только готовые значения; кривые — явные массивы. Формулы GDD — только способ заполнить таблицы (позже — в админке); в игре формул нет.
 - **Текст для игрока в `data/` запрещён**: имя вида — строка `species.shurshun.name` в `strings/` (§8).
 
 ### 3.4. Версия схемы и миграции
@@ -221,6 +220,7 @@ public sealed class SpeciesConfigConverter : IConfigTableConverter
 {
     public string TableId => "species";
     public int BlobVersion => SpeciesTableBlob.VERSION;
+
     public void Build(ConfigBuildContext ctx, BlobBuilder builder)
     {
         var file = ctx.Load<SpeciesFile>(TableId);
@@ -229,8 +229,14 @@ public sealed class SpeciesConfigConverter : IConfigTableConverter
         for (int i = 0; i < file.Rows.Count; i++)
         {
             var src = file.Rows[i];
-            rows[i] = new SpeciesRow { Family = ctx.Ref("families", src.Family, src.Id), View = ctx.Visual(src.Visual),
-                Hp = (int)src.Hp, SpeedTilesPerTick = ctx.PerTick(src.SpeedTilesPerSec), FleeChance = (float)src.FleeChance };
+            rows[i] = new SpeciesRow
+            {
+                Family = ctx.Ref("families", src.Family, src.Id),
+                View = ctx.Visual(src.Visual),
+                Hp = (int)src.Hp,
+                SpeedTilesPerTick = ctx.PerTick(src.SpeedTilesPerSec),
+                FleeChance = (float)src.FleeChance
+            };
         }
     }
 }
@@ -243,9 +249,26 @@ public sealed class SpeciesConfigConverter : IConfigTableConverter
 Blob-структуры таблицы (README §4.1) — сборка `RiseToPanteon.Simulation`, папка `Features/Creatures/Simulation/`:
 
 ```csharp
-public struct SpeciesTableBlob { public const int VERSION = 1; public BlobArray<SpeciesRow> Rows; }
-public struct SpeciesRow { public int Family; public ViewKey View; public int Hp; public float SpeedTilesPerTick; public float FleeChance; }
-public struct SpeciesConfig : IComponentData { public BlobAssetReference<SpeciesTableBlob> Table; }
+public struct SpeciesTableBlob
+{
+    public const int VERSION = 1;
+
+    public BlobArray<SpeciesRow> Rows;
+}
+
+public struct SpeciesRow
+{
+    public int Family;
+    public ViewKey View;
+    public int Hp;
+    public float SpeedTilesPerTick;
+    public float FleeChance;
+}
+
+public struct SpeciesConfig : IComponentData
+{
+    public BlobAssetReference<SpeciesTableBlob> Table;
+}
 ```
 
 EditMode-тест `ConfigBlobLayoutTests` считает отпечаток раскладки каждого `*TableBlob` (поля, типы, смещения — рекурсивно) и сверяет с `BlobLayouts.lock.txt`: раскладка изменилась, а `VERSION` нет — тест падает.
@@ -281,12 +304,20 @@ EditMode-тест `ConfigBlobLayoutTests` считает отпечаток ра
 ```csharp
 public interface IConfigPackProvider
 {
+    event Action<ConfigPack> OnReplaced;
+
     ConfigPack Current { get; }
+
     UniTask LoadAsync(CancellationToken ct);
     UniTask<bool> TryApplyPendingAsync(CancellationToken ct);
-    event Action<ConfigPack> OnReplaced;
 }
-public readonly struct ConfigTableData { public readonly string TableId; public readonly int BlobVersion; public readonly NativeArray<byte>.ReadOnly Bytes; }
+
+public readonly struct ConfigTableData
+{
+    public readonly string TableId;
+    public readonly int BlobVersion;
+    public readonly NativeArray<byte>.ReadOnly Bytes;
+}
 ```
 
 - `Current` — пак сессии; не меняется, пока жив мир.
@@ -312,12 +343,15 @@ public interface IConfigTableBinder
 {
     string TableId { get; }
     int BlobVersion { get; }
+
     void Bind(EntityManager em, in ConfigTableData table, ConfigBlobStore store);
 }
+
 public sealed class SpeciesConfigBinder : ConfigTableBinder<SpeciesTableBlob, SpeciesConfig>
 {
     public override string TableId => "species";
     public override int BlobVersion => SpeciesTableBlob.VERSION;
+
     protected override SpeciesConfig Wrap(BlobAssetReference<SpeciesTableBlob> blob) => new() { Table = blob };
 }
 ```
@@ -334,7 +368,8 @@ public sealed class SpeciesConfigBinder : ConfigTableBinder<SpeciesTableBlob, Sp
 ```csharp
 public struct ConfigVersion : IComponentData
 {
-    public ushort SchemaMajor, SchemaMinor;
+    public ushort SchemaMajor;
+    public ushort SchemaMinor;
     public FixedString64Bytes Commit;
     public uint4 ContentHash;
     public byte Flags;
@@ -352,7 +387,7 @@ public struct ConfigVersion : IComponentData
 
 ## 5. Итерация в редакторе
 
-В редакторе конфиги читаются прямо из `Configs/` (A-23): JSON → тот же сборщик → `editor.pack` → тот же рантайм-путь. Отдельного «JSON-режима» у игры нет: что работает в редакторе, работает и в билде.
+В редакторе конфиги читаются прямо из `Configs/`: JSON → тот же сборщик → `editor.pack` → тот же рантайм-путь. Отдельного «JSON-режима» у игры нет: что работает в редакторе, работает и в билде.
 
 - `ConfigSourceWatcher` (`[InitializeOnLoad]`) следит за `Configs/` через `FileSystemWatcher` (задержка 300 мс) и сверяет время и размер файлов при возврате фокуса в Unity: на macOS наблюдатель бывает ненадёжен — «проверить на спайке». Запасной вариант — `AssetDatabase.RegisterCustomDependency` с хешем `Configs/` и `ScriptedImporter`-якорь в `Assets/` с `ctx.DependsOnCustomDependency` — тоже «проверить на спайке».
 - `data/` или `rooms/` → быстрый путь без Node: десериализация, конвертация, запись `editor.pack`. Ориентир — меньше 200 мс на ~13 таблиц Прототипа (GDD Scope); если дольше — пересборка только изменённых таблиц.
@@ -366,7 +401,7 @@ public struct ConfigVersion : IComponentData
 
 ## 6. Обновление конфигов без пересборки
 
-Механизм заложен сейчас (A-22) и работает без сервера: будущий сервер только кладёт файл туда, откуда провайдер уже умеет его брать. **Сессия** — время жизни одного загруженного мира: от «Продолжить» или «Новый мир» до возврата в меню или выхода. Пак выбирается при запуске или в меню, пока мира нет (`TryApplyPendingAsync`); посреди сессии `Current` не меняется.
+Механизм работает без сервера: будущий сервер только кладёт файл туда, откуда провайдер уже умеет его брать. **Сессия** — время жизни одного загруженного мира: от «Продолжить» или «Новый мир» до возврата в меню или выхода. Пак выбирается при запуске или в меню, пока мира нет (`TryApplyPendingAsync`); посреди сессии `Current` не меняется.
 
 ```mermaid
 flowchart LR
@@ -379,7 +414,7 @@ flowchart LR
 ```
 
 - **Хранилище**: `persistentDataPath/configs/` — `active.pack`, `pending.pack`, `rejected/` (отвергнутые, причина — в логе); запись во временный файл и переименование.
-- **Проверки скачанного пака**: `Magic`, `PackFormat`, `ContentHash`; `AppVersion` = `Application.version` (после обновления приложения старый пак отбрасывается); `SchemaMajor` и набор пар `{секция, BlobVersion}` совпадают со встроенным паком — эталоном, собранным тем же кодом, что и билд.
+- **Проверки скачанного пака**: `Magic`, `PackFormat`, `ContentHash`; `AppVersion` = `Application.version` (после обновления приложения старый пак отбрасывается); `SchemaMajor` и набор пар `{секция, BlobVersion}` совпадают со встроенным паком — эталоном, собранным тем же кодом, что и билд. Почему сверяется `BlobVersion`, а не только схема: бинарную совместимость определяет раскладка blob.
 - **Сейчас, без сервера**: `pending.pack` кладут dev-инструменты (`RTP_DEV`: «Установить пак из файла» и «…по URL») и тесты. Так тестер получает вариант баланса без пересборки: `ConfigPackBuilder` в batchmode собирает пак из ветки `balance/<имя>` под ту же `AppVersion`.
 - **Потом, с сервером**: фоновая задача после загрузки спрашивает эндпоинт `{appVersion} → {url, contentHash, size}`, качает в `pending.pack.tmp`, сверяет хеш и переименовывает в `pending.pack`; пак применится при следующем входе в меню. Пак для каждой поддерживаемой версии приложения собирается сборщиком этой же версии кода — раскладки blob должны совпасть. Подпись пака — только если понадобится защита от подмены.
 - **Так не обновляются** строки (таблицы Localization — ассеты Addressables; удалённая группа — отдельное решение позже) и ассеты.
@@ -394,7 +429,7 @@ flowchart LR
 | Ручная вставка: комплекс Врат, секретная комната, нарративная точка, стоянка NPC (Срез) | W04 R2–R4, R15–R20 | `rooms/insert/` | не больше раза |
 | Лагерь: основа и зоны, открываемые по мере роста (Срез) | K01 R1, R14, §9 | `rooms/camp/` | один |
 
-Игра читает только данные (A-50): шаблон хранит логическую сетку и объекты, визуал строится тем же рендером, что у процедурных комнат (GDD W02 R4). Префабов и сцен на комнату нет.
+Игра читает только данные: шаблон хранит логическую сетку и объекты, визуал строится тем же рендером, что у процедурных комнат (GDD W02 R4). Префабов и сцен на комнату нет.
 
 ### 7.2. Формат шаблона
 
@@ -477,9 +512,9 @@ flowchart LR
 
 - На каждый файл — String Table Collection с тем же именем в `Assets/_Project/Localization/Tables/`; локали — из манифеста, плюс псевдолокаль для проверки вёрстки +30% (M04 §5; настройка — `UI.md`).
 - Ключи Shared Table Data = ключи JSON; `text` → запись (флаг Smart — по правилу выше); `note` → метаданные `Comment`. Ключ, пропавший из JSON, удаляется с записью в лог.
-- Запуск: наблюдатель редактора (§5), меню `RiseToPanteon/Localization/Import`, препроцесс билда — до сборки контента Addressables (таблицы Localization — адресуемые ассеты).
+- Запуск: наблюдатель редактора (§5), меню `RiseToPanteon/Localization/Import`, препроцесс билда (`IPreprocessBuildWithReport`) — до сборки контента Addressables (таблицы Localization — адресуемые ассеты). CI проверяет, что таблицы актуальны.
+- Импортёр повторяет проверки ключей и подстановок из `validate` (§8.1).
 - Сгенерированные таблицы коммитятся, чтобы чистый клон открывался рабочим, но правятся только через JSON.
-- Пакета `com.unity.localization` в `Packages/manifest.json` пока нет — ставится при создании контура.
 
 ## 9. Ассеты и Addressables
 
@@ -500,11 +535,11 @@ Assets/_Project/Art/
 └── Placeholders/               заглушки Прототипа — цветные формы (Scope)
 ```
 
-Папки — `PascalCase`; главный ассет назван своим visual id (§9.4). Старые папки прототипа (`Art/Tiles/…`) к раскладке не относятся (A-05).
+Папки — `PascalCase`; главный ассет назван своим visual id (§9.4). Папка прототипа `Art/Tiles/` к раскладке не относится (`CodeStructure.md` §2.4).
 
 ### 9.2. Пресеты импорта, атласы, скелеты
 
-Масштаб: **1 клетка = 1 юнит = 128 px исходника (PPU 128).** Обзор по высоте — ~10–11 клеток (GDD C10); на телефоне в альбоме это 1080–1440 px, ~100–140 px на клетку, и 128 даёт почти 1:1 без лишней памяти. Графика рисованная, не пиксельная (Scope → «Производство обликов»). Окончательно — после выбора стиля (раунд 7).
+Масштаб: **1 клетка = 1 юнит = 128 px исходника (PPU 128).** Обзор по высоте — ~10–11 клеток (GDD C10); на телефоне в альбоме это 1080–1440 px, ~100–140 px на клетку, и 128 даёт почти 1:1 без лишней памяти. Графика рисованная, не пиксельная (Scope → «Производство обликов»). Окончательно — после выбора визуального стиля (`Docs/GDD/OpenQuestions.md` → «Визуальный стиль»).
 
 Пресеты — `Assets/_Project/Settings/Presets/`, назначаются Preset Manager по фильтрам папок. Preset Manager действует только при первом импорте, поэтому EditMode-тест `ImportSettingsTests` сверяет ключевые поля ассетов с пресетом папки.
 
@@ -513,15 +548,15 @@ Assets/_Project/Art/
 | `Sprite_World` | Environment, Camp, Weapons, спрайты Vfx | Sprite, PPU 128, Bilinear, Clamp, без мипмапов, Mesh Tight, max 2048 |
 | `Psb_Creature` | Rigs, Creatures, Player | PSD Importer: Character Rig, Use Layer Grouping, PPU 128, Main Skeleton — шаблон из `Rigs/` («проверить на спайке» общий скелет) |
 | `Sprite_Ui` | Ui | Sprite, Bilinear, без мипмапов; текста в картинках нет (M04 R3) |
-| `Texture_Floor` | текстуры смешивания пола (A-31) | Default, Repeat, мипмапы вкл., ASTC 6×6 |
-| `Audio_Sfx` / `Audio_Stream` | Audio/Sfx / Audio/Music, Audio/Ambience | Decompress On Load, Vorbis, моно (A-55) / Streaming, Vorbis |
+| `Texture_Floor` | текстуры смешивания пола (`Presentation.md` §6.2) | Default, Repeat, мипмапы вкл., ASTC 6×6 |
+| `Audio_Sfx` / `Audio_Stream` | Audio/Sfx / Audio/Music, Audio/Ambience | Decompress On Load, Vorbis, моно / Streaming, Vorbis |
 
 - **Атласы** — Sprite Atlas v2: один на биом (`atlas.env.abyss`), на семейство существ (виды семейства делят части и различаются цветом — Scope), на тело игрока, на иконки UI. До 2048², padding 4, без поворота; сжатие задаёт атлас: Android и iOS — ASTC 6×6, UI — ASTC 4×4. Атлас лежит в той же группе Addressables, что его спрайты; Addressables Analyze «Check Duplicate Bundle Dependencies» — без находок. «Проверить на спайке»: атлас v2 + Addressables и упаковка скиннованных спрайтов.
-- **Скелеты** — шаблон с общими точками крепления в `Rigs/`; PSB семейства ссылается на него; сменные части — Sprite Library, перекраска — шейдером по палитре (A-30). Прототип — 4 скелета семейств, 6 палитр, ~42 анимации (Scope).
+- **Скелеты** — шаблон с общими точками крепления в `Rigs/`; PSB семейства ссылается на него; сменные части — Sprite Library, перекраска — шейдером по палитре (`Presentation.md` §5). Прототип — 4 скелета семейств, 6 палитр, ~42 анимации (Scope).
 
 ### 9.3. Группы и метки
 
-Сейчас все группы локальные (в билде, LZ4); удалённые группы и Content Directories — после спайка (A-37).
+Сейчас все группы локальные (в билде, LZ4); удалённые группы и Content Directories (6.6) — после спайка.
 
 | Группа | Что | Метки |
 |---|---|---|
@@ -538,10 +573,10 @@ Assets/_Project/Art/
 
 ### 9.4. Visual id = адрес
 
-- Visual id (A-56) — адрес Addressables: `<категория>.<объект>[.<вариант>]`, до четырёх сегментов: `creature.spark.base`, `creature.shurshun.base`, `tileset.abyss`, `decor.abyss.bones_01`, `vfx.absorb.burst`, `sfx.hit.chitin`, `icon.items.living_sap`.
+- Visual id — адрес Addressables: `<категория>.<объект>[.<вариант>]`, до четырёх сегментов: `creature.spark.base`, `creature.shurshun.base`, `tileset.abyss`, `decor.abyss.bones_01`, `vfx.absorb.burst`, `sfx.hit.chitin`, `icon.items.living_sap`.
 - Категории: `creature`, `weapon`, `tileset`, `prop`, `decor`, `trace`, `vfx`, `sfx`, `music`, `amb`, `icon`, `ui`, `anim`, `palette`, `atlas`, `placeholder`. Новая категория — сначала правка этого списка.
 - Имя файла главного ассета = visual id (`creature.shurshun.base.prefab`); `AddressRules` ставит адрес = имя файла без расширения. Подадреса `[sub]` не используются.
-- Каталога «id → ассет» нет (A-56): секция `visuals` пака — только `ViewKey ↔ id` для компактного снимка.
+- Каталога «id → ассет» нет: секция `visuals` пака — только `ViewKey ↔ id` для компактного снимка.
 - Ассет по адресу самоописывающийся: префаб существа несёт риг, Sprite Library и набор клипов; конфиг хранит только id. ARCH-13 запрещает ссылки на ассеты в коде и конфигах; ссылки ассет → ассет — норма.
 
 Путь от конфига до картинки: `species.json` `visual: "creature.shurshun.base"` → сборщик: `SpeciesRow.View = ViewKey 17` → симуляция: `ViewState.ViewKey = 17` → `WorldPresenter`: `VisualTable.GetAddress(17)` = `"creature.shurshun.base"` → `IAssetProvider` грузит по адресу. UI идёт тем же путём: read-модель несёт `ViewKey` иконки; ключ имени UI строит из `ConfigIdList` (индекс → `shurshun` → `species.shurshun.name`). Таблиц конфигов UI и представление не читают: числа приходят в read-моделях.
@@ -596,7 +631,7 @@ Assets/_Project/Art/
 
 | ID | Правило |
 |---|---|
-| CONT-01 | Данные баланса, шаблоны комнат и строки существуют только в `Configs/` и правятся только там (ARCH-12, ARCH-17, A-50, A-54). |
+| CONT-01 | Данные баланса, шаблоны комнат и строки существуют только в `Configs/` и правятся только там (ARCH-12, ARCH-17). |
 | CONT-02 | Любой JSON в `Configs/` проходит `fmt:check`, `validate`, `pack-check`; указатель на коммит с красным CI в игру не попадает. |
 | CONT-03 | Id стабилен и не переиспользуется; удалённый id — в `retired-ids.json`. |
 | CONT-04 | В плеере нет JSON конфигов и JSON-парсера — только бинарный пак. Newtonsoft и DTO — только в `RiseToPanteon.Editor`; DTO только генерируются (`gen:cs`), `Generated/` руками не правится. |
@@ -618,14 +653,14 @@ Assets/_Project/Art/
 
 ## 12. Типы контура
 
+Канонические типы README §4.3 (`IConfigPackProvider`, `IConfigTableBinder`) здесь не повторяются.
+
 | Тип | Сборка | Назначение |
 |---|---|---|
-| `IConfigPackProvider` | Services | (README) Текущий пак: цепочка источников, проверки, применение ожидающего пака между сессиями |
 | `ConfigPack`, `ConfigPackInfo` | Services | Разобранный пак (`Info`, blob-секции, `Ids(table)`, `Visuals`); схема, коммит, хеш, `AppVersion`, флаги, источник |
 | `ConfigTableData` | Services | Сырая blob-секция: `TableId`, `BlobVersion`, байты |
 | `IConfigPackSource` | Services | Источник пака: `EditorConfigPackSource`, `DownloadedConfigPackSource`, `EmbeddedConfigPackSource` |
 | `VisualTable`, `ConfigIdList` | Services | `ViewKey ↔ visual id`; индекс строки ↔ строковый id таблицы |
-| `IConfigTableBinder` | Bridge | (README) Секция пака → blob → синглтон ECS; по одному на таблицу в срезе фичи |
 | `ConfigTableBinder<TBlob, TConfig>` | Bridge | Базовый биндер: `TryRead`, передача в хранилище, синглтон |
 | `ConfigWorldBinder`, `ConfigBlobStore` | Bridge | Привязка всех таблиц к миру, `ConfigVersion`, горячая замена; владение blob-ами сессии |
 | `ConfigVersion` | Simulation | Синглтон: схема, коммит, хеш, флаги, `Generation` |

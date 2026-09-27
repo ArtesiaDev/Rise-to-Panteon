@@ -2,7 +2,7 @@
 
 > Контур «Сервисы» и корень композиции (`RiseToPanteon.App`): скоупы VContainer, инсталлеры фич, граф загрузки,
 > сцены, сохранения, ввод, аудио, жизненный цикл, локализация, логирование, dev-инструменты. Канонические имена — из
-> `README.md`, новые публичные типы — в разделе 13. Решения: A-12, A-13, A-22, A-51–A-55, R-02. GDD: M01, M02, D01,
+> `README.md`, новые публичные типы — в разделе 13. GDD: M01, M02, D01,
 > U01, U04, U08, U09, E08, M04, dev-инструменты L01, L03, B02, W02, W10. API VContainer сверены с исходниками пакета
 > 1.19.0 (`Library/PackageCache/jp.hadashikick.vcontainer@*`). **«Проверить на спайке»** — не подтверждено на
 > Unity 6000.6.3f1 / IL2CPP.
@@ -22,13 +22,11 @@
 | Контракт локализации, выбор языка | Таблицы строк, импорт, шрифты (`Content.md`, `UI.md`) |
 | Логирование, политика ошибок, dev-инструменты | Устройство `IConfigPackProvider` и `IAssetProvider` (`Content.md`) |
 
-`RiseToPanteon.Services` — интерфейсы и реализации сервисов. На Simulation, Bridge, Presentation, UI, App и
-Unity.Entities эта сборка не ссылается (README 4.1). `RiseToPanteon.App` содержит скоупы, `FeatureInstallerCatalog`,
-`BootGraph`, узлы загрузки и `SceneFlow`. App ссылается на все сборки, **кроме** `Simulation` и Unity.Entities
-(README 4.1), и работает с миром только через API `WorldHost`. Интерфейсы Services, реализованные в других
+`RiseToPanteon.Services` — интерфейсы и реализации сервисов. `RiseToPanteon.App` содержит скоупы,
+`FeatureInstallerCatalog`, `BootGraph`, узлы загрузки и `SceneFlow` и работает с миром только через API
+`WorldHost`. Ссылки сборок — README §4.1, `CodeStructure.md` §3.1. Интерфейсы Services, реализованные в других
 сборках: `ILocalizationService` — UI (только она ссылается на Unity Localization), `IWorldSaveSource` и мировые
-`ISaveSection` — Bridge, `ISceneFlow` — App. Порты `IPointerProjector`, `IWorldAnchorService`,
-`IAppearancePreviewService` лежат в Contracts и реализуются представлением.
+`ISaveSection` — Bridge, `ISceneFlow` — App.
 
 Сервис из `ProjectScope` про `GameScope` не знает. Игровая сессия сама подключается к нему через `Attach*`, получает
 `IDisposable` и освобождает его при уничтожении (SVC-08).
@@ -37,11 +35,13 @@ Unity.Entities эта сборка не ссылается (README 4.1). `RiseTo
 
 ### 2.1. Скоупы
 
-| Скоуп | Живёт | Регистрирует | Точка входа |
-|---|---|---|---|
-| `ProjectScope` (`Boot.unity`) | Пока работает приложение; сцена не выгружается | `ILog`, `IAppLifecycle`, `ISaveService`, `ISettingsService`, `IInputService`, `IAudioService`, `IAssetProvider`, `IConfigPackProvider`, `ILocalizationService`, `ISceneFlow`, `ILoadingProgress`, узлы `IBootNode`; от UI — `IScreenService` и главное меню | `BootEntryPoint` |
-| `GameScope` (`Game.unity`, родитель — `ProjectScope`) | От входа в игру до выхода в меню | `GameStartRequest`, `WorldHost`, `WorldViewPublisher`, `IOperationSink`, мостовые системы, `IConfigTableBinder` × N, мировые `ISaveSection` × N, `IWorldSaveSource`, `WorldPresenter`, камера, экраны игры, узлы `IGameStartNode` | `GameEntryPoint` |
-| `DevScope` (`Dev.unity`, родитель — `GameScope`, только `RTP_DEV`) | Пока загружена `Dev.unity` | Оверлеи, панели, источники dev-операций | `DevEntryPoint` |
+Сцены, родители и время жизни скоупов — README §4.2.
+
+| Скоуп | Регистрирует | Точка входа |
+|---|---|---|
+| `ProjectScope` | `ILog`, `IAppLifecycle`, `ISaveService`, `ISettingsService`, `IInputService`, `IAudioService`, `IAssetProvider`, `IConfigPackProvider`, `ILocalizationService`, `ISceneFlow`, `ILoadingProgress`, узлы `IBootNode`; от UI — `IScreenService` и главное меню | `BootEntryPoint` |
+| `GameScope` | `GameStartRequest`, `WorldHost`, `WorldViewPublisher`, `IOperationSink`, мостовые системы, `IConfigTableBinder` × N, мировые `ISaveSection` × N, `IWorldSaveSource`, `WorldPresenter`, камера, экраны игры, узлы `IGameStartNode` | `GameEntryPoint` |
+| `DevScope` | Оверлеи, панели, источники dev-операций | `DevEntryPoint` |
 
 Корень — `ProjectScope`, собирается в `Awake` (`autoRun = true`). `VContainerSettings.RootLifetimeScope` не
 используется. `Configure` любого скоупа делает две вещи: регистрирует сериализованные ссылки сцены (микшер, корневой
@@ -54,27 +54,53 @@ Unity.Entities эта сборка не ссылается (README 4.1). `RiseTo
 Сборка `RiseToPanteon.Core`:
 
 ```csharp
-public interface IFeatureInstaller { void Install(IContainerBuilder builder); }
-public enum InstallScope { Project, Game, Dev }
+public interface IFeatureInstaller
+{
+    void Install(IContainerBuilder builder);
+}
+
+public enum InstallScope
+{
+    Project,
+    Game,
+    Dev
+}
+
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
 public sealed class FeatureInstallerAttribute : Attribute
 {
-    public FeatureInstallerAttribute(InstallScope scope) => Scope = scope;
     public InstallScope Scope { get; }
     public int Order { get; set; }
+
+    public FeatureInstallerAttribute(InstallScope scope) => Scope = scope;
 }
 ```
 
 `Order`: меньше — раньше; по умолчанию 0.
 
-Пример — файл `Features/Absorption/Bridge/AbsorptionBridgeInstaller.cs`. Имя — `<Фича><Контур>Installer`
+Пример — файл `Features/Absorption/Bridge/AbsorptionBridgeInstaller.cs`: мост среза «Поглощение» в игровом скоупе —
+мостовая система, биндер таблицы конфигов и секция сохранения. Имя — `<Фича><Контур>Installer`
 (`CodeStructure.md` §5); скоуп задаёт атрибут, а не имя.
 
 ```csharp
-[Preserve, FeatureInstaller(InstallScope.Game)]
-public sealed class AbsorptionBridgeInstaller : IFeatureInstaller
+using RiseToPanteon.Bridge;
+using RiseToPanteon.Core;
+using RiseToPanteon.Services;
+using UnityEngine.Scripting;
+using VContainer;
+
+namespace RiseToPanteon.Absorption.Bridge
 {
-    public void Install(IContainerBuilder b) => b.RegisterBridgeSystem<AbsorptionIntakeSystem>();
+    [Preserve, FeatureInstaller(InstallScope.Game)]
+    public sealed class AbsorptionBridgeInstaller : IFeatureInstaller
+    {
+        public void Install(IContainerBuilder builder)
+        {
+            builder.RegisterBridgeSystem<AbsorptionIntakeSystem>();
+            builder.Register<IConfigTableBinder, AbsorptionConfigBinder>(Lifetime.Singleton);
+            builder.Register<ISaveSection, AbsorptionSaveSection>(Lifetime.Singleton);
+        }
+    }
 }
 ```
 
@@ -121,10 +147,9 @@ Bridge есть расширение `builder.RegisterBridgeSystem<T>() where T 
 Система помечена `[DisableAutoCreation]` и `[UpdateInGroup(...)]`, конструктор у неё без параметров, зависимости
 приходят через метод `[Inject] void Construct(...)`.
 
-При создании мира `WorldHost` проходит по `IReadOnlyList<BridgeSystemDescriptor>`: резолвит систему, вызывает
-`World.AddSystemManaged(system)` (метод есть в Entities 6.6, `World.cs`) и через `AddSystemToUpdateList` кладёт её в
-группу из `[UpdateInGroup]`. После этого группы сортируются (README 4.4). Мостовая система живёт столько же, сколько
-`GameScope` и мир.
+При создании мира `WorldHost` проходит по `IReadOnlyList<BridgeSystemDescriptor>`, резолвит каждую систему и
+добавляет её в группу из `[UpdateInGroup]` (`Simulation.md` §2.1, шаг 3). Мостовая система живёт столько же,
+сколько `GameScope` и мир.
 
 ## 3. Граф загрузки и старт игры
 
@@ -139,10 +164,14 @@ public interface IBootNode
 {
     IReadOnlyList<Type> DependsOn { get; }
     float Weight { get; }
+
     UniTask RunAsync(IProgress<float> progress, CancellationToken ct);
 }
+
 [CollectionContract]
-public interface IGameStartNode : IBootNode { }
+public interface IGameStartNode : IBootNode
+{
+}
 ```
 
 - `DependsOn` — типы узлов-предшественников; узел опознаётся по своему типу.
@@ -184,7 +213,7 @@ flowchart LR
 |---|---|---|---|
 | `AddressablesInitNode` | `Addressables.InitializeAsync()` | — | фатально |
 | `ProfileLoadNode` | Читает профиль устройства (5.7), применяет `ISettingsService` | — | резервная копия, иначе значения по умолчанию; `Warning` |
-| `ConfigPackNode` | `IConfigPackProvider`: «скачанный → встроенный», проверка версии схемы и хеша (A-22, `Content.md`) | Addressables | фатально, если невалиден встроенный пак |
+| `ConfigPackNode` | `IConfigPackProvider.LoadAsync`: выбор пака и проверки (`Content.md` §4.5, §6) | Addressables | фатально, если невалиден встроенный пак |
 | `LocalizationNode` | `ILocalizationService.InitializeAsync`, язык из профиля (раздел 9) | Addressables, Profile | фатально |
 | `AudioInitNode` | Микшер, громкости из профиля, прогрев пула, звуки меню | Addressables, Profile | фатально |
 | `SaveIndexNode` | Заголовки слотов миров, совместимость, восстановление прерванной записи (5.5) | ConfigPack (число слотов, `ConfigVersion`) | слот помечается, загрузка продолжается |
@@ -224,8 +253,7 @@ flowchart TD
 
 ## 4. Сцены и переходы
 
-Сцены и скоупы перечислены в README 4.2. `Boot.unity` имеет индекс 0 и не выгружается. `Game.unity` и `Dev.unity`
-грузятся аддитивно; `Dev.unity` — только в dev-сборках. Локации — не сцены (A-51). Переход между ними выполняют
+Сцены и скоупы — README §4.2; `Boot.unity` имеет индекс 0. Локации — не сцены: переход между ними выполняют
 `WorldHost` (`LocationTransitionGroup`) и затемнение в представлении, сцена при этом не загружается.
 
 `SceneFlow.EnterGameAsync` — родительство и передача запроса (API VContainer 1.19.0):
@@ -245,7 +273,7 @@ SceneManager.SetActiveScene(SceneManager.GetSceneByName(SceneNames.Game));
 - **Родитель.** `projectScope` получают резолвом `LifetimeScope` в `ProjectScope`: VContainer регистрирует экземпляр
   скоупа сам (`InstallTo`). Тот же резолв в `GameScope` возвращает `GameScope` — так `DevSceneNode` грузит `Dev.unity`.
 - **Активная сцена** во время игры — `Game`: созданное `Instantiate` попадает в неё и умирает вместе с ней.
-- **Выход в меню** («Сохранить и выйти», M01 R4) — строго по порядку: `RequestSave(Exit)` с ожиданием →
+- **Выход в меню** («Сохранить и выйти», M01 R4) — строго по порядку: `RequestSaveAsync(Exit)` с ожиданием →
   явный `WorldHost.Shutdown()` (на порядок `Dispose` не полагаемся) → выгрузка `Dev`, затем `Game` → проверка
   хэндлов `IAssetProvider` (в dev — отчёт об утечках) и `Resources.UnloadUnusedAssets()` → активна снова `Boot`.
 - **Редактор.** Play всегда начинается с `Boot`: утилита `RiseToPanteon.Editor` выставляет
@@ -255,8 +283,9 @@ SceneManager.SetActiveScene(SceneManager.GetSceneByName(SceneNames.Game));
 
 У мира один слот. Отката и загрузки раннего состояния нет; резервная копия нужна только для восстановления
 (M01 R1, R3, R10). На каждом триггере пишется полный снимок — атомарно, вне главного потока, с одной резервной
-копией (A-53, M01 R15). Снимок собирается экспортом ECS → DTO (R-02). Не хранятся: состояние ИИ, флаг «в бою»,
-снаряды, VFX, звук (M01 R17). Схемой владеет M01 (I33); каждая фича хранит свою часть в своей `ISaveSection`.
+копией (M01 R15); формат — бинарный с заголовком версии (5.3). Снимок собирается экспортом ECS → DTO
+(`Simulation.md` §10.2). Что не хранится — M01 R17 (со стороны симуляции — `Simulation.md` §10.2). Схемой владеет
+M01; каждая фича хранит свою часть в своей `ISaveSection`.
 
 ### 5.1. Триггеры
 
@@ -286,11 +315,11 @@ sequenceDiagram
     participant SEC as ISaveSection × N
     participant BG as Фоновый поток
     participant FS as Файлы слота
-    T->>SS: RequestSave(reason)
+    T->>SS: RequestSaveAsync(reason)
     SS->>SS: слияние запросов по приоритету
     SS->>WS: TryCapture(writer) в безопасной точке
     WS->>SEC: Write(ISaveWriter) по Order
-    SEC-->>WS: DTO-копии, экспорт из ECS джобами (R-02)
+    SEC-->>WS: DTO-копии, экспорт из ECS джобами
     WS-->>SS: снимок без ссылок на ECS
     SS->>BG: сериализация секций, сводка, CRC32
     BG->>FS: world.sav.tmp и flush на диск
@@ -313,13 +342,16 @@ sequenceDiagram
 ```csharp
 public interface ISaveService
 {
+    event Action<SaveCommit> OnCommitted;
+
     IReadOnlyList<WorldSlotInfo> Slots { get; }
-    UniTask<SaveResult> RequestSave(SaveReason reason);
+    bool IsWriting { get; }
+
+    UniTask<SaveResult> RequestSaveAsync(SaveReason reason);
     UniTask<WorldLoadResult> LoadWorldAsync(int slot, CancellationToken ct);
     IDisposable AttachWorld(int slot, IWorldSaveSource source);
-    bool IsWriting { get; }
-    event Action<SaveCommit> OnCommitted;
 }
+
 [CollectionContract]
 public interface ISaveSection
 {
@@ -327,12 +359,26 @@ public interface ISaveSection
     ushort Version { get; }
     SaveTarget Target { get; }
     int Order { get; }
+
     void Write(ISaveWriter writer);
     void Read(ISaveReader reader);
 }
-public interface ISaveWriter { void WriteSection<TDto>(string id, ushort version, TDto dto) where TDto : class; }
-public interface ISaveReader { bool TryReadSection<TDto>(string id, out TDto dto, out ushort version) where TDto : class; }
-public interface IWorldSaveSource { bool TryCapture(ISaveWriter writer); void Restore(ISaveReader reader); }
+
+public interface ISaveWriter
+{
+    void WriteSection<TDto>(string id, ushort version, TDto dto) where TDto : class;
+}
+
+public interface ISaveReader
+{
+    bool TryReadSection<TDto>(string id, out TDto dto, out ushort version) where TDto : class;
+}
+
+public interface IWorldSaveSource
+{
+    bool TryCapture(ISaveWriter writer);
+    void Restore(ISaveReader reader);
+}
 ```
 
 - `Slots` заполняет `SaveIndexNode` / `RefreshSlotsAsync`.
@@ -398,7 +444,7 @@ CRC32; берётся валидный с наибольшим `SaveSeq`. `.tmp`
 ### 5.6. Смерть: одна атомарная запись
 
 1. В тике симуляция одной операцией применяет рассеивание, Эхо и шаг мира (D01 R8) и экспортирует `SimEvent` смерти.
-2. `SaveTriggerRelay` → `RequestSave(SaveReason.Death)`, Blocking. `SaveBarrier` останавливает тик, `IScreenService`
+2. `SaveTriggerRelay` → `RequestSaveAsync(SaveReason.Death)`, Blocking. `SaveBarrier` останавливает тик, `IScreenService`
    не открывает меню — смерть важнее (U04 §10). Захват — в конце того же кадра.
 3. UI открывает экран смерти по `OnCommitted(Death)`, а не по `SimEvent` (U04 R5, M01 R7). Барьер снимается после
    обработчиков, когда экран смерти уже взял паузу. Сбой записи — один немедленный повтор; не помог — экран смерти
@@ -420,7 +466,7 @@ U08 R17, R18) и язык (U08 R14). Срез добавляет флаги по
 После успешной записи мира `SaveService` в фоне передаёт снимок наблюдателям `ISaveCommitObserver`. В dev-сборке
 `RiseToPanteon.Dev` регистрирует `SaveJsonDumper`, который пишет `world.json` через Newtonsoft.Json
 (`com.unity.nuget.newtonsoft-json` 3.2.1 уже в проекте транзитивно). Игра этот файл не читает: он для отладки,
-агентов и просмотрщика снимка. В релизе наблюдателей нет, выгрузка ничего не стоит (A-53, ARCH-18).
+агентов и просмотрщика снимка. В релизе наблюдателей нет, выгрузка ничего не стоит (ARCH-18).
 
 ### 5.9. Версии и миграции
 
@@ -441,15 +487,14 @@ U08 R17, R18) и язык (U08 R14). Срез добавляет флаги по
 ## 6. Ввод
 
 **Действия.** Используется общепроектный набор действий Input System — `InputSystem.actions`, ассет
-`Assets/Settings/InputSystem_Actions.inputactions`, назначен в Project Settings → Input System. Карта `Player` там пока
-от старого прототипа (`Move`, `Attack`, `Restart`, `ToggleMinimap`, `ToggleGizmos`, `Teleport`); её заменяет состав
-`Move`, `Point`, `Attack`, `Dash`, `Ability1`–`Ability4`, `Context`, `QuickSlot`, `SlowWalk`, `Menu`, `Map`,
-`Equipment`, `Character` (U01 R3, R12, R16; U04 §7). Карта `UI` — стандартная, `Dev` включает только dev-инсталлер.
+`Assets/Settings/InputSystem_Actions.inputactions`, назначен в Project Settings → Input System. Состав карты
+`Player`: `Move`, `Point`, `Attack`, `Dash`, `Ability1`–`Ability4`, `Context`, `QuickSlot`, `SlowWalk`, `Menu`,
+`Map`, `Equipment`, `Character` (U01 R3, R12, R16; U04 §7). В ассете карта `Player` пока от прототипа
+(`Move`, `Attack`, `Restart`, `ToggleMinimap`, `ToggleGizmos`, `Teleport`) и заменяется этим составом. Карта `UI` — стандартная, `Dev` включает только dev-инсталлер.
 Действия ищутся один раз: `FindAction("Player/Move", throwIfNotFound: true)`; нет действия — ошибка старта.
 
-**Тач.** Виджеты UI — плавающий стик, до 8 кнопок, мультитач (U01 R2, R3, R15) — каждый кадр пишут в
-`ITouchControlsSink`: `SetStick(Vector2)`, `SetButton(PlayerButton, bool held)` и `SetPointerOverUI(bool)` —
-последний, чтобы клик мышью по UI не превратился в атаку.
+**Тач.** Виджеты UI (`UI.md` §7) каждый кадр пишут в `ITouchControlsSink`: `SetStick(Vector2)`,
+`SetButton(PlayerButton, bool held)` и `SetPointerOverUI(bool)`.
 
 **Слияние** идёт раз в кадр, в фазе `PreUpdate`. К этому моменту Input System уже обработал события в `EarlyUpdate`
 (режим «Process Events In Dynamic Update»), а тики ECS в `Update` ещё не начались. Точку в PlayerLoop даёт UniTask
@@ -471,7 +516,7 @@ U08 R17, R18) и язык (U08 R14). Срез добавляет флаги по
 
 ## 7. Аудио
 
-Звук встроенный (A-55). Микшер `MainMixer` — сериализованная ссылка `ProjectScope`. Группы: `Master → Music` (слои
+Звук встроенный: AudioMixer, пул источников, клипы через Addressables. Микшер `MainMixer` — сериализованная ссылка `ProjectScope`. Группы: `Master → Music` (слои
 «исследование» и «в бою» с плавным переходом, U09 R17) и `Master → Effects` (ползунок «эффекты», U08 R18) с
 дочерними `SFX` (события мира; подгруппа `Signals` — сигналы читаемости, U09 R3, R19), `Ambience` и `UI`.
 
@@ -482,14 +527,14 @@ U08 R17, R18) и язык (U08 R14). Срез добавляет флаги по
 - **Пул** `AudioSourcePool`: SFX — 24 голоса (ориентир, замер на 40 существах, ARCH-19); по 2 на музыку (переход
   слоёв) и фон; UI — 4. Когда голоса кончаются, вытесняется самый старый с наименьшим приоритетом. Один клип звучит
   не больше 3 раз одновременно в окне 50 мс.
-- **Клипы** — через `IAssetProvider` по адресу, он же строковый id (A-56). Звуки локации предзагружает
+- **Клипы** — через `IAssetProvider` по адресу, он же строковый id (CONT-18). Звуки локации предзагружает
   `PresentationPreloadNode`; хэндлы освобождаются вместе с `GameScope`.
 - **API** `IAudioService`: `PlayOneShot(address, AudioChannel, position?, priority)`, `PlayMusic(address, fade)`,
   `SetMusicLayerWeight(combat01)`, `PlayAmbience(address, fade)`, `SetVolume(VolumeChannel, value)`.
 - **Пауза игры** → `AudioListener.pause = true`: звуки локации стоят (U09 R13). У источников `Music` и `UI` выставлено
   `ignoreListenerPause = true` — они звучат дальше под снимком `Paused`. В фоне звук глушит ОС.
 - **Граница.** Какой звук на какое событие, решает представление (README 3). Два слоя музыки встроенный звук
-  тянет; FMOD — только если понадобится адаптивная музыка сложнее (A-55).
+  тянет; FMOD — только если понадобится адаптивная музыка сложнее.
 
 ## 8. Жизненный цикл приложения и пауза
 
@@ -502,9 +547,7 @@ U08 R17, R18) и язык (U08 R14). Срез добавляет флаги по
   `Application.wantsToQuit` (задержка выхода до финальной записи) и `Application.lowMemory` (`IAssetProvider`
   сбрасывает кэши, пишется `Warning`).
 - **Остановка тика.** `WorldHost` подписан на `OnGamePauseChanged` и на паузе не обновляет `SimulationTickGroup`;
-  операции меню применяются «тиком без времени» (A-17, `Simulation.md` §5.3); представление замирает на
-  последнем снимке (README 3). После паузы догоняющих тиков нет: хост сбрасывает
-  накопитель фиксированного шага (`Simulation.md`). `Time.timeScale` не используется. `IScreenService` держит
+  «тик без времени» и отсутствие догоняющих тиков — README §3, `Simulation.md` §2.3, §5.3. `IScreenService` держит
   `PauseReason.Menu`, пока открыт хоть один экран (U04 R1).
 
 ```mermaid
@@ -522,14 +565,13 @@ stateDiagram-v2
 ```
 
 - **Сворачивание** (`OnApplicationPause(true)`): `Background` → `OnEnteringBackground` → Urgent
-  `RequestSave(Background)`. Посреди перехода между локациями захвата нет: остаётся прошлая запись, переход запишет
+  `RequestSaveAsync(Background)`. Посреди перехода между локациями захвата нет: остаётся прошлая запись, переход запишет
   свой шаг после возвращения (M01 §10). Главный поток ждёт записи до 2 с — кадр не рисуется, просадки нет; фоновое
   время iOS и Android — **проверить на устройстве**. Затем `Background` сменяется на `AwaitingResume`.
 - **Возвращение** (`OnApplicationPause(false)`): игра стоит до явного «Продолжить» (U04 R3); если экран не открыт,
   UI показывает меню паузы. «Продолжить» → `ConfirmResume()` → `OnResumedAfterBackground`.
-- **Льгота после возврата** — правило симуляции. `ResumeGraceRelay` (`GameScope`) ставит в `IOperationSink`
-  операцию `RESUME_GRACE`; тип и длительность задают `Simulation.md` и GDD. Критерий U04 §13: после сворачивания и
-  возврата в первые секунды урона нет.
+- **Льгота после возврата** — операция `RESUME_GRACE` (`Simulation.md` §5.2), её ставит `ResumeGraceRelay`
+  (`GameScope`). Критерий U04 §13: после сворачивания и возврата в первые секунды урона нет.
 - **Потеря фокуса без сворачивания** (шторка уведомлений, пункт управления) → `AwaitingResume` без записи;
   в редакторе и на ПК отключается настройкой. Кокон, метаморфоза, поглощение и рывок на паузе замирают и
   продолжаются с того же тика (E08 §10, U04 §10).
@@ -538,18 +580,18 @@ stateDiagram-v2
 ## 9. Локализация (сервис)
 
 - **Где.** Интерфейс `ILocalizationService` — в Services. Реализация `UnityLocalizationService` — в UI, потому что
-  на Unity Localization ссылается только UI (README 4.1). В `ProjectScope` её регистрирует инсталлер UI.
-- **Строки** хранятся в `Configs/strings/` (JSON) и при сборке импортируются в String Tables (A-54, `Content.md`).
-  В редакторе работает горячая перезагрузка.
+  на Unity Localization ссылается только UI. В `ProjectScope` её регистрирует инсталлер UI.
+- **Строки** и их импорт в String Tables — `Content.md` §8.
 - **Инициализация** (`LocalizationNode`). Сервис ждёт `LocalizationSettings.InitializationOperation` и выбирает язык:
-  из профиля; если там пусто — язык системы, если он поддержан; иначе английский (M04 R11, U08 R14). В прототипе
-  язык один — русский (M04 R1). Таблицы главного меню загружаются заранее.
+  из профиля; если там пусто — язык системы, если он поддержан; иначе английский (M04 R11, U08 R14;
+  `SystemLocaleSelector` с запасным английским). В прототипе язык один — русский (M04 R1). Таблицы главного меню
+  загружаются заранее.
 - **API.** `CurrentLocale`, `AvailableLocales`, `SetLocaleAsync(code)` (сохраняет выбор в профиль),
-  `Get(table, key)`, `Format(table, key, args)`, событие `OnLocaleChanged`. Шаблоны и множественное число — Smart
-  Strings; склеивать строки в коде нельзя (M04 R6, R7).
-- **Экраны** привязывают текст через `LocalizedString` в UI Toolkit (`UI.md`). Сервисы передают ключи, а не готовый
-  текст (ARCH-17). Ввод игрока (seed, имя мира) не локализуется (M04 R10).
-- **Пакет** `com.unity.localization` в `Packages/manifest.json` ещё не добавлен; имена API сверить при установке
+  `Get(table, key)`, `Format(table, key, args)`, событие `OnLocaleChanged`. Шаблоны, множественное число и запрет
+  склейки — `Content.md` §8.1.
+- **Экраны** привязывают текст через `LocalizedString` в UI Toolkit (`UI.md` §9). Сервисы передают ключи, а не
+  готовый текст (ARCH-17). Ввод игрока (seed, имя мира) не локализуется (M04 R10).
+- **Пакет** `com.unity.localization` — статус `CodeStructure.md` §3.1; имена API сверить при установке
   (**проверить на спайке**). Исключение из ARCH-17 — встроенный текст ru/en аварийного экрана загрузки (раздел 10):
   локализация к тому моменту может не подняться.
 
@@ -558,7 +600,15 @@ stateDiagram-v2
 Сборка `RiseToPanteon.Services`:
 
 ```csharp
-public enum LogLevel { Verbose, Debug, Info, Warning, Error }
+public enum LogLevel
+{
+    Verbose,
+    Debug,
+    Info,
+    Warning,
+    Error
+}
+
 public interface ILog
 {
     ILog ForCategory(string category);
@@ -578,7 +628,7 @@ public interface ILog
 
 **Релиз.** `Verbose` и `Debug` вырезаются при компиляции вместе с вычислением аргументов. `Info` пишется только в
 кольцевой буфер, `Warning` и `Error` — в консоль и в буфер. Стек для `LogType.Log` выключен:
-`Application.SetStackTraceLogType(LogType.Log, StackTraceLogType.None)`. Телеметрии нет (A-02).
+`Application.SetStackTraceLogType(LogType.Log, StackTraceLogType.None)`. Телеметрии нет (README §2).
 
 **Сообщения движка** из `Application.logMessageReceivedThreaded` идут в буфер и файл, в консоль повторно не
 попадают. Необработанные исключения уходят в `ILog.Error`: в точках входа — через
@@ -606,9 +656,8 @@ public interface ILog
 - **Изоляция.** Релизный код на типы Dev не ссылается. Dev подключается только своими инсталлерами и реализациями
   `ILogSink`, `ISaveCommitObserver`, `IGameStartNode`. Dev-инсталлер целится в Project (панель главного меню с вводом
   seed — M02 R12, §7), в Game (dev-типы операций, dev-экспорт) или в Dev (оверлеи).
-- **Читы** — dev-типы `Operation` (ARCH-18); их Validate и Apply — `ISystem` из `RiseToPanteon.Dev` в
-  `CommandIntakeGroup`, существующие только в dev-сборке. Оверлеи читают `IWorldView` и dev read-модели, которые
-  dev-системы пишут в `ExportGroup` обычным механизмом (`Simulation.md`).
+- **Читы** — dev-операции (ARCH-18, `Simulation.md` §5.4). Оверлеи читают `IWorldView` и dev read-модели, которые
+  dev-системы пишут в `ExportGroup` обычным механизмом (`Simulation.md` §6.2).
 - **Пакетные инструменты** работают в редакторе или через `-batchmode -executeMethod`, точки входа — в
   `RiseToPanteon.Editor`. Мир создаётся через `WorldHost` без сцен и представления (headless, `Simulation.md`),
   сервисы — в `ContainerBuilder` без `LifetimeScope`. Результат — код выхода и файл отчёта.
@@ -632,7 +681,7 @@ public interface ILog
 | ID | Правило |
 |---|---|
 | SVC-01 | Скоупов три: `ProjectScope`, `GameScope`, `DevScope`. Новый скоуп сначала описывается в README. |
-| SVC-02 | Регистрация — только в `IFeatureInstaller` с `[FeatureInstaller(scope, Order)]` и `[Preserve]`. Инсталлер только регистрирует: без резолва, файлов, асинхронщины и побочных эффектов. Центральные файлы не правятся; в `Configure` скоупа — только ссылки сцены и вызов каталога. |
+| SVC-02 | Сверх ARCH-15: инсталлер помечен `[FeatureInstaller(scope, Order)]` и `[Preserve]` и только регистрирует — без резолва, файлов, асинхронщины и побочных эффектов. В `Configure` скоупа — только ссылки сцены и вызов каталога. |
 | SVC-03 | Один контракт — одна регистрация на цепочку скоупов. Несколько — только для `[CollectionContract]`; дубль — ошибка старта. Потребитель коллекции фильтрует её сам и не полагается на подмешивание родителя. |
 | SVC-04 | В каждом скоупе одна точка входа: `BootEntryPoint`, `GameEntryPoint`, `DevEntryPoint`. Стартовая работа фичи — узел `IBootNode` или `IGameStartNode` с явными `DependsOn`; `IStartable` и `IAsyncStartable` в фичах запрещены. |
 | SVC-05 | У узла загрузки зависимости заданы типами, `Weight > 0`, запуск повторяем. Граф проверяется до старта: цикл или отсутствующая зависимость — ошибка старта. |
@@ -642,42 +691,39 @@ public interface ILog
 | SVC-09 | Состояние игры попадает на диск только через `ISaveService`, захват — только в безопасной точке. DTO — свежие копии без ссылок на ECS, `UnityEngine.Object` и живые коллекции. |
 | SVC-10 | Запись атомарна (`.tmp` → замена, одна `.bak`), идёт вне главного потока, на слот — одна за раз. Прежний валидный файл удаляется только после успешной новой записи. |
 | SVC-11 | У `ISaveSection` стабильный `Id` и `Version`. Схема DTO изменилась — `Version` растёт; со Среза — вместе с миграцией. |
-| SVC-20 | Данные `ISaveSection` ссылаются на строки конфигов **строковым id**, никогда плотным индексом пака (`Content.md` CONT-11): индексы меняются при правке конфигов. |
+| SVC-20 | Данные `ISaveSection` ссылаются на строки конфигов по CONT-11 — **строковым id**, не индексом пака. |
 | SVC-12 | Экран смерти открывается по `OnCommitted(Death)`. Пока стоит `SaveBarrier`, меню не открываются. |
-| SVC-13 | Пауза игры — только `IAppLifecycle.AcquirePause(reason)` с освобождением хэндла; `Time.timeScale` для паузы не используется. После фона игра стоит в `AwaitingResume` до явного «Продолжить». |
+| SVC-13 | Сверх ARCH-21: хэндл `AcquirePause` освобождается; после фона игра стоит в `AwaitingResume` до явного «Продолжить». |
 | SVC-14 | Игра получает ввод только как `PlayerInputFrame` из `IInputService`. С Input System напрямую работают только `InputService`, карта `UI` в контуре UI и Dev. |
 | SVC-15 | Звук — только через `IAudioService`: `AudioSource` вне пула не создаются, клипы грузятся через `IAssetProvider`. |
 | SVC-16 | Текст для игрока — только по ключу через `ILocalizationService` или `LocalizedString`. Единственное исключение — встроенный текст `BootErrorScreen`. |
-| SVC-17 | Логирование — только через `ILog`; `Debug.Log*` вызывает только `UnityConsoleSink`. Пустых `catch` нет, исключения логируются с контекстом. |
-| SVC-18 | Dev-код — только в `RiseToPanteon.Dev` под `RTP_DEV`, в рантайме — `Debug.isDebugBuild`. `DEVELOPMENT_BUILD` запрещён (UAC0009). Релизный код не ссылается на типы Dev. |
+| SVC-17 | Сверх CODE-13: логгер — `ILog`; `Debug.Log*` вызывает только `UnityConsoleSink`. Пустых `catch` нет, исключения логируются с контекстом. |
+| SVC-18 | Сверх ARCH-18: в рантайме dev-проверка — `Debug.isDebugBuild`; `DEVELOPMENT_BUILD` запрещён (UAC0009). Релизный код не ссылается на типы Dev. |
 | SVC-19 | Сервисы и App не содержат правил игры и не используют Unity.Entities (ARCH-02, ARCH-04). |
 
 ## 13. Типы контура
 
-Пометка «README» — канонические имена из README; остальные типы введены этим документом.
+Типы из таблицы README §4.3 здесь не повторяются; ниже — остальные публичные типы контура.
 
 | Тип | Сборка | Скоуп / вид | Назначение |
 |---|---|---|---|
-| `IFeatureInstaller` (README); `FeatureInstallerAttribute`, `InstallScope`, `CollectionContractAttribute` | Core | интерфейс, атрибуты, enum | Инсталлер фичи, его скоуп и порядок; контракт с несколькими регистрациями |
-| `ProjectScope`, `GameScope`, `DevScope` (README); `FeatureInstallerCatalog`, `CompositionException` | App | `LifetimeScope`; static, исключение | Скоупы; поиск, порядок, установка и проверка инсталлеров |
-| `BootGraph` (README), `BootFailedException` | App | класс, исключение | Исполнитель графа загрузки, сбой узла |
-| `IBootNode`, `IGameStartNode` (README) | Core | интерфейсы | Узлы загрузки приложения и старта игры; фичи добавляют свои инсталлерами |
+| `CollectionContractAttribute` | Core | атрибут | Контракт с несколькими регистрациями (2.3) |
+| `FeatureInstallerCatalog`, `CompositionException` | App | static, исключение | Поиск, порядок, установка и проверка инсталлеров |
+| `BootFailedException` | App | исключение | Сбой узла графа загрузки |
 | `BootEntryPoint`, `GameEntryPoint` / `DevEntryPoint` | App / Dev | `IAsyncStartable` | Единственные точки входа скоупов |
 | `AddressablesInitNode`, `ProfileLoadNode`, `ConfigPackNode`, `LocalizationNode`, `AudioInitNode`, `SaveIndexNode`, `MainMenuReadyNode` | App | `IBootNode`, Project | Узлы загрузки (3.2) |
 | `WorldCreateNode`, `SnapshotLoadNode`, `ConfigBindNode`, `WorldBuildNode`, `InitialSaveNode`, `LocationUnfoldNode`, `PresentationPreloadNode`, `GameReadyNode`; `DevSceneNode` | App; Dev | `IGameStartNode`, Game | Узлы старта игры (3.3); загрузка `Dev.unity` |
-| `ISceneFlow` / `SceneFlow`; `GameStartRequest`, `ILoadingProgress` | Services / App; Services | Project | Переходы между сценами; `NewWorld(seed, salt)` или `Continue(slot)`; прогресс для UI |
+| `GameStartRequest`, `ILoadingProgress` | Services | Project | `NewWorld(seed, salt)` или `Continue(slot)`; прогресс загрузки для UI |
 | `BridgeContainerExtensions`, `BridgeSystemDescriptor` | Bridge | static, `[CollectionContract]` | `RegisterBridgeSystem<T>()` и список систем для `WorldHost` |
-| `ISaveService`, `ISaveSection` (README); `ISaveWriter`, `ISaveReader`, `IWorldSaveSource` | Services | Project; интерфейсы | Сохранения, секция фичи, запись и чтение секций, источник снимка мира |
+| `ISaveWriter`, `ISaveReader`, `IWorldSaveSource` | Services | интерфейсы | Запись и чтение секций, источник снимка мира |
 | `SaveReason`, `SaveTarget`, `SaveResult`, `SaveCommit`, `WorldSlotInfo`, `WorldLoadResult`, `SaveHeader` | Services | значения | Причины, результат, слоты, заголовок файла |
 | `ISaveCommitObserver`; `ISaveMigration`; `ISaveDtoFormatter<T>` | Services | `[CollectionContract]`; Срез; запасной путь | Наблюдатель после записи (dev JSON); миграция секции; формат DTO без MemoryPack |
 | `WorldSaveSource`, `SaveTriggerRelay`, `PlayerInputIntakeSystem`, `ResumeGraceRelay` | Bridge | Game | Источник снимка; триггеры из `SimEvent`; ввод в ECS; операция льготы |
 | `SaveJsonDumper`, `FileLogSink` | Dev | Project | JSON-выгрузка сохранения; лог в файл |
 | `ISettingsService`, `GameSettings` | Services | Project | Настройки из профиля устройства |
-| `IInputService`, `ITouchControlsSink` (README), `InputScheme` | Services | Project | Ввод; приём тача и флага «указатель над UI» от UI; активная схема |
-| `IPointerProjector` (README) | Contracts | Game | Экран → мир для прицела мышью; реализует Presentation |
-| `PlayerButton` | Contracts | enum | Кнопки из состава `PlayerInputFrame`; **нужно канонизировать в README и `Simulation.md`** |
-| `IAudioService` (README), `AudioChannel`, `VolumeChannel`, `AudioSourcePool` | Services | Project | Звук, каналы микшера, громкость, пул |
-| `IAppLifecycle` (README), `PauseReason`, `AppLifecycleBehaviour` | Services | Project | Пауза, фон, возобновление; пересылка колбэков Unity |
+| `InputScheme` | Services | enum | Активная схема ввода (6) |
+| `AudioChannel`, `VolumeChannel`, `AudioSourcePool` | Services | Project | Каналы микшера, громкость, пул источников |
+| `PauseReason`, `AppLifecycleBehaviour` | Services | Project | Причины паузы; пересылка колбэков Unity в `IAppLifecycle` |
 | `ILocalizationService` / `UnityLocalizationService` | Services / UI | Project | Язык и строки |
 | `ILog`, `LogLevel`, `LogExtensions`, `ILogSink`, `UnityConsoleSink`, `RingBufferSink` | Services | Project | Логирование |
 | `BootErrorScreen` | UI | `Boot.unity` | Аварийный экран загрузки без DI |

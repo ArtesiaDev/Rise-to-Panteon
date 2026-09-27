@@ -13,7 +13,6 @@ ALLOWED_MD = [glob_regex(p) for p in [
     "Docs/GDD/*.md",
     "Docs/GDD/Features/*.md",
     "Docs/Tech/Harness.md",
-    "Docs/Tech/ArchitectureDecisions.md",
     "Docs/Tech/Architecture/*.md",
     "Docs/Tech/Reference/**/*.md",
     "Docs/Parked/*.md",

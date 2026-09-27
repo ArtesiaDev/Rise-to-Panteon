@@ -58,3 +58,19 @@
   expect: [Architecture/README.md, Presentation.md#12, Scope.md]
 - q: локализация текста для игрока
   expect: [M04-Localization.md, UI.md#9, Content.md#8, Services.md#9]
+- q: личная база игрока
+  expect: [Camp.md, K01-CampLocation.md]
+- q: что будет если умереть
+  expect: [D01-DeathAndRespawn.md, Death.md]
+- q: торговец
+  expect: [I10-SinksAndArbitrage.md, K04-CampActivities.md, I01-Items.md]
+- q: где писать почему принято решение
+  expect: [Harness.md]
+- q: нельзя комментарии в коде
+  expect: [CodeStructure.md, Harness.md]
+- q: как агент проверяет изменения перед коммитом
+  expect: [Harness.md, CodeStructure.md#12]
+- q: слоты способностей
+  expect: [C05-Abilities.md]
+- q: фракции
+  expect: [L10-Factions.md, LivingWorld.md]

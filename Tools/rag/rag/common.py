@@ -8,10 +8,8 @@ CORPUS = [
     ("Docs/GDD/Features/*.md", "gdd-feature"),
     ("Docs/GDD/Glossary.md", "gdd-reference"),
     ("Docs/GDD/Formulas.md", "gdd-reference"),
-    ("Docs/GDD/DecisionLog.md", "decisions"),
     ("Docs/GDD/*.md", "gdd"),
     ("Docs/Tech/Architecture/*.md", "arch"),
-    ("Docs/Tech/ArchitectureDecisions.md", "decisions"),
     ("Docs/Tech/Reference/Unity/*.md", "reference"),
     ("Docs/Tech/Harness.md", "harness"),
     ("Docs/Roadmap.md", "roadmap"),
@@ -20,7 +18,7 @@ CORPUS = [
 ]
 
 LAYERS = list(dict.fromkeys(layer for _, layer in CORPUS))
-DEFAULT_LAYERS = [layer for layer in LAYERS if layer != "decisions"]
+DEFAULT_LAYERS = list(LAYERS)
 
 EXCLUDED_PARTS = {"_Template~"}
 
@@ -307,7 +305,7 @@ def parse_doc(path: str, layer: str, text: str = None) -> Doc:
             doc.mentions.update(DOC_MENTION.findall(line))
     doc.feature_ids = set(FEATURE_ID.findall(body))
     doc.rule_ids = set(RULE_ID.findall(body))
-    if layer in ("arch", "harness", "decisions"):
+    if layer in ("arch", "harness"):
         for line in lines:
             m = TABLE_RULE_ROW.match(line)
             if m:
