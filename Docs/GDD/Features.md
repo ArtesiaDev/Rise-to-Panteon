@@ -22,7 +22,7 @@
 | W08 | [Приглушение плотности](Features/W08-DensitySuppression.md) | Прототип | ✅ |
 | W09 | [Врата Резонанса: два ключа](Features/W09-ResonanceGates.md) | Срез | ✅ |
 | W10 | [Постоянство мира](Features/W10-WorldPersistence.md) | Прототип | ✅ |
-| W11 | [Биомы ярусов](Features/W11-TierBiomes.md) | Срез | ❓ лор — Z2 |
+| W11 | [Биомы ярусов](Features/W11-TierBiomes.md) | Срез | ✅|
 | W12 | [Замки и ключи](Features/W12-LocksAndKeys.md) | Прототип | ✅ |
 | W13 | [Ловушки](Features/W13-Traps.md) | Прототип | ✅ |
 | W14 | [Лут в мире](Features/W14-WorldLoot.md) | Прототип | ✅ |
@@ -71,9 +71,9 @@
 | B01 | [Виды существ](Features/B01-Species.md) | Прототип | 🟡 каталог |
 | B02 | [ИИ и пищевая сеть](Features/B02-CreatureAI.md) | Прототип | ✅ |
 | B03 | [Мини-боссы](Features/B03-MiniBosses.md) | Прототип | ✅ |
-| B04 | [Изначальные Стражи](Features/B04-OriginalGuardians.md) | Срез | ❓ лор — Z2 |
+| B04 | [Изначальные Стражи](Features/B04-OriginalGuardians.md) | Срез | ✅|
 | B05 | [Преемники Стражей](Features/B05-GuardianSuccessors.md) | Срез | ✅ |
-| B06 | [Мегабосс Рубежа](Features/B06-FrontierMegaboss.md) | Гл1 | ❓ лор — Z1 |
+| B06 | [Мегабосс Рубежа](Features/B06-FrontierMegaboss.md) | Гл1 | ✅|
 
 ## Живой мир — [LivingWorld.md](LivingWorld.md)
 
@@ -84,11 +84,11 @@
 | L03 | [Правила шага мира](Features/L03-WorldStepRules.md) | Прототип (охота, рост) | 🟡 формулы |
 | L04 | [Истощение](Features/L04-Depletion.md) | Срез | ✅ |
 | L05 | [Следы](Features/L05-Traces.md) | Прототип (минимум) | 🟡 реестр |
-| L06 | [Слухи](Features/L06-Rumors.md) | Срез | ❓ лор — Z3 |
+| L06 | [Слухи](Features/L06-Rumors.md) | Срез | ✅|
 | L07 | [NPC в мире](Features/L07-WorldNPCs.md) | Срез | ✅ |
 | L08 | [Преемники функций NPC](Features/L08-NPCFunctionSuccession.md) | Срез | ✅ |
-| L09 | [Соперники](Features/L09-Rivals.md) | Срез | ❓ лор — Z2, Z3 |
-| L10 | [Фракции](Features/L10-Factions.md) | Срез | ❓ лор — Z2 |
+| L09 | [Соперники](Features/L09-Rivals.md) | Срез | ✅|
+| L10 | [Фракции](Features/L10-Factions.md) | Срез | ✅|
 | L11 | [Подчинение](Features/L11-Subjugation.md) | Срез | ✅ |
 | L12 | [Страховки](Features/L12-Guardrails.md) | Срез | ✅ |
 | L13 | [Рычаги игрока](Features/L13-PlayerLevers.md) | Срез | ✅ |
@@ -99,18 +99,18 @@
 |----|------|------|--------|
 | D01 | [Смерть и возрождение](Features/D01-DeathAndRespawn.md) | Прототип | ✅ |
 | D02 | [Эхо Души](Features/D02-SoulEcho.md) | Прототип | ✅ |
-| D03 | [Наследие](Features/D03-Legacy.md) | Гл1 | ❓ лор — Z3 |
+| D03 | [Наследие](Features/D03-Legacy.md) | Гл1 | ✅|
 
 ## Лагерь — [Camp.md](Camp.md)
 
 | ID | Фича | Этап | Статус |
 |----|------|------|--------|
-| K01 | [Локация Лагеря](Features/K01-CampLocation.md) | Срез | ❓ лор — Z3 |
+| K01 | [Локация Лагеря](Features/K01-CampLocation.md) | Срез | ✅|
 | K02 | [Якоря](Features/K02-Anchors.md) | Прототип (якорь на каждом этаже, I34), Срез *(итерация 4 — сверка: было «Прототип (стартовый)»)* | ✅ |
-| K03 | [Приведение NPC](Features/K03-BringingNPCs.md) | Срез | ❓ лор — Z2 |
+| K03 | [Приведение NPC](Features/K03-BringingNPCs.md) | Срез | ✅|
 | K04 | [Активности](Features/K04-CampActivities.md) | Срез | ✅ |
 | K05 | [Хранилище](Features/K05-Storage.md) | Срез | ✅ |
-| K06 | [Персонализация](Features/K06-CampPersonalization.md) | Гл1 | ❓ лор — Z3 |
+| K06 | [Персонализация](Features/K06-CampPersonalization.md) | Гл1 | ✅|
 | K07 | [Улучшения Лагеря](Features/K07-CampUpgrades.md) | Срез | ✅ |
 
 ## Предметы и экономика — [Items.md](Items.md), [Economy.md](Economy.md)
@@ -118,13 +118,13 @@
 | ID | Фича | Этап | Статус |
 |----|------|------|--------|
 | I01 | [Обычные предметы и источники](Features/I01-Items.md) | Прототип | 🟡 |
-| I02 | [Реликвии](Features/I02-Relics.md) | Срез | ❓ лор — Z3 |
+| I02 | [Реликвии](Features/I02-Relics.md) | Срез | ✅|
 | I03 | [Слоты: внутренние и внешние](Features/I03-ItemSlots.md) | Прототип | ✅ |
 | I04 | [Свойства и редкость](Features/I04-ItemPropertiesAndRarity.md) | Срез | ✅ |
 | I05 | [Расходники](Features/I05-Consumables.md) | Прототип | ✅ |
 | I06 | [Видимость предметов](Features/I06-ItemVisibility.md) | Прототип | ✅ |
 | I07 | [Сила предмета и плотность](Features/I07-ItemPowerCap.md) | Прототип | ✅ |
-| I08 | [Валюты](Features/I08-Currencies.md) | Срез | ❓ лор — Z3 |
+| I08 | [Валюты](Features/I08-Currencies.md) | Срез | ✅|
 | I09 | [Материалы](Features/I09-Materials.md) | Срез | ✅ |
 | I10 | [Стоки и защита от арбитража](Features/I10-SinksAndArbitrage.md) | Срез | ✅ |
 | I11 | [Крафт и улучшение](Features/I11-CraftAndUpgrade.md) | Срез | ✅ |
@@ -133,13 +133,13 @@
 
 | ID | Фича | Этап | Статус |
 |----|------|------|--------|
-| N01 | [Фрагменты лора](Features/N01-LoreFragments.md) | Срез | ❓ лор — Z3 |
-| N02 | [Диалоги](Features/N02-Dialogues.md) | Срез | ❓ лор — Z3 |
+| N01 | [Фрагменты лора](Features/N01-LoreFragments.md) | Срез | ✅|
+| N02 | [Диалоги](Features/N02-Dialogues.md) | Срез | ✅|
 | N03 | [Просьбы](Features/N03-Requests.md) | Срез | ✅ |
 | N04 | [Катсцены](Features/N04-Cutscenes.md) | Срез | ✅ |
 | N05 | [Реакции персонажа](Features/N05-CharacterReactions.md) | Прототип | ✅ |
-| N06 | [Откровения](Features/N06-Revelations.md) | Срез | ❓ лор — Z1, Z2 |
-| N07 | [Концовки](Features/N07-Endings.md) | Гл1 | ❓ лор — Z1 |
+| N06 | [Откровения](Features/N06-Revelations.md) | Срез | ✅|
+| N07 | [Концовки](Features/N07-Endings.md) | Гл1 | ✅|
 
 ## Интерфейс — [Interface.md](Interface.md)
 
