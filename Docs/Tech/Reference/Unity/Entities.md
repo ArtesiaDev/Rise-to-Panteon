@@ -61,7 +61,7 @@ ECS в проекте — **только симуляция игровой ло�
 | `[assembly: DisableAutoCreation]` | То же для **всех** систем сборки (проверено в `Types/TypeManagerSystems.cs`) |
 | `[DisableBootstrapOverrides]` (тип или сборка) | `ICustomBootstrap` не выбирается автоматически |
 
-Рекомендация для проекта: define `..._RUNTIME_WORLD` плюс `[assembly: DisableAutoCreation]` в сборках симуляции. Системы попадают в мир только через явный список.
+Как это применяется в проекте, определяет `Docs/Tech/Architecture/README.md` §4.4 (он приоритетнее справочника): define `..._RUNTIME_WORLD` отключает только мир по умолчанию; системы симуляции **не** помечаются `[DisableAutoCreation]` и находятся автоматически через `GetAllSystems` + `AddSystemsToRootLevelSystemGroups` по `[UpdateInGroup]` (без центрального списка); `[DisableAutoCreation]` ставится только на мостовые `SystemBase`, которые создаёт VContainer и хост добавляет через `World.AddSystemManaged`.
 
 ### 2.4 Создание мира вручную
 

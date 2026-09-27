@@ -2,16 +2,24 @@
 
 ## Проект
 
-2D roguelike на Unity 6.6 (6000.6.3f1) с DOTS (Entities 6.6 — core-пакет движка).
-Гибридная архитектура: ECS-симуляция + GameObject-рендеринг.
+2D RPG-песочница на Unity 6.6 (6000.6.3f1) для iOS и Android, одиночная игра.
+Вся игровая логика — Unity ECS (Entities 6.6); отрисовка (URP 2D), UI (UI Toolkit) и сервисы (VContainer) —
+отдельные ООП-контуры, связанные только данными.
 
-## Правила работы с ECS
+## Архитектура — читать первой
 
-При работе с ECS используй Unity DOTS. Это обязательно.
+`/Docs/Tech/Architecture/README.md` — контуры, каркас, канонические имена, правила ARCH-xx; оттуда ссылки на
+документы контуров (`Simulation.md`, `Presentation.md`, `UI.md`, `Content.md`, `Services.md`,
+`CodeStructure.md`). Любой новый код пишется только по ним. Почему принято то или иное решение —
+`/Docs/Tech/ArchitectureDecisions.md`.
 
-### Документация проекта
+Код в `Assets/_Project/{Dots,Framework,Main,Dev,Editor}` — прототип старой концепции (legacy): новый код на него
+не ссылается и не берёт из него образцы. Конституция `.specify/memory/constitution.md` пока описывает этот
+прототип и будет переписана вместе с харнессом агентов; при расхождении приоритет у `/Docs/Tech/Architecture/`.
 
-Пути к документации по правильному использованию:
+## Справочники по ECS
+
+Справочники по API (что и как работает в 6.6):
 1. `/Docs/Tech/Reference/Unity/Entities.md` — Unity Entities 6.6: что используем и как
 2. `/Docs/Tech/Reference/Unity/JobsAndBurst.md` — Job System, Burst, Collections
 
@@ -30,24 +38,11 @@ https://docs.unity3d.com/Packages/com.unity.entities@6.6/manual/index.html
 и Aspects удалены, managed-компоненты устарели. Гайд по миграции:
 https://docs.unity3d.com/Packages/com.unity.entities@6.6/manual/upgrade-guide.html
 
-## Конституция проекта
-
-Принципы и ограничения описаны в `.specify/memory/constitution.md`.
-Все архитектурные решения ДОЛЖНЫ соответствовать конституции.
-
 ## Структура проекта
 
-```
-Assets/_Project/Dots/
-├── Runtime/        — IComponentData + ISystem (Burst-совместимые)
-│   ├── Components/ — чистые struct-компоненты
-│   ├── Systems/    — системы симуляции
-│   ├── Map/        — BlobAsset карты
-│   └── Navigation/ — A* pathfinding
-├── Hybrid/         — MonoBehaviour-мосты (Input, Rendering, UI)
-├── Authoring/      — MonoBehaviour + Baker
-└── Baking/         — BakingSystem расширения
-```
+Папки, сборки, неймспейсы, именование и пошаговое «как добавить фичу» — `/Docs/Tech/Architecture/CodeStructure.md`.
+Инфраструктура — `Assets/_Project/Code/<Контур>/`, фичи — `Assets/_Project/Features/<Фича>/<Контур>/`,
+конфиги — git submodule `Configs/` в корне репозитория.
 
 ## Документация геймплейных механик
 
@@ -75,17 +70,17 @@ Assets/_Project/Dots/
 
 ## Ключевые соглашения
 
-- Компоненты: `struct IComponentData` без managed-полей
-- Системы: `partial struct : ISystem` с `[BurstCompile]`
-- Структурные изменения: только через `EntityCommandBuffer`
-- Рандом: только `Unity.Mathematics.Random` (детерминизм по seed)
-- Ввод: только Input System — project-wide actions в
-  `Assets/Settings/InputSystem_Actions.inputactions` (`InputSystem.actions`);
-  `UnityEngine.Input` и `StandaloneInputModule` не использовать
+Полные правила — ARCH-xx в `/Docs/Tech/Architecture/README.md` и правила документов контуров. Кратко:
+- Контуры общаются только типами `Contracts`: из симуляции — снимок, события, read-модели; в симуляцию —
+  `PlayerInputFrame` и `Operation`. Кроме моста, никто не обращается к ECS.
+- Системы симуляции — `ISystem` + `[BurstCompile]`, работа в джобах; структурные изменения — через ECB тика
+- Рандом: только `Unity.Mathematics.Random` с состоянием в компонентах (детерминизм по seed)
+- Ввод: только Input System (`IInputService`, project-wide actions
+  `Assets/Settings/InputSystem_Actions.inputactions`); `UnityEngine.Input` и `StandaloneInputModule` не использовать
 - Enter Play Mode без перезагрузки домена: static-состояние сбрасывать
   в `OnDestroy` или через `[RuntimeInitializeOnLoadMethod(SubsystemRegistration)]`
-- Namespace: `RuntimeRoguelike.Dots.{Runtime|Hybrid|Authoring|Baking}`
-- Именование: PascalCase, суффиксы `System`, `Config`, `State`, `Tag`
+- Namespace: `RiseToPanteon.<Контур>` и `RiseToPanteon.<Фича>.<Контур>`; именование — `CodeStructure.md` §5
+- Числа баланса — только в `Configs/`; текст для игрока — только ключи локализации
 - Комментарии: на русском языке
 
 ## Active Technologies

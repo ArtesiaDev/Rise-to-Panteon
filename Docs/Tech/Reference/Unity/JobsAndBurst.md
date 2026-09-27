@@ -20,7 +20,7 @@
 
 **Правило.** Любая логика симуляции — это `ISystem` с `[BurstCompile]`, которая планирует Burst-джобы
 (`IJobEntity`/`IJobChunk`, при необходимости `IJobFor`/`IJobParallelFor*`). Отступление допускается
-только с причиной, записанной комментарием у системы (`// NOT BURST: ...` или `// MAIN THREAD: ...`).
+только с причиной, записанной комментарием у системы (`// NOT-BURST: ...` или `// MAIN-THREAD: ...`, ARCH-06).
 
 Разумные причины для исключения (по документации Entities и `ArchitectureDecisions.md`, R-04):
 
@@ -259,7 +259,7 @@ Sync point — место, где главный поток ждёт завер�
 `WaitForJobGroupID` на главном потоке. Правила проекта:
 
 - не вызывать `Complete()` в `OnUpdate` симуляции; результат нужен следующей системе — отдаём через компоненты и `state.Dependency`;
-- структурные изменения — через ECB (`EndFixedStepSimulationEntityCommandBufferSystem` для фиксированного тика);
+- структурные изменения — через ECB; в проекте для тика это `EndSimulationTickEcbSystem` (ARCH-07), в общем случае Unity — `EndFixedStepSimulationEntityCommandBufferSystem`;
 - системы со структурными изменениями ставить подряд: две такие системы подряд дают один sync point.
 
 ### Размер батча и рабочие потоки
@@ -505,7 +505,7 @@ Jobs › Burst › Open Inspector. Слева список целей компи
 - `NextInt(min, max)` — полуинтервал `[min, max)`, `NextUInt(max)` — `[0, max)`. Для авторитетной логики — только целочисленные методы, не `NextFloat*`.
 - Ловушка value type: копия `Random` в поле джоба продвигает свою копию. Исходное состояние не меняется, и следующий кадр повторит ту же последовательность. Сохраняй состояние обратно (компонент на сущности) или создавай генератор заново из `(worldSeed, stableId, tick)`.
 - Один `Random` на весь параллельный джоб — гонка и зависимость от порядка. Нужен свой генератор на сущность или на операцию.
-- Противоречие в правилах проекта: `CLAUDE.md` требует «только `Unity.Mathematics.Random`». ArchitectureDecisions R-05.9 (статус «Рекомендовано») предлагает собственный PCG32/SplitMix в ядре правил на чистом C# (`noEngineReferences`). В 6.6 Mathematics — движковый модуль, и из `noEngineReferences`-сборки он, вероятно, недоступен (не проверено компиляцией). До решения владельца: визуал и некритичное — `Unity.Mathematics.Random`, авторитетные броски — через ядро правил.
+- Решение проекта (журнал, A-16): `Unity.Mathematics.Random`, состояние в компонентах, сиды по правилам GDD. Собственный ГСЧ не используется.
 
 ### Рекомендуемые паттерны
 
@@ -530,7 +530,7 @@ public partial struct DeathJob : IJobEntity
 }
 
 // В OnUpdate системы фиксированного тика:
-var ecb = SystemAPI.GetSingleton<EndFixedStepSimulationEntityCommandBufferSystem.Singleton>()
+var ecb = SystemAPI.GetSingleton<EndSimulationTickEcbSystem.Singleton>() // в проекте (ARCH-07)
     .CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
 new DeathJob { Ecb = ecb }.ScheduleParallel();
 ```
