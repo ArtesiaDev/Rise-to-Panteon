@@ -3,6 +3,8 @@
     "com.coplaydev.unity-mcp": "https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity#main",
     "com.cysharp.unitask": "https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask#2.5.11",
     "com.unity.addressables": "2.11.2",
+    "com.unity.ai.assistant": "2.20.0-pre.1",
+    "com.unity.ai.inference": "2.6.1",
     "com.unity.collab-proxy": "2.13.6",
     "com.unity.entities": "6.6.0",
     "com.unity.feature.2d": "2.0.2",
