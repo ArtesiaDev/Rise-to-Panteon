@@ -694,7 +694,7 @@ public interface ILog
 | SVC-20 | Данные `ISaveSection` ссылаются на строки конфигов по CONT-11 — **строковым id**, не индексом пака. |
 | SVC-12 | Экран смерти открывается по `OnCommitted(Death)`. Пока стоит `SaveBarrier`, меню не открываются. |
 | SVC-13 | Сверх ARCH-21: хэндл `AcquirePause` освобождается; после фона игра стоит в `AwaitingResume` до явного «Продолжить». |
-| SVC-14 | Игра получает ввод только как `PlayerInputFrame` из `IInputService`. С Input System напрямую работают только `InputService`, карта `UI` в контуре UI и Dev. |
+| SVC-14 | Игра получает ввод только как `PlayerInputFrame` из `IInputService`. С Input System напрямую работают только `InputService` и dev-инструменты (Dev). UI Toolkit получает указатель и навигацию через модуль событий, настроенный в сцене `Boot` (карта `UI`); код контура UI API Input System не вызывает. |
 | SVC-15 | Звук — только через `IAudioService`: `AudioSource` вне пула не создаются, клипы грузятся через `IAssetProvider`. |
 | SVC-16 | Текст для игрока — только по ключу через `ILocalizationService` или `LocalizedString`. Единственное исключение — встроенный текст `BootErrorScreen`. |
 | SVC-17 | Сверх CODE-13: логгер — `ILog`; `Debug.Log*` вызывает только `UnityConsoleSink`. Пустых `catch` нет, исключения логируются с контекстом. |

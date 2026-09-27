@@ -96,8 +96,8 @@ Assets/
 | `RiseToPanteon.Presentation` | Core, Contracts, Services | Unity.RenderPipelines.Universal.Runtime, Unity.RenderPipelines.Core.Runtime, Unity.2D.Animation.Runtime, Unity.2D.Tilemap (прототип пола, `Presentation.md` §6.5), Unity.Burst, Unity.Collections, Unity.Mathematics, VContainer, UniTask | все | нет |
 | `RiseToPanteon.UI` | Core, Contracts, Services | Unity.Localization (после установки пакета), Unity.Mathematics, VContainer, UniTask | все | нет |
 | `RiseToPanteon.App` | Core, Contracts, Bridge, Services, Presentation, UI | VContainer, UniTask | все | нет |
-| `RiseToPanteon.Dev` | Core, Contracts, Simulation, Bridge, Services, Presentation, UI, App | Unity.Entities, Unity.Collections, Unity.Burst, Unity.Mathematics, VContainer, UniTask | все · `RTP_DEV` | да |
-| `RiseToPanteon.Editor` | все выше, кроме Dev | те же + `*.Editor`-сборки пакетов, Newtonsoft Json (только здесь, `Content.md` §4.2) | Editor | да |
+| `RiseToPanteon.Dev` | Core, Contracts, Simulation, Bridge, Services, Presentation, UI, App | Unity.Entities, Unity.Collections, Unity.Burst, Unity.Mathematics, VContainer, UniTask, Input System, Newtonsoft Json (`Content.md` §4.2) | все · `RTP_DEV` | да |
+| `RiseToPanteon.Editor` | все выше, кроме Dev | те же + `*.Editor`-сборки пакетов, Newtonsoft Json (`Content.md` §4.2) | Editor | да |
 | `RiseToPanteon.Tests.EditMode` | все выше, кроме Dev | те же + UnityEngine.TestRunner, UnityEditor.TestRunner, `nunit.framework.dll` | Editor · `UNITY_INCLUDE_TESTS` | да |
 | `RiseToPanteon.Tests.PlayMode` | все рантайм-сборки, кроме Dev | те же + UnityEngine.TestRunner, `nunit.framework.dll` | все · `UNITY_INCLUDE_TESTS` | да |
 
@@ -182,7 +182,7 @@ Defines проекта: `UNITY_DISABLE_AUTOMATIC_SYSTEM_BOOTSTRAP_RUNTIME_WORLD`
 | Везде | `RuntimeRoguelike`, `using Framework` (прототип); `DefaultGameObjectInjectionWorld`; `UnityEngine.Input`, `Input.Get*`; `Debug.Log*` вне логгера в `Code/Services/`; `Resources.Load`; `GameObject.Find*`, `FindObject*`, `FindAnyObjectByType`; `async void` |
 | `Simulation` | Любой `UnityEngine`; `System.IO`; `System.Random`; `DateTime`; `VContainer`; `Cysharp`; `SystemBase`; `class …: IComponentData` |
 | `Services`, `Presentation`, `UI`, `App`; `Dev`, кроме `*DevOpSystem` | `Unity.Entities`, `Unity.Transforms`, `EntityManager`, `SystemAPI` |
-| Всё, кроме `Services` | `UnityEngine.InputSystem` (ввод — через `IInputService`, CODE-12) |
+| Всё, кроме `Services` и `Dev` | `UnityEngine.InputSystem` (ввод — через `IInputService`, CODE-12) |
 
 Правила, которые требуют знания заметок, проверяет не Unity, а `rag lint` (`Docs/Tech/Harness.md` §8): комментарии в
 коде (CODE-18), запись о каждом файле в заметке (CODE-19), `ISystem` без `[BurstCompile]` без записи
@@ -453,8 +453,8 @@ block: 0x20
 ### 7.1. Схема
 
 `OpType`, `SimEvent.Type` и `OpRequest.Reason` — `ushort`. Срез получает **блок** `B` — байт от `0x10` до `0xEF`.
-Блок `0x00` принадлежит инфраструктуре (`InfraOpTypes`, `InfraEventTypes` в `Code/Contracts/`, `InfraDevOpTypes` в
-`Code/Dev/`; там же причины `UNHANDLED`, `NEEDS_RUNNING_TICK` из `Simulation.md` §5), `0x01–0x0F` — её резерв.
+Блок `0x00` принадлежит инфраструктуре: `InfraOpTypes`, `InfraEventTypes` и `InfraRejectReasons` (причины `UNHANDLED`,
+`NEEDS_RUNNING_TICK`, `Simulation.md` §5) — в `Code/Contracts/`, `InfraDevOpTypes` — в `Code/Dev/`; `0x01–0x0F` — её резерв.
 
 | Пространство | Диапазон для блока `B` | Пример, `B = 0x20` |
 |---|---|---|
@@ -711,7 +711,7 @@ Co-Authored-By: <строка агента>
 | CODE-09 | Сверх ARCH-15: инсталлеры фичи (SVC-02) лежат только в её срезе (§8). Править `App`, скоупы, сцены и общие списки ради фичи запрещено. |
 | CODE-10 | Системы находятся по `[UpdateInGroup]` в группах README §4.4. Срез может добавить подгруппу, но не группу верхнего уровня. |
 | CODE-11 | Изменяемое `static`-состояние в `Simulation` запрещено. В остальных сборках оно сбрасывается методом с `[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]` или в `OnDestroy`. |
-| CODE-12 | Ввод читается только через `IInputService`. Input System (project-wide actions, `InputSystem.actions`) используется только в `Services`; `UnityEngine.Input` и `StandaloneInputModule` запрещены. |
+| CODE-12 | Ввод читается только через `IInputService`. Input System (project-wide actions, `InputSystem.actions`) используется только в `Services` и `Dev`; `UnityEngine.Input` и `StandaloneInputModule` запрещены. |
 | CODE-13 | Логирование — только через логгер из `Services`, `Debug.Log*` запрещён. Зависимости приходят через VContainer; `Find*`, `Resources.Load` и статические синглтоны-MonoBehaviour запрещены. |
 | CODE-14 | Тесты среза лежат в `Features/<Фича>/Tests/`. Каждая новая или изменённая система, операция, биндер, секция сохранения и view-модель покрыты EditMode-тестом. Коммит с красным архитектурным тестом запрещён. |
 | CODE-15 | Новый файл или папка коммитятся с `.meta`, `.meta` не копируются. `Features/_Template~` копируется без `~`, чтобы Unity его импортировал, и обновляется тем же коммитом, что и API контуров. |
