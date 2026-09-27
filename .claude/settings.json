@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__rag",
+      "Bash(uv run --project Tools/rag rag:*)"
+    ]
+  },
+  "enabledMcpjsonServers": ["rag"],
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/harness.py\" session-start" }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Read|Edit|Write|MultiEdit",
+        "hooks": [
+          { "type": "command", "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/harness.py\" note-hint" }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/harness.py\" stop", "timeout": 60 }
+        ]
+      }
+    ]
+  }
+}

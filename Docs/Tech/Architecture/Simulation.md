@@ -45,7 +45,7 @@
    3. `DefaultWorldInitialization.AddSystemsToRootLevelSystemGroups(world, types)` — корневые группы, все системы,
       раскладка по `[UpdateInGroup]`, рекурсивная сортировка корневых групп;
    4. `SortSystems()` у ручных групп — ошибки порядка всплывают при старте, а не при первом переходе;
-   5. `FixedStepSimulationSystemGroup.Timestep = SimConstants.Dt` (1/30 с, A-15), `world.MaximumDeltaTime` (§3.3);
+   5. `FixedStepSimulationSystemGroup.Timestep = SimConstants.DT` (1/30 с, A-15), `world.MaximumDeltaTime` (§3.3);
    6. проверка обязательного состава (§2.2) с исключением: ошибки `OnCreate` при создании списком только логируются.
 3. Мостовые `SystemBase` (`[DisableAutoCreation]`, созданы VContainer): `world.AddSystemManaged(system)` →
    `group.AddSystemToUpdateList(system)` для группы из их `[UpdateInGroup]` → `group.SortSystems()`.
@@ -103,7 +103,7 @@ ECB-системы пакета создаются, но симуляция их
 ### 3.1. Дерево групп
 
 ```
-FixedStepSimulationSystemGroup            Timestep = SimConstants.Dt (1/30 с)
+FixedStepSimulationSystemGroup            Timestep = SimConstants.DT (1/30 с)
 └── SimulationTickGroup                   rate manager TickGateRateManager: тика нет, пока ждёт LocationTransitionRequest
     ├── TickBeginSystem          [First]  SimClock.Tick += 1
     ├── CommandIntakeGroup       [First]  после TickBeginSystem
@@ -137,7 +137,7 @@ SaveCaptureGroup                          ручная; мост обновля�
 - Фича ссылается в `UpdateBefore/After` только на свои системы и на инфраструктуру этого документа; порядок между
   фичами задаёт выбор группы (Combat раньше Lifecycle).
 - `OrderFirst` — служебные системы начала группы (часы, индексы, приём команд), `OrderLast` — завершающие (ECB,
-  финализация, очистка). Фича ставит их только с обоснованием в комментарии. `[CreateAfter]` — только если
+  финализация, очистка). Фича ставит их только с обоснованием в записи системы в заметке. `[CreateAfter]` — только если
   `OnCreate` читает чужой синглтон.
 
 ### 3.3. Фиксированная частота
@@ -277,13 +277,13 @@ flowchart LR
 - Одна система на фичу, `<Фича>OpSystem`, обрабатывает свой диапазон по возрастанию `Seq`: `Validate` — чистая
   статическая функция только на чтение, возвращает причину отказа; затем `Apply`. Следующая операция проверяется
   после применения предыдущей; порядок между фичами — фиксированный порядок систем группы.
-- Операций единицы за тик: Burst `OnUpdate` на главном потоке (`// MAIN-THREAD: единицы операций`); структурные
+- Операций единицы за тик: Burst `OnUpdate` на главном потоке (в заметке: `Исключение ARCH-06: единицы операций за тик`); структурные
   изменения — через `EndSimulationTickEcbSystem`.
 - Отказ: `Result = Rejected`, `Reason` — код фичи из её блока id (`<F>RejectReasons`, `CodeStructure.md` §7). `OpQueueFinalizeSystem` превращает `Pending` в
-  `Rejected(Unhandled)` с dev-ошибкой, выпускает `SimEvent` результата (UI показывает отказ), очищает буфер.
+  `Rejected(UNHANDLED)` с dev-ошибкой, выпускает `SimEvent` результата (UI показывает отказ), очищает буфер.
 - Операция не порождает операций: симуляция не пишет в `OpQueue`; последствия — компоненты и `…Request`.
   Лог `(Tick, PlayerInputFrame, Operation[])` ведёт мост — для воспроизведения багов на том же устройстве и сборке.
-- Инфраструктурные операции (блок `0x00`, `InfraOpTypes`, `CodeStructure.md` §7): `ResumeGrace` — несколько секунд
+- Инфраструктурные операции (блок `0x00`, `InfraOpTypes`, `CodeStructure.md` §7): `RESUME_GRACE` — несколько секунд
   неуязвимости после возвращения из фона (GDD U04 §13); её отправляет мост (`ResumeGraceRelay`) после
   `IAppLifecycle.ConfirmResume()`.
 
@@ -299,7 +299,7 @@ flowchart LR
 
 Читы и dev-команды (ARCH-18) — операции dev-диапазона. Их `…OpSystem` лежат в сборке `RiseToPanteon.Dev`
 (белый список только при `RTP_DEV`) и подчиняются тем же правилам. Без `RTP_DEV` такие операции отклоняются как
-`Unhandled`. Пример: `DevAdvanceWorldTime` (`InfraDevOpTypes`) — «прогнать N ед. времени мира» (GDD L01 §9) — ставит
+`UNHANDLED`. Пример: `DEV_ADVANCE_WORLD_TIME` (`InfraDevOpTypes`) — «прогнать N ед. времени мира» (GDD L01 §9) — ставит
 `LocationTransitionRequest` вида `StepInPlace` с заданной величиной.
 
 ## 6. События и экспорт
@@ -368,8 +368,8 @@ Contracts не ссылается на Entities, поэтому `SimEventBuffer 
 
 | Величина | Представление | Почему |
 |---|---|---|
-| `WorldTime`, `AccumulatedStep`, `LocationClock` | `long`, 1 ед. = `SimConstants.WorldTimeScale` = 10 000 | Подшаг 0,1 ед. = `SimConstants.WorldSubstep` = 1 000 ровно, без двоичной погрешности |
-| Численность популяции, съеденное | `long`, 1 особь = `SimConstants.PopulationOne` = 65 536; целая часть — особи, младшие 16 бит — дробный остаток (L03 R2, R8) | Особь исчезает, когда остаток переходит через целое |
+| `WorldTime`, `AccumulatedStep`, `LocationClock` | `long`, 1 ед. = `SimConstants.WORLD_TIME_SCALE` = 10 000 | Подшаг 0,1 ед. = `SimConstants.WORLD_SUBSTEP` = 1 000 ровно, без двоичной погрешности |
+| Численность популяции, съеденное | `long`, 1 особь = `SimConstants.POPULATION_ONE` = 65 536; целая часть — особи, младшие 16 бит — дробный остаток (L03 R2, R8) | Особь исчезает, когда остаток переходит через целое |
 | Коэффициенты правил (r_пары, N_насыщения, скорость размножения) | Целые raw в blob-конфиге; перевод из десятичной строки JSON — при сборке пака или в binder, не float-арифметикой в рантайме | Одинаковый результат на всех устройствах |
 
 Обёртка — fixed-point-тип Core (README §4.1) при совпадении масштаба. Каждое умножение сразу нормализуется
@@ -454,7 +454,7 @@ flowchart TD
 
 Хост обновляет группу, пока `LocationTransitionRequest.Kind != None`. Этап выполняет только то, что нужно виду
 запроса, и выходит сразу, если ему делать нечего. Структурные изменения в этапах — пакетными методами
-`EntityManager` в системе-применителе этапа (`// MAIN-THREAD: тик на паузе`), тяжёлые расчёты — Burst-джобами
+`EntityManager` в системе-применителе этапа (в заметке: `Исключение ARCH-06: тик на паузе`), тяжёлые расчёты — Burst-джобами
 до применения. После последнего обновления хост вызывает `CompleteAllTrackedJobs()`.
 
 | Вид (`TransitionKind`) | Collapse | WorldStep | Generate | Restore | Unfold | Publish | Затем |
@@ -519,7 +519,7 @@ sequenceDiagram
 ### 9.2. Движение
 
 - Свободное движение (C01 R3, C04 R1): `MoveIntent` (ИИ или `PlayerInput`) → `Velocity2D` → `Position2D` с шагом
-  `SimConstants.Dt`; `float` допустим — реальное время не обязано совпадать между устройствами (§11.3).
+  `SimConstants.DT`; `float` допустим — реальное время не обязано совпадать между устройствами (§11.3).
 - Жёстко держат только стены и запертые двери (`CellState`). Тела мягко расталкиваются (C01 R22): сущность считает
   импульс по соседям из `SpatialGrid` и пишет только свою скорость — параллельно, без гонок. Коллизия ≤ 1,6 клетки.
 - `SpatialGrid` строится в конце `MovementGroup`: массив `(ячейка, StableId, индекс)` → `SortJob` → диапазоны
@@ -628,7 +628,7 @@ EditMode-тесты (`RiseToPanteon.Tests.EditMode`): мир — `SimulationWorl
 | Время мира | Независимость от дробления для одной локации (L01 R10); 50 переходов и отдыхов без поглощений не меняют популяций (L01 R8); 10 смертей подряд без поглощений не создают мини-боссов, повтор кокона минимума не даёт (L01 R6) |
 | Предыстория | Один seed → одни и те же мини-боссы на этажах 2–3 (L01 R19) |
 | Постоянство | «Убил, вышел, вошёл» без времени — убитых нет (W10 R7); свёртка → развёртка сохраняет численность и остаток |
-| Операции | Для каждой операции: отказ по каждой причине, применение, порядок по `Seq`, `Unhandled` |
+| Операции | Для каждой операции: отказ по каждой причине, применение, порядок по `Seq`, `UNHANDLED` |
 | События и экспорт | Строка `ViewState` на каждую экспортируемую сущность; нет `Entity` в экспорте; версия read-модели растёт только при изменении |
 | Сохранения | Круг захват → восстановление → захват (§10.2); нет ИИ-состояния в `…SaveData` |
 | StableId | Уникальность; одинаковая выдача при одинаковой истории |
@@ -641,9 +641,9 @@ EditMode-тесты (`RiseToPanteon.Tests.EditMode`): мир — `SimulationWorl
 |---|---|
 | SIM-01 | У каждой системы и группы — `[UpdateInGroup]` с группой из дерева §3.1. Система вне групп контура — баг. |
 | SIM-02 | `UpdateBefore/After` — только между членами одной группы и одной корзины `OrderFirst`/—/`OrderLast`; фича ссылается только на свои типы и на инфраструктуру этого документа. |
-| SIM-03 | Система — `partial struct : ISystem` с `[BurstCompile]` на struct и `OnCreate/OnUpdate/OnDestroy`; работа — `IJobEntity`/`IJobChunk` c `ScheduleParallel`. Иначе — комментарий `// MAIN-THREAD: причина` или `// NOT-BURST: причина` (ARCH-06). `SystemBase` — только мост и группы. |
+| SIM-03 | Система — `partial struct : ISystem` с `[BurstCompile]` на struct и `OnCreate/OnUpdate/OnDestroy`; работа — `IJobEntity`/`IJobChunk` c `ScheduleParallel`. Иначе — строка `Исключение ARCH-06: причина` в записи системы в заметке (`CodeStructure.md` §6.4). `SystemBase` — только мост и группы. |
 | SIM-04 | В тике нет `Complete()`, `Run()`, структурных изменений через `EntityManager`. |
-| SIM-05 | Время — только `SimClock` и `SimConstants.Dt`; `SystemAPI.Time` и `UnityEngine.Time` запрещены; длительности — в тиках (`int`). |
+| SIM-05 | Время — только `SimClock` и `SimConstants.DT`; `SystemAPI.Time` и `UnityEngine.Time` запрещены; длительности — в тиках (`int`). |
 | SIM-06 | Структурные изменения тика — только через `EndSimulationTickEcbSystem`; ECB-системы пакета не используются; sort key — `[ChunkIndexInQuery]`/`unfilteredChunkIndex`; один ECB на джоб. |
 | SIM-07 | Частые смены состояния — `IEnableableComponent`; add/remove тегов в тике — только для редких событий жизни сущности. |
 | SIM-08 | Ссылка дольше тика — `StableId`, разрешение через `StableIdIndex`. `Entity` не хранится в компонентах, живущих дольше тика, в `SimEvent`, `ViewState`, read-моделях, `…SaveData`, операциях. |
@@ -654,7 +654,7 @@ EditMode-тесты (`RiseToPanteon.Tests.EditMode`): мир — `SimulationWorl
 | SIM-13 | Шаг мира: порядок фаз L03 R3 через группы фаз; правило — однопоточный `IJob` по локациям плана в порядке `LocationInfo.Key`; локация события (текущая) не шагается. |
 | SIM-14 | Итог правила шага, меняющий видимое, пишется в `LocationChange`; правило без следа не реализуется (L03 R5–R6). |
 | SIM-15 | Изменения набора сущностей локаций (свёртка, шаг, генерация, восстановление, развёртка) — только в этапах `LocationTransitionGroup`. Тик только ставит `LocationTransitionRequest`. |
-| SIM-16 | Операция: одна `…OpSystem` на диапазон фичи; `Validate` — только чтение, затем `Apply`, по возрастанию `Seq`; симуляция не пишет в `OpQueue`; непринятая операция — `Rejected(Unhandled)`. |
+| SIM-16 | Операция: одна `…OpSystem` на диапазон фичи; `Validate` — только чтение, затем `Apply`, по возрастанию `Seq`; симуляция не пишет в `OpQueue`; непринятая операция — `Rejected(UNHANDLED)`. |
 | SIM-17 | `SimEventBuffer` — только выход: системы его не читают. Параллельные производители — `SimEventWriter` + `SimEventMergeJob`; `ParallelWriter` в `Events` запрещён. |
 | SIM-18 | Экспорт — только в `ExportGroup` (раскладка — в `PublishStageGroup`); игровые компоненты — только на чтение; запись — только в `ExportTarget` и `…ReadModelTarget`; версия read-модели растёт только при изменении. |
 | SIM-19 | Конфиг читается из синглтона `…Config` по ссылке (`ref …Blob.Value`); ссылка на blob конфига не копируется в компоненты сущностей. |
@@ -672,7 +672,7 @@ EditMode-тесты (`RiseToPanteon.Tests.EditMode`): мир — `SimulationWorl
 
 Новые публичные типы этого документа. Типы README (`SimClock`, `SimConstants`, `OpQueue`, `OpRequest`,
 `SimEventBuffer`, `StableIdAllocator`, группы §4.4, `EndSimulationTickEcbSystem`, `LocationTransitionGroup`)
-используются как есть; в `SimConstants` добавлены члены `WorldTimeScale`, `WorldSubstep`, `PopulationOne`.
+используются как есть; в `SimConstants` добавлены константы `WORLD_TIME_SCALE`, `WORLD_SUBSTEP`, `POPULATION_ONE`.
 `SpeciesConfig`/`SpeciesTableBlob` — только пример соглашения §4.1 (как в `Content.md`), типы среза `Creatures`.
 
 | Тип | Вид | Назначение |
@@ -681,7 +681,7 @@ EditMode-тесты (`RiseToPanteon.Tests.EditMode`): мир — `SimulationWorl
 | `TickBeginSystem`; `TickGateRateManager` | ISystem; IRateManager | `SimClock.Tick += 1`; тика нет, пока ждёт `LocationTransitionRequest` (§3.1, §3.3) |
 | `SaveCaptureGroup` | ComponentSystemGroup, ручная | Системы захвата `…SaveData` (§10.2) |
 | `PlayerInput` | IComponentData, синглтон | `PlayerInputFrame` текущего тика (§5.1) |
-| `OpResult`; `OpQueueFinalizeSystem` | enum; ISystem | `Pending`/`Applied`/`Rejected` в `OpRequest`; `Unhandled`, события результата, очистка очереди (§5.2) |
+| `OpResult`; `OpQueueFinalizeSystem` | enum; ISystem | `Pending`/`Applied`/`Rejected` в `OpRequest`; `UNHANDLED`, события результата, очистка очереди (§5.2) |
 | `SimEventWriter`; `SimEventMergeJob`; `SimEventExportSystem` | struct; IJob; ISystem | Запись событий из параллельного джоба в `NativeStream`; перенос в `SimEventBuffer` по индексам; экспорт и очистка (§6.1) |
 | `ExportTarget` | IComponentData, синглтон | Контейнеры моста: два слота `ViewState`, события кадра, заголовок (§6.3) |
 | `ViewSource`; `ViewExportSystem` | IComponentData; ISystem | `ViewKey`, `AnimState`, `Flags` сущности; строки `ViewState` (§6.2) |

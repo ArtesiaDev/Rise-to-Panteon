@@ -20,6 +20,8 @@
 | `CodeStructure.md` | Папки, сборки, неймспейсы, именование, пошаговое «как добавить фичу» | Перед созданием любого файла |
 
 Справочники по API: `Docs/Tech/Reference/Unity/Entities.md`, `Docs/Tech/Reference/Unity/JobsAndBurst.md`.
+Как агенты находят знание, заметки к коду, правила документов — `Docs/Tech/Harness.md`. Статус реализации —
+`Docs/Roadmap.md`.
 `Docs/Tech/Reference/WO_ProductionArchitecture.md` — чужой проект, только референс.
 
 Приоритет при расхождении: этот документ → документ контура → журнал решений → справочники.
@@ -167,7 +169,7 @@ sequenceDiagram
 | `ViewState` | Contracts | Строка снимка на одну видимую сущность `{ StableId, ViewKey, Position, Facing, AnimState, Flags }`; `AnimState = { Id, Restart }`, `Flags` — `ViewFlags` (биты задаёт `Presentation.md`) |
 | `IWorldView` | Contracts | Чтение снимка: текущий и предыдущий `ViewState`, `CurrentTick`, события с прошлого кадра, `Alpha` интерполяции, read-модели с версией |
 | Read-модель (`*ReadModel`) | Contracts | Blittable-структура для UI и представления: статы игрока, инвентарь, карта, раскладка локации |
-| `SimClock` | Simulation | Синглтон: номер тика. Длительность тика — `SimConstants.Dt` (1/30 с) |
+| `SimClock` | Simulation | Синглтон: номер тика. Длительность тика — `SimConstants.DT` (1/30 с) |
 | `OpQueue` + `OpRequest` | Simulation | Синглтон с буфером операций текущего тика |
 | `SimEventBuffer` | Simulation | Синглтон с `NativeList<SimEvent>` текущего тика (`SimEvent` — не компонент: Contracts не ссылается на Entities) |
 | `WorldHost` | Bridge | Создаёт, обновляет, ставит на паузу и уничтожает ECS-мир |
@@ -261,9 +263,9 @@ SaveCaptureGroup (вне тика; обновляется хостом вруч�
 | ARCH-03 | Симуляция не использует `UnityEngine.Object`, MonoBehaviour, `UnityEngine.Time`, `UnityEngine.Input`, `UnityEngine.Random`, файловую систему и сервисы. |
 | ARCH-04 | Состояние игры меняется только в симуляции и только в ответ на тик, `PlayerInput` или `Operation`. |
 | ARCH-05 | Никакой код не читает `World.DefaultGameObjectInjectionWorld`. ECS-миром владеет `WorldHost`. |
-| ARCH-06 | Системы симуляции — `ISystem` + `[BurstCompile]`; работа по умолчанию — в джобах (`ScheduleParallel`). Исключение помечается комментарием `// NOT-BURST: причина` или `// MAIN-THREAD: причина`. |
+| ARCH-06 | Системы симуляции — `ISystem` + `[BurstCompile]`; работа по умолчанию — в джобах (`ScheduleParallel`). Исключение записывается в заметку к коду строкой `Исключение ARCH-06: причина` (`CodeStructure.md` §6.4). |
 | ARCH-07 | Структурные изменения в тике — только через `EndSimulationTickEcbSystem` (или ECB своей группы с обоснованием). |
-| ARCH-08 | Время в симуляции — только `SimClock` и `SimConstants.Dt`. |
+| ARCH-08 | Время в симуляции — только `SimClock` и `SimConstants.DT`. |
 | ARCH-09 | Случайность — `Unity.Mathematics.Random`, состояние в компонентах, сиды по правилам GDD (A-16). |
 | ARCH-10 | Всё, что сохраняется или на что ссылаются дольше тика, адресуется `StableId`. `Entity` не попадает в сохранения, события, read-модели и операции. |
 | ARCH-11 | Шаг мира детерминирован: целые и fixed-point, фиксированный порядок правил, обход по возрастанию id (GDD L03). |

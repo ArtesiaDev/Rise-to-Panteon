@@ -1,0 +1,60 @@
+- q: как игрок поглощает крупную добычу
+  expect: [E01-Absorption.md]
+- q: что происходит с телом существа, убитого не игроком
+  expect: [E01-Absorption.md, B02-CreatureAI.md]
+- q: потеря здоровья от плотной среды
+  expect: [W06-Decay.md, W05-EnvironmentDensity.md]
+- q: сохранение игры при сворачивании приложения
+  expect: [M01-SaveSystem.md, Services.md#5]
+- q: как работает кокон
+  expect: [E08-Cocoon.md]
+- q: ключи и запертые двери
+  expect: [W12-LocksAndKeys.md]
+- q: другие восходящие, которые соревнуются с игроком
+  expect: [L09-Rivals.md]
+- q: как по миру расходятся слухи
+  expect: [L06-Rumors.md]
+- q: что остаётся на месте гибели игрока
+  expect: [D02-SoulEcho.md, D01-DeathAndRespawn.md]
+- q: стоимость уровня и плотность персонажа
+  expect: [E02-LevelsAndDensity.md, Formulas.md]
+- q: личная база игрока
+  expect: [Camp.md, K01-CampLocation.md]
+- q: управление на телефоне, стик и кнопки
+  expect: [U01-Controls.md, UI.md#7]
+- q: формула опыта за поглощение более плотной цели
+  expect: [E01-Absorption.md, Formulas.md]
+- q: где хранится номер тика и его длительность
+  expect: [Architecture/README.md, Simulation.md]
+- q: как экран отправляет действие игрока в симуляцию
+  expect: [Architecture/README.md, UI.md, Simulation.md#5]
+- q: регистрация фичи в VContainer без правки центральных файлов
+  expect: [Services.md#2, CodeStructure.md#8]
+- q: пауза игры при открытии меню
+  expect: [Services.md#8, Architecture/README.md#3, U04-ScreensAndPause.md]
+- q: интерполяция вьюх между снимками
+  expect: [Presentation.md#4]
+- q: как добавить новую таблицу конфигов
+  expect: [Content.md#10, CodeStructure.md#11]
+- q: запрещено логировать через Debug.Log
+  expect: [CodeStructure.md]
+- q: детерминизм шага мира и fixed-point
+  expect: [Simulation.md]
+- q: структурные изменения через EntityCommandBuffer
+  expect: [Simulation.md, Reference/Unity/Entities.md]
+- q: пример IJobEntity с ScheduleParallel
+  expect: [Reference/Unity/Entities.md, Reference/Unity/JobsAndBurst.md]
+- q: диапазоны числовых id операций и событий среза
+  expect: [CodeStructure.md#7]
+- q: где лежат UXML и USS экрана фичи
+  expect: [CodeStructure.md#2, UI.md]
+- q: WorldViewPublisher двойной буфер снимка
+  expect: [Architecture/README.md, Simulation.md#6, Presentation.md]
+- q: SIM-07
+  expect: [Simulation.md]
+- q: генерация планировки локации по сиду
+  expect: [W02-LayoutGenerator.md, Simulation.md#8]
+- q: сколько существ в комнате без просадки FPS
+  expect: [Architecture/README.md, Presentation.md#12, Scope.md]
+- q: локализация текста для игрока
+  expect: [M04-Localization.md, UI.md#9, Content.md#8, Services.md#9]

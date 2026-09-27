@@ -73,8 +73,9 @@ flowchart LR
    в `IOperationSink` или вызывает сервис. View-модель «в ожидании результата» не меняется: новое состояние
    приходит только через read-модель.
 
+Пример — экран выбора кокона (U04 R8): данные — из read-модели, действия — операциями.
+
 ```csharp
-// Экран выбора кокона (U04 R8). Данные — из read-модели, действия — операциями.
 public sealed class CocoonScreenController : ScreenController<CocoonViewModel>
 {
     private readonly IWorldView _world;
@@ -82,21 +83,24 @@ public sealed class CocoonScreenController : ScreenController<CocoonViewModel>
     private ReadModelWatch<CocoonChoiceReadModel> _choice;
     public CocoonScreenController(IWorldView world, IOperationSink ops, CocoonViewModel model)
         : base(model) { _world = world; _ops = ops; }
-    protected override void OnBind(VisualElement root)          // один раз после Instantiate
+    protected override void OnBind(VisualElement root)
     {
-        root.dataSource = Model;                                // привязки UXML читают отсюда
-        root.Q<Button>("cocoon-screen__confirm").clicked += OnConfirm;
-        root.Q<Button>("cocoon-screen__cancel").clicked += OnCancel;
+        root.dataSource = Model;
+        root.Q<Button>("cocoon-screen__confirm").clicked += ConfirmClickedHandler;
+        root.Q<Button>("cocoon-screen__cancel").clicked += CancelClickedHandler;
     }
-    public override void Refresh()                              // каждый LateTick, пока экран виден
+    public override void Refresh()
     {
         if (_choice.Changed(_world, out var rm)) Model.Apply(in rm);
     }
-    // Фабрики операций — в Contracts фичи, формат Operation — Simulation.md.
-    private void OnConfirm() => _ops.Enqueue(CocoonOps.ChooseVariant(Model.SelectedIndex));
-    private void OnCancel()  => _ops.Enqueue(CocoonOps.Cancel());
+    private void ConfirmClickedHandler() => _ops.Enqueue(CocoonOps.ChooseVariant(Model.SelectedIndex));
+    private void CancelClickedHandler() => _ops.Enqueue(CocoonOps.Cancel());
 }
 ```
+
+- `OnBind` вызывается один раз после `Instantiate`; привязки UXML читают из `root.dataSource`.
+- `Refresh` вызывается каждый `LateTick`, пока экран виден.
+- `CocoonOps` — фабрики операций в Contracts фичи; формат `Operation` — `Simulation.md`.
 
 ## 3. IScreenService: стек, модальность, пауза, приоритеты
 
@@ -107,15 +111,19 @@ public sealed class CocoonScreenController : ScreenController<CocoonViewModel>
 ```csharp
 public interface IScreenService
 {
-    bool Open<TScreen>() where TScreen : IScreenController;          // false — отказ по приоритету
+    bool Open<TScreen>() where TScreen : IScreenController;
     bool Open<TScreen, TArgs>(TArgs args) where TScreen : IScreenController, IScreenWithArgs<TArgs>;
     void Close<TScreen>() where TScreen : IScreenController;
-    bool Back();                                                     // Esc, «назад» Android
+    bool Back();
     bool IsOpen<TScreen>() where TScreen : IScreenController;
-    bool IsBlockingInput { get; }                                    // открыт экран слоя screen/modal/system
-    event Action StackChanged;
+    bool IsBlockingInput { get; }
+    event Action OnStackChanged;
 }
 ```
+
+- `Open` возвращает `false` при отказе по приоритету.
+- `Back` — Esc, «назад» Android.
+- `IsBlockingInput` — открыт экран слоя `screen`, `modal` или `system`.
 
 | Слой | Поведение | Экраны Прототипа (приоритет) |
 |---|---|---|
@@ -284,17 +292,19 @@ HUD (U01 R2, §5). Справа — дуга кнопок вокруг атак�
 ### 7.4. Миллиметры → пиксели
 
 Минимумы U01 §5 заданы в миллиметрах: кнопка ≥ 10 мм, атака ≥ 14 мм. Панель масштабируется по высоте экрана,
-поэтому размеры контролов считает `TouchMetrics` по токенам темы в мм (§8).
+поэтому размеры контролов считает `TouchMetrics` по токенам темы в мм (§8). Перевод мм в единицы панели:
 
 ```csharp
-// Перевод мм в единицы панели. Screen.dpi на части Android равен 0 или врёт — берём запасной.
 public float MmToPanel(float mm, IPanel panel)
 {
     float dpi = Screen.dpi;
-    if (dpi < MinSaneDpi || dpi > MaxSaneDpi) dpi = FallbackDpi;  // 100…800; запасной — 460
-    return mm * dpi / 25.4f / panel.scaledPixelsPerPoint;          // px → единицы панели
+    if (dpi < MIN_SANE_DPI || dpi > MAX_SANE_DPI) dpi = FALLBACK_DPI;
+    return mm * dpi / 25.4f / panel.scaledPixelsPerPoint;
 }
 ```
+
+`Screen.dpi` на части Android равен 0 или врёт, поэтому вне `MIN_SANE_DPI`…`MAX_SANE_DPI` (100…800) берётся
+`FALLBACK_DPI` = 460. Деление на `scaledPixelsPerPoint` переводит пиксели в единицы панели.
 
 Запасной DPI завышен сознательно: при ошибке кнопки выйдут крупнее минимума, а не мельче. Размер — `max(токен,
 минимум U01)`, пересчёт — при смене разрешения или безопасной зоны; множитель из настроек (80–130%, U08 §5, Срез)

@@ -23,7 +23,7 @@ VContainer и сервисы — `Services.md`.
 Rise to Panteon/
 ├── Assets/             проект Unity (§2.2)
 ├── Configs/            submodule rise-to-panteon-configs (A-20): схемы, данные, комнаты, строки и свои tools/ (Content.md)
-├── Tools/              Node.js-инструменты репозитория игры (проверки кода и документов); node_modules/ не в git
+├── Tools/rag/          база знаний и проверки агентов (Python, uv; Docs/Tech/Harness.md); .venv/ и .index/ не в git
 ├── Docs/               GDD/, Tech/ (Architecture/, ArchitectureDecisions.md, Reference/)
 ├── Packages/  ProjectSettings/  CLAUDE.md  .gitmodules
 ```
@@ -167,7 +167,7 @@ Defines проекта: `UNITY_DISABLE_AUTOMATIC_SYSTEM_BOOTSTRAP_RUNTIME_WORLD`
 | `AsmrefRulesTests` | Каждая контурная папка среза содержит ровно один `.asmref` на свою сборку; в `Features/` нет `.asmdef` и `.cs` вне контурных папок |
 | `SourceRulesTests` | Запрещённые `using` и API (таблица ниже); комментарии и строки перед проверкой вырезаются |
 | `NamespaceRulesTests` / `FileLayoutTests` | Неймспейс по пути (§4); один тип верхнего уровня на файл, имя файла = имя типа |
-| `FeatureGraphTests` | Зависимости срезов по `using` ацикличны и объявлены в README среза (§6.5) |
+| `FeatureGraphTests` | Зависимости срезов по `using` ацикличны и объявлены в `depends` заметки среза (§6.4, §6.5) |
 | `IdBlockTests` | Диапазоны и уникальность id, соответствие таблице §7.4 |
 | `InstallerCatalogTests` | У инсталлеров есть `[FeatureInstaller]` и `[Preserve]`, скоуп допустим для контура (§8, `Services.md` §2.2) |
 | `StaticStateTests` | Изменяемые `static`-поля есть только в типах со сбросом `SubsystemRegistration` (CODE-11) |
@@ -175,9 +175,13 @@ Defines проекта: `UNITY_DISABLE_AUTOMATIC_SYSTEM_BOOTSTRAP_RUNTIME_WORLD`
 | Где | Запрещено в исходниках |
 |---|---|
 | Везде | `RuntimeRoguelike`, `using Framework` (прототип); `DefaultGameObjectInjectionWorld`; `UnityEngine.Input`, `Input.Get*`; `Debug.Log*` вне логгера в `Code/Services/`; `Resources.Load`; `GameObject.Find*`, `FindObject*`, `FindAnyObjectByType`; `async void` |
-| `Simulation` | Любой `UnityEngine`; `System.IO`; `System.Random`; `DateTime`; `VContainer`; `Cysharp`; `SystemBase`; `class …: IComponentData`; `ISystem` без `[BurstCompile]` и без `// NOT-BURST:` / `// MAIN-THREAD:` (ARCH-06) |
+| `Simulation` | Любой `UnityEngine`; `System.IO`; `System.Random`; `DateTime`; `VContainer`; `Cysharp`; `SystemBase`; `class …: IComponentData` |
 | `Services`, `Presentation`, `UI`, `App`; `Dev`, кроме `*DevOpSystem` | `Unity.Entities`, `Unity.Transforms`, `EntityManager`, `SystemAPI` |
 | Всё, кроме `Services` | `UnityEngine.InputSystem` (ввод — через `IInputService`, CODE-12) |
+
+Правила, которые требуют знания заметок, проверяет не Unity, а `rag lint` (`Docs/Tech/Harness.md` §8): комментарии в
+коде (CODE-18), запись о каждом файле в заметке (CODE-19), `ISystem` без `[BurstCompile]` без записи
+«Исключение ARCH-06» в заметке. Он же работает в хуке в конце ответа агента и у ревьюера.
 
 ## 4. Неймспейсы
 
@@ -203,15 +207,32 @@ Defines проекта: `UNITY_DISABLE_AUTOMATIC_SYSTEM_BOOTSTRAP_RUNTIME_WORLD`
 
 ### 5.1. Общие правила
 
-- Идентификаторы — на английском. Комментарии и XML-doc (`///`) — на русском. У публичных типов и членов
-  контракта есть однострочное `///`-описание.
-- PascalCase — типы, методы, свойства, константы, публичные поля (включая поля компонентов). `_camelCase` —
-  приватные поля. `camelCase` — локальные переменные и параметры.
-- Аббревиатуры: из двух букв — заглавные (`UI`, `AI`, `IO`); из трёх и больше — как слово (`Hud`, `Npc`, `Vfx`).
-- Один тип верхнего уровня на файл, имя файла = имя типа (для MonoBehaviour этого требует Unity). Вложенные типы
-  разрешены. Partial-тип можно разрезать: `FooSystem.cs` + `FooSystem.Jobs.cs`.
-- Интерфейсы — `I*`. Булевы — `Is*`, `Has*`, `Can*`. Асинхронные методы — `*Async`, возвращают `UniTask`.
-  Перечисления — в единственном числе (`DamageType`), `[Flags]` — во множественном (`ViewFlags`).
+- Идентификаторы — на английском. Комментариев в коде нет, включая XML-doc (`///`): что делает тип и почему он так
+  устроен, записывается в заметку (§6.4, CODE-18). Разрешены только служебные директивы: `#pragma`,
+  `// ReSharper disable` и `// ReSharper restore`. Сгенерированный код (`*.g.cs`) — исключение.
+- Стили: PascalCase — каждое слово с заглавной; camelCase — первое слово со строчной, остальные с заглавной;
+  UPPER_CASE — все буквы заглавные, слова через `_`.
+
+| Что | Стиль | Пример |
+|---|---|---|
+| Неймспейсы, классы, структуры, методы | PascalCase | `RiseToPanteon.Combat.Simulation`, `PlayerModel`, `Shoot()` |
+| Интерфейсы | PascalCase с префиксом `I` | `IPlayerModel` |
+| Публичные и защищённые поля, в том числе поля компонентов | PascalCase | `public int MaxHealth;` |
+| Приватные поля, в том числе статические | `_camelCase` | `private int _maxArmor;`, `private static readonly int _vertical` |
+| Константы (`const`) любой видимости | UPPER_CASE | `public const float CAMERA_FOV = 50f;` |
+| Свойства любой видимости | PascalCase | `public int MaxArmor => _hasArmor ? _maxArmor : 0;` |
+| События | PascalCase с префиксом `On` | `public event Action OnMessageReceived;` |
+| Метод-обработчик события `OnX` | `XHandler` | `MessageReceivedHandler` |
+| Перечисления и их члены | PascalCase | `RenderMode.FullLighting` |
+| Параметры и локальные переменные | camelCase | `int counter = 0;` |
+
+- Аббревиатуры в PascalCase: из двух букв — заглавные (`UI`, `AI`, `IO`); из трёх и больше — как слово (`Hud`,
+  `Npc`, `Vfx`). В UPPER_CASE — заглавные (`CAMERA_FOV`).
+- Один тип верхнего уровня на файл, имя файла = имя типа (для MonoBehaviour этого требует Unity). В каждом файле
+  объявлен неймспейс. Вложенный тип выносится в свой файл: внешний тип объявляется `partial`, файл называется
+  `Внешний.Вложенный.cs` или по группе (`FooSystem.Jobs.cs` — джобы системы).
+- Булевы — `Is*`, `Has*`, `Can*`. Асинхронные методы — `*Async`, возвращают `UniTask`. Перечисления — в
+  единственном числе (`DamageType`), `[Flags]` — во множественном (`ViewFlags`).
 - Технические константы — в `*Constants` (`SimConstants` из README); числа баланса в коде запрещены (ARCH-12).
   Тип с ролью из §5.2 обязан иметь её суффикс; тип без роли — существительное без суффикса.
 
@@ -219,8 +240,8 @@ Defines проекта: `UNITY_DISABLE_AUTOMATIC_SYSTEM_BOOTSTRAP_RUNTIME_WORLD`
 
 | Контур | Роль | Шаблон | Пример |
 |---|---|---|---|
-| Contracts | Константы операций / кодов отказа / payload операции (unmanaged) | `<Фича>OpTypes` / `<Фича>RejectReasons` / `<Константа>Op` | `AbsorptionOpTypes.AbsorbBody`, `AbsorbBodyOp` |
-| Contracts | Константы событий (глагол в прошедшем времени) | `<Фича>EventTypes` | `CombatEventTypes.HitLanded` |
+| Contracts | Константы операций / кодов отказа / payload операции (unmanaged) | `<Фича>OpTypes` / `<Фича>RejectReasons` / `<Константа>Op` | `AbsorptionOpTypes.ABSORB_BODY`, `AbsorbBodyOp` |
+| Contracts | Константы событий (глагол в прошедшем времени) | `<Фича>EventTypes` | `CombatEventTypes.HIT_LANDED` |
 | Contracts | Read-модель (blittable) | `*ReadModel` | `PlayerStatsReadModel` |
 | Simulation | Компоненты: данные / тег и enableable-флаг / одноразовый запрос / синглтон / элемент буфера (`Simulation.md` §4.1) | существительное / `*Tag` / `*Request` / существительное / имя элемента | `Position2D`, `DeadTag`, `PathRequest`, `WorldMeta`, `SpeciesPopulation` |
 | Simulation | Таблица конфигов: синглтон / корень блоба / строка (`Content.md` §10) | `<Таблица>Config` / `<Таблица>TableBlob` / `<Таблица>Row` | `SpeciesConfig`, `SpeciesTableBlob`, `SpeciesRow` |
@@ -232,11 +253,66 @@ Defines проекта: `UNITY_DISABLE_AUTOMATIC_SYSTEM_BOOTSTRAP_RUNTIME_WORLD`
 | Presentation | Вьюха (наследник `WorldView`) / логика над вьюхами / обработчик событий / пул | `*View` / `*Presenter` / `<Имя>EventHandler : ISimEventHandler` / `*Pool` | `SkeletalView`, `CocoonEventHandler` |
 | UI | Экран / вкладка / виджет HUD / триггер открытия (`UI.md` §11) | `<Имя>Screen.uxml`, `.uss` + `<Имя>ScreenController` / `<Имя>Tab` / `<Имя>Widget` / `<Имя>ScreenTrigger` | `CocoonScreenController`, `MinimapWidget` |
 | UI | View-модель / свой `VisualElement` | `<Имя>ViewModel` / существительное | `CocoonViewModel`, `ValueBar` |
-| Dev | Константы и payload dev-операций / их обработчик | `<Фича>DevOpTypes`, `*Op` / `<Фича>DevOpSystem` | `AbsorptionDevOpTypes.GrantEssence` |
+| Dev | Константы и payload dev-операций / их обработчик | `<Фича>DevOpTypes`, `*Op` / `<Фича>DevOpSystem` | `AbsorptionDevOpTypes.GRANT_ESSENCE` |
 | Любой | Инсталлер VContainer | `<Фича><Контур>Installer` | `AbsorptionBridgeInstaller`, `CocoonUIInstaller` |
 | App или контур фичи | Узел графа загрузки / старта игры (интерфейсы — Core) | `*BootNode : IBootNode`, `*StartNode : IGameStartNode` | `ConfigPackBootNode` |
 | Editor | Окно / инспектор / валидатор / конвертер таблицы (DTO `<Таблица>File` генерирует `gen:cs`) | `*Window` / `*Inspector` / `*Validator` / `<Таблица>ConfigConverter : IConfigTableConverter` | `RoomEditorWindow`, `SpeciesConfigConverter` |
 | Tests | Класс / метод | `<Тестируемое>Tests` / `Действие_Условие_Результат` | `Absorb_TargetDenser_ExpIsCapped` |
+
+### 5.3. Форматирование
+
+- Фигурные скобки — всегда на новой строке. Отступ — 4 пробела.
+- Одно объявление поля или переменной на строку.
+- Одна пустая строка между `using` и неймспейсом и между методами.
+- Порядок членов типа: константы → публичные статические поля → приватные статические поля → публичные события →
+  приватные события → публичные поля → приватные поля с `[SerializeField]` → приватные поля → публичные свойства →
+  приватные свойства → конструктор или метод внедрения зависимостей → статические методы → методы жизненного цикла
+  MonoBehaviour (`Awake`, `Start`, `OnEnable`, `OnDisable`, `OnDestroy`, …) → публичные методы → приватные методы.
+- `[SerializeField]` пишется в одну строку с полем. Если у полей блока есть и другие атрибуты, атрибуты всех полей
+  блока выносятся на отдельные строки.
+- Вместо приватного поля с публичным свойством-геттером — автосвойство: `public int Count { get; private set; }`;
+  сериализуемое — `[field: SerializeField] public int Count { get; private set; }`.
+
+```csharp
+using System;
+using UnityEngine;
+
+namespace RiseToPanteon.Presentation
+{
+    public class ExampleView : MonoBehaviour
+    {
+        public const float CAMERA_FOV = 50f;
+
+        private static readonly int _vertical = Animator.StringToHash("Vertical");
+
+        public event Action OnMessageReceived;
+
+        [SerializeField] private int _maxHealth;
+        private int _health;
+
+        public bool IsAlive => _health > 0;
+
+        private void Awake()
+        {
+            OnMessageReceived += MessageReceivedHandler;
+        }
+
+        private void OnDestroy()
+        {
+            OnMessageReceived -= MessageReceivedHandler;
+        }
+
+        public void Hit(int damage)
+        {
+            _health -= damage;
+        }
+
+        private void MessageReceivedHandler()
+        {
+        }
+    }
+}
+```
 
 ## 6. Срез фичи и шаблон `_Template~`
 
@@ -249,7 +325,7 @@ Defines проекта: `UNITY_DISABLE_AUTOMATIC_SYSTEM_BOOTSTRAP_RUNTIME_WORLD`
 3. Имя среза — домен на английском в PascalCase, одно-два слова, без номера GDD (`Absorption`, `WorldStep`,
    `CreatureAI`). После создания среза имя не меняется.
 4. Если фича меняет чужой срез (E09 учит `CreatureAI` возвращаться к гнезду), правка делается в папке того среза,
-   а id записывается в строку «Участвует» README обоих срезов.
+   а id записывается в `participates` заметок обоих срезов.
 5. Данные фичи на HUD показывает виджет в `Features/<Фича>/UI/`; `Hud` — компоновка и общие элементы (`UI.md`).
 6. Срез делится, когда в нём больше ~60 файлов или появились независимые данные. Новый срез получает новый блок;
    выданные id не меняются, и новый срез указывает унаследованный блок в `[FeatureIdBlock]` (§7.3).
@@ -260,7 +336,7 @@ Defines проекта: `UNITY_DISABLE_AUTOMATIC_SYSTEM_BOOTSTRAP_RUNTIME_WORLD`
 
 ```
 Features/Absorption/
-├── README.md               паспорт среза (§6.4)
+├── README.md               заметка среза (§6.4)
 ├── Contracts/              → RiseToPanteon.Contracts: Absorption.Contracts.asmref, *OpTypes, *EventTypes, *Op, *ReadModel
 ├── Simulation/             → RiseToPanteon.Simulation: Components/, Config/, Systems/ (при ≤ 8 файлах — без подпапок)
 ├── Bridge/                 → RiseToPanteon.Bridge: биндеры, секции сохранения, мостовые системы
@@ -282,7 +358,7 @@ Unity не импортирует папки с `~` на конце: код ша
 
 ```
 _Template~/                 (у каждой контурной папки — свой Template.<Контур>.asmref)
-├── README.md               паспорт с плейсхолдерами
+├── README.md               заметка с плейсхолдерами
 ├── Contracts/              TemplateOpTypes, TemplateEventTypes, ExampleOp, TemplateReadModel
 ├── Simulation/             Components/ (пример данных и тега), Config/TemplateConfig, Config/TemplateTableBlob,
 │                           Config/TemplateRow, Systems/TemplateOpSystem, Systems/TemplateReadModelExportSystem
@@ -298,18 +374,69 @@ _Template~/                 (у каждой контурной папки — �
 Плейсхолдеры: `Template` (файлы, типы, неймспейсы) → имя среза, `Example` → первая операция, `0x00` в
 `[FeatureIdBlock]` → блок среза. Забытый `0x00` роняет `IdBlockTests`: блок `0x00` принадлежит инфраструктуре.
 
-### 6.4. README среза
+### 6.4. Заметка к коду
 
-Шапка — таблица полей: «Владелец GDD» (`E01`), «Участвует» (`E02 — опыт, L01 — мировое время`), «Блок id» (`0x20`),
-«Зависит от срезов» (`Creatures, Progression`), «Этап» (`Прототип`). Разделы: «Контракты» (по строке на тип: имя —
-назначение — правило GDD, например `E01 R3`), «Симуляция» (системы и группы, синглтоны, таблицы конфигов), «Мост»,
-«Представление и UI», «Тесты» (что покрыто, что проверяется вручную). Обновляется тем же коммитом, что и код.
+Код не содержит комментариев (CODE-18): всё знание о нём — в заметке. Заметка — `README.md` единицы кода: среза
+(`Features/<Фича>/README.md`) или области инфраструктуры (`Code/<Сборка>/README.md`, `Code/<Сборка>/<Область>/README.md`).
+Файл кода описывает ближайшая заметка вверх по дереву в пределах среза или сборки. Заметка длиннее ~400 строк
+делится: контурная папка получает свою заметку того же формата без шапки; шапка остаётся в заметке среза.
+
+**Шапка** — YAML в начале заметки среза или верхней заметки сборки; поля, которых нет, не пишутся:
+
+| Поле | Значение |
+|---|---|
+| `gdd` | Id GDD, которыми единица владеет (§6.1, §7.4) |
+| `participates` | Id GDD чужих срезов, правила которых единица реализует (§6.1, п. 4) |
+| `depends` | Срезы, типы которых используются (§6.5) |
+| `block` | Блок id (§7.4) |
+
+**Тело:**
+- `# <Срез или область>` и 1–3 предложения: за что единица отвечает в игре.
+- `## <Контурная папка>` в порядке §6.2: `Contracts`, `Simulation`, `Bridge`, `Services`, `Presentation`, `UI`,
+  `Dev`, `Editor`, `Tests`. У инфраструктуры — разделы по подпапкам или один раздел.
+- `### <Тип>` — запись о значимом типе: системе, операции, биндере, секции сохранения, вьюхе, экране, сервисе.
+  Заголовок H3 — только имя типа: по нему хук и `rag` находят запись файла. В записи — только то, чего не видно из
+  кода за минуту чтения:
+  - что делает и какие правила GDD реализует (`E01 R7, R9`);
+  - где и когда выполняется (группа, порядок, частота) — для систем;
+  - что читает и пишет, какие события и read-модели порождает;
+  - `Нельзя: … — потому что …` — неочевидные ограничения и уроки исправленных багов;
+  - `Исключение ARCH-06: <причина>` — у системы без `[BurstCompile]` или без джобов.
+- Простые типы (компонент-данные, тег, константы, payload, read-модель, тест) — строкой таблицы в разделе своей
+  папки: `` | `Тип` | назначение | правило GDD | ``.
+- Каждый `.cs` описан записью или строкой; запись о несуществующем типе — ошибка (CODE-19, проверяет `rag lint`).
+- Заметка описывает только текущее состояние (DOC-02) и обновляется тем же коммитом, что и код. Статус реализации —
+  в `Docs/Roadmap.md`, не в заметке.
+
+```markdown
+---
+gdd: [E01]
+participates: [E02, L01]
+depends: [Creatures, Progression]
+block: 0x20
+---
+# Absorption
+
+Поглощение убитых существ: опыт, эссенция, лечение; способ поглощения — сам или действием над телом.
+
+## Simulation
+
+### AbsorbSystem
+Решает способ поглощения в момент гибели (E01 R7, R9), начисляет опыт и эссенцию (E01 R1–R5).
+`LifecycleGroup`, после `DeathSystem`. Читает `Density`, `DeadTag`; пишет `Experience`, `EssencePool`; событие
+`ABSORB_STARTED`.
+Нельзя: сравнивать с приглушённой плотностью — только с истинной (E01 R2).
+
+| Тип | Назначение | GDD |
+|---|---|---|
+| `AbsorbableTag` | Тело можно поглотить | E01 R11 |
+```
 
 ### 6.5. Зависимости между срезами
 
-- Типы чужого `Contracts` (публичная поверхность среза) можно использовать всегда; зависимость указывается в README.
+- Типы чужого `Contracts` (публичная поверхность среза) можно использовать всегда; зависимость указывается в `depends`.
 - Публичные типы чужого среза в той же сборке (компонент `Health` среза `Combat` в системе среза `Death`) можно
-  использовать, если зависимость объявлена в README и граф срезов остаётся ацикличным.
+  использовать, если зависимость объявлена в `depends` и граф срезов остаётся ацикличным.
 - Ссылка на чужой срез — только через `using RiseToPanteon.<Срез>.<Контур>;`: полные имена не видит `FeatureGraphTests`.
 - Если нужен цикл, общие данные переносятся в нижележащий срез; данные, нужные почти всем (`StableId`, позиция), —
   в инфраструктуру с записью в журнал решений.
@@ -322,7 +449,7 @@ _Template~/                 (у каждой контурной папки — �
 
 `OpType`, `SimEvent.Type` и `OpRequest.Reason` — `ushort`. Срез получает **блок** `B` — байт от `0x10` до `0xEF`.
 Блок `0x00` принадлежит инфраструктуре (`InfraOpTypes`, `InfraEventTypes` в `Code/Contracts/`, `InfraDevOpTypes` в
-`Code/Dev/`; там же причины `Unhandled`, `NeedsRunningTick` из `Simulation.md` §5), `0x01–0x0F` — её резерв.
+`Code/Dev/`; там же причины `UNHANDLED`, `NEEDS_RUNNING_TICK` из `Simulation.md` §5), `0x01–0x0F` — её резерв.
 
 | Пространство | Диапазон для блока `B` | Пример, `B = 0x20` |
 |---|---|---|
@@ -334,8 +461,8 @@ _Template~/                 (у каждой контурной папки — �
 - `0x0000` — «нет типа»; нулевое смещение в блоке (`0x2000`, `0xF200`) не используется. `0xF000–0xFEFF` — только
   dev-операции и dev-события, `0xFF00–0xFFFF` — резерв.
 - Блоков не требуют: `ViewKey` и `StableId` (выдаются автоматически), строковый `ISaveSection.Id` (`Services.md`).
-  Биты `ViewState.Flags` — общий ресурс `Code/Contracts`: бит добавляется правкой инфраструктуры, в комментарии —
-  срез-владелец.
+  Биты `ViewState.Flags` — общий ресурс `Code/Contracts`: бит добавляется правкой инфраструктуры, срез-владелец
+  указывается в заметке `Code/Contracts`.
 
 ### 7.2. Правила
 
@@ -345,19 +472,22 @@ _Template~/                 (у каждой контурной папки — �
 3. Id — только `public const ushort` в классах `*OpTypes`, `*EventTypes`, `*RejectReasons`, `*DevOpTypes`; литерал id
    вне них запрещён. `*DevOpTypes`, их payload и `<Фича>DevOpSystem` лежат в `Features/<Фича>/Dev/`: сборка Dev
    компилируется только с `RTP_DEV`, поэтому `#if` не нужен.
-4. Если у операции `X` есть данные, её payload называется `XOp`. Каждому `*Op` соответствует константа, а размер
-   `*Op` не больше ёмкости `Operation.Payload`.
+4. Если у операции есть данные, её payload называется по константе в PascalCase с суффиксом `Op`:
+   `ABSORB_BODY` → `AbsorbBodyOp`. Каждому `*Op` соответствует константа, а размер `*Op` не больше ёмкости
+   `Operation.Payload`.
 
 ### 7.3. Код
 
+Файл `Features/Absorption/Contracts/AbsorptionOpTypes.cs`:
+
 ```csharp
-// Файл Features/Absorption/Contracts/AbsorptionOpTypes.cs, неймспейс RiseToPanteon.Absorption.Contracts.
-/// <summary>Типы операций среза «Поглощение». Блок 0x20, см. CodeStructure.md §7.4.</summary>
-[FeatureIdBlock("Absorption", 0x20)]
-public static class AbsorptionOpTypes
+namespace RiseToPanteon.Absorption.Contracts
 {
-    /// <summary>Поглотить тело действием игрока (GDD E01).</summary>
-    public const ushort AbsorbBody = 0x2001;
+    [FeatureIdBlock("Absorption", 0x20)]
+    public static class AbsorptionOpTypes
+    {
+        public const ushort ABSORB_BODY = 0x2001;
+    }
 }
 ```
 
@@ -445,7 +575,7 @@ N `0x90–0x9F`, U `0xA0–0xAF`, M `0xB0–0xBF`; `0xC0–0xEF` — резер�
 `IdBlockTests` (EditMode, `[Category("Arch")]`) через рефлексию по `RiseToPanteon.Contracts` и `RiseToPanteon.Dev`
 (если загружена) проверяет: каждое значение `*OpTypes`, `*EventTypes`, `*RejectReasons`, `*DevOpTypes` лежит в блоке
 своего `[FeatureIdBlock]`; значения уникальны в своём пространстве; блок не заявлен двумя срезами; каждый
-`[FeatureIdBlock]` есть в §7.4 с тем же именем, а каждой строке «создан» соответствует код; пары `X` ↔ `XOp` выполняют §7.2, п. 4.
+`[FeatureIdBlock]` есть в §7.4 с тем же именем, а каждой строке «создан» соответствует код; пары константа ↔ `*Op` выполняют §7.2, п. 4.
 
 ## 8. Регистрация без центральных файлов
 
@@ -462,6 +592,8 @@ N `0x90–0x9F`, U `0xA0–0xAF`, M `0xB0–0xBF`; `0xC0–0xEF` — резер�
 | Экран, вкладка, виджет HUD | `ScreenDefinition` по `UI.md` §11 | `<Фича>UIInstaller` |
 | Сервис, dev-панель | Регистрация в инсталлере своего контура | `<Фича>{Services,Dev}Installer` |
 
+`AbsorptionBridgeInstaller` регистрирует мост среза «Поглощение» в игровом скоупе:
+
 ```csharp
 using RiseToPanteon.Bridge;
 using RiseToPanteon.Core;
@@ -471,7 +603,6 @@ using VContainer;
 
 namespace RiseToPanteon.Absorption.Bridge
 {
-    /// <summary>Регистрирует мост среза «Поглощение» в игровом скоупе.</summary>
     [Preserve, FeatureInstaller(InstallScope.Game)]
     public sealed class AbsorptionBridgeInstaller : IFeatureInstaller
     {
@@ -534,7 +665,7 @@ Co-Authored-By: <строка агента>
 ```
 
 - Типы: `feat`, `fix`, `refactor`, `perf`, `test`, `docs`, `chore`. Область: срез в kebab-case (`absorption`,
-  `world-step`), сборка (`bridge`), `configs`, `arch`, `gdd`. Заголовок — до 72 символов, без точки.
+  `world-step`), сборка (`bridge`), `configs`, `arch`, `gdd`, `harness`. Заголовок — до 72 символов, без точки.
 - Коммит атомарный: одна логическая единица, компилируется, тесты зелёные. Новый файл или папка коммитятся с
   `.meta`; `.meta` не копируются между папками (дубли GUID). `Library/`, `Temp/`, `Logs/`, `*.csproj` — не в git.
 
@@ -545,7 +676,7 @@ Co-Authored-By: <строка агента>
 2. **Владелец** — по §7.4. Срез создан — работа идёт в нём. Нет — взять имя и блок из строки «план» (или добавить
    строку с первым свободным блоком, §7.2) и поставить статус «создан».
 3. **Срез.** Скопировать `Features/_Template~/` в `Features/<Фича>/` без `~`, заменить плейсхолдеры (§6.3), удалить
-   ненужные контурные папки, заполнить `README.md` (§6.4). Дать Unity создать `.meta`, проверить компиляцию.
+   ненужные контурные папки, заполнить заметку `README.md` (§6.4). Дать Unity создать `.meta`, проверить компиляцию.
 4. **Contracts.** Операции (`<Фича>OpTypes` + `*Op`), события (`<Фича>EventTypes`), read-модели (`*ReadModel`) —
    только то, что нужно другим контурам. Id — из блока среза. Контракт blittable и без `Entity` (ARCH-10).
 5. **Simulation.** Компоненты по `Simulation.md` §4.1, системы `*System` в группах README §4.4 (`[BurstCompile]`,
@@ -564,7 +695,8 @@ Co-Authored-By: <строка агента>
     регистрациями (§8). **Dev:** читы — dev-операции в `Features/<Фича>/Dev/` из dev-диапазона блока (ARCH-18).
 11. **Тесты** (§9) на каждую новую или изменённую систему, операцию (Validate и Apply), биндер, секцию сохранения,
     view-модель; правила из «Проверки в прототипе» спецификации, проверяемые без глаз, — тоже.
-12. **Документы.** README среза. Изменилась механика — файл фичи в `Docs/GDD/Features/` и статус в
+12. **Документы.** Заметка среза — запись о каждом новом и изменённом типе (§6.4); строка фичи в `Docs/Roadmap.md`.
+    Изменилась механика — файл фичи в `Docs/GDD/Features/` и статус в
     `Docs/GDD/Features.md`. Изменилась архитектура — `ArchitectureDecisions.md`, документ контура, этот документ
     (ARCH-20). Выданный блок — в §7.4 тем же коммитом.
 13. **Чеклист §12, коммит §10.**
@@ -579,7 +711,10 @@ Co-Authored-By: <строка агента>
 - [ ] В коде нет чисел баланса (все в `Configs/`, `npm --prefix Configs run validate` проходит); текст для игрока — только ключи локализации.
 - [ ] Изменяемые `static`-поля сбрасываются в `SubsystemRegistration` (Enter Play Mode без перезагрузки домена).
 - [ ] Горячие пути (ИИ, движение, бой, шаг мира, генерация, отрисовка) в бюджетах ARCH-19; при сомнении — perf-тест или профайлер.
-- [ ] README среза, GDD и архитектурные документы обновлены (шаг 12 §11); коммит атомарный и оформлен по §10.
+- [ ] Комментариев в коде нет (CODE-18); заметка описывает каждый новый и изменённый тип (CODE-19); `Docs/Roadmap.md`,
+      GDD и архитектурные документы обновлены (шаг 12 §11).
+- [ ] `uv run --project Tools/rag rag lint --changed` — без ошибок; ревьюер (`Docs/Tech/Harness.md` §7) — вердикт «чисто».
+- [ ] Коммит атомарный и оформлен по §10.
 
 ## 13. Правила
 
@@ -589,9 +724,9 @@ Co-Authored-By: <строка агента>
 | CODE-02 | Сборки и их ссылки — только по §3.1 и §3.2, по имени сборки, не по GUID. Новая сборка появляется сначала в README, новая пакетная ссылка — отдельным обоснованным коммитом. |
 | CODE-03 | В `Features/` нет `.asmdef`. Каждая контурная папка среза содержит ровно один `.asmref` на одноимённую сборку. `.cs` вне контурной папки запрещён. |
 | CODE-04 | Неймспейс равен пути (§4); подпапки его не меняют. Один тип верхнего уровня на файл, имя файла = имя типа. |
-| CODE-05 | Идентификаторы — на английском, комментарии и XML-doc — на русском. Роли из §5.2 называются по своим шаблонам, суффикс одной роли не используется для другой. |
-| CODE-06 | У каждого id GDD один владелец (§6.1, §7.4). README среза перечисляет id, которыми срез владеет и в которых участвует. |
-| CODE-07 | Зависимости между срезами объявлены в README, оформлены через `using` и образуют ациклический граф. |
+| CODE-05 | Идентификаторы — на английском; именование и форматирование — по §5.1 и §5.3. Роли из §5.2 называются по своим шаблонам, суффикс одной роли не используется для другой. |
+| CODE-06 | У каждого id GDD один владелец (§6.1, §7.4). Шапка заметки среза перечисляет id, которыми срез владеет (`gdd`) и в которых участвует (`participates`). |
+| CODE-07 | Зависимости между срезами объявлены в `depends` заметки, оформлены через `using` и образуют ациклический граф. |
 | CODE-08 | Числовые id берутся только из блока среза и объявляются только в `*OpTypes`, `*EventTypes`, `*RejectReasons`, `*DevOpTypes`. Выданные id не меняются и не переиспользуются. |
 | CODE-09 | Фича регистрируется только инсталлерами своего среза с `[FeatureInstaller]` и `[Preserve]`. Править `App`, скоупы, сцены и общие списки ради фичи запрещено. |
 | CODE-10 | Системы находятся по `[UpdateInGroup]` в группах README §4.4. Срез может добавить подгруппу, но не группу верхнего уровня. |
@@ -601,4 +736,6 @@ Co-Authored-By: <строка агента>
 | CODE-14 | Тесты среза лежат в `Features/<Фича>/Tests/`. Каждая новая или изменённая система, операция, биндер, секция сохранения и view-модель покрыты EditMode-тестом. Коммит с красным архитектурным тестом запрещён. |
 | CODE-15 | Новый файл или папка коммитятся с `.meta`, `.meta` не копируются. `Features/_Template~` копируется без `~`, чтобы Unity его импортировал, и обновляется тем же коммитом, что и API контуров. |
 | CODE-16 | Коммит атомарный, формат — §10. Сейчас работа идёт в `main`; после перехода на ветки — `feature/<GDD-id>-<slug>` → `preprod` → `main`. |
-| CODE-17 | Изменение механики → GDD. Изменение архитектуры → журнал решений, документ контура и этот документ. Выдача блока → §7.4 тем же коммитом. |
+| CODE-17 | Изменение механики → GDD. Изменение архитектуры → журнал решений, документ контура и этот документ. Выдача блока → §7.4 тем же коммитом. Изменение реализации фичи → строка в `Docs/Roadmap.md` тем же коммитом. |
+| CODE-18 | В коде нет комментариев: ни в `.cs` (включая XML-doc `///`), ни в `.uss`, `.uxml` и шейдерах. Разрешены только `#pragma`, `// ReSharper disable` и `// ReSharper restore`. Всё, что стоило бы написать комментарием, записывается в заметку (§6.4). Исключение — сгенерированный код (`*.g.cs`, `Code/Editor/Configs/Generated/`): его не правят руками, и заметка к нему не нужна. |
+| CODE-19 | Каждый `.cs` в `Code/` и `Features/` описан в своей заметке — записью `### <Тип>` или строкой таблицы (§6.4). Запись обновляется тем же коммитом, что и код; запись о несуществующем типе удаляется. |

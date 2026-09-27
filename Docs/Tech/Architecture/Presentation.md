@@ -106,27 +106,34 @@ sequenceDiagram
 
 `WorldPresenter` — точка входа VContainer в `GameScope` (`RegisterEntryPoint`, `ILateTickable`: к `PreLateUpdate`
 тики кадра уже прошли). Только он читает `IWorldView`; остальные классы контура получают данные от него.
+Эскиз ниже — иллюстрация: имена членов `IWorldView` и `IAppLifecycle` задают Contracts и Services.
 
 ```csharp
-// Иллюстрация. Имена членов IWorldView и IAppLifecycle задают Contracts и Services.
 public sealed class WorldPresenter : IStartable, ILateTickable, IDisposable
 {
     public void LateTick()
     {
-        if (_lifecycle.IsPaused) { _pause.Enter(); return; }       // §4
+        if (_lifecycle.IsPaused) { _pause.Enter(); return; }
         _pause.Exit();
-        _clock.Advance(Time.deltaTime);                             // _RtpWorldTime
-        _location.Sync(_world);                                     // раскладка, клетки, туман (§6)
-        _appearance.Sync(_world, _registry);                        // облик по версии (§5.4)
-        if (_world.SnapshotTick != _appliedTick) ApplySnapshot();   // §3.2
-        _events.Route(_world.Events, _registry);                    // §10, ровно один раз
-        _registry.FlushDespawns();                                   // пул или outro
-        _registry.Interpolate(math.saturate(_world.Alpha));         // §4
-        _camera.Tick(_registry, _world);                             // §11
-        _anchors.Publish(_camera);                                   // IWorldAnchorService (Contracts)
+        _clock.Advance(Time.deltaTime);
+        _location.Sync(_world);
+        _appearance.Sync(_world, _registry);
+        if (_world.SnapshotTick != _appliedTick) ApplySnapshot();
+        _events.Route(_world.Events, _registry);
+        _registry.FlushDespawns();
+        _registry.Interpolate(math.saturate(_world.Alpha));
+        _camera.Tick(_registry, _world);
+        _anchors.Publish(_camera);
     }
 }
 ```
+
+- `_pause` — пауза (§4); `_clock` двигает `_RtpWorldTime`.
+- `_location.Sync` — раскладка, клетки, туман (§6); `_appearance.Sync` — облик по версии (§5.4).
+- `ApplySnapshot` — сравнение снимков (§3.2).
+- `_events.Route` — события (§10), ровно один раз.
+- `FlushDespawns` — исчезнувшие вьюхи уходят в пул или в outro; `Interpolate` — интерполяция (§4).
+- `_camera.Tick` — камера (§11); `_anchors.Publish` — `IWorldAnchorService` (Contracts).
 
 ### 3.2. Сравнение снимков по StableId
 
@@ -233,17 +240,20 @@ Animator Controller не используется; у скелетной вью�
 визуала (R-04, `Content.md`).
 
 ```csharp
-// AnimationPlayableOutput(Animator) ← AnimationMixerPlayable(2 входа) ← AnimationClipPlayable из кэша.
 public sealed class AnimationPlayer : IDisposable
 {
-    public void Init(Animator animator, AnimSet set);     // граф, выход, микшер, кэш клипов по AnimStateId
-    public void SetState(byte stateId, byte restart);     // переподключение входов, кроссфейд из AnimSet
-    public void Tick(float dt);                            // только веса кроссфейда
-    public void SetPaused(bool paused);                   // скорость корня 0 или 1
-    public void Dispose();                                 // graph.Destroy()
+    public void Init(Animator animator, AnimSet set);
+    public void SetState(byte stateId, byte restart);
+    public void Tick(float dt);
+    public void SetPaused(bool paused);
+    public void Dispose();
 }
 ```
 
+- Граф: `AnimationPlayableOutput(Animator)` ← `AnimationMixerPlayable` (2 входа) ← `AnimationClipPlayable` из кэша.
+- `Init` строит граф, выход, микшер и кэш клипов по `AnimStateId`; `SetState` переподключает входы и делает
+  кроссфейд из `AnimSet`; `Tick` меняет только веса кроссфейда; `SetPaused` ставит скорость корня 0 или 1;
+  `Dispose` вызывает `graph.Destroy()`.
 - Режим графа — `DirectorUpdateMode.GameTime` (пакетная оценка); ручной `Evaluate` — запасной, выбор по замеру.
 - Переходы состояний решает симуляция; проигрыватель только играет `AnimState` с кроссфейдом, без аллокаций.
 - Клипы могут ключевать метки `SpriteResolver` (смена кадра части) — штатная возможность 2D Animation.

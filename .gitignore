@@ -82,3 +82,8 @@ crashlytics-build.properties
 # IDE
 .cursor/
 .idea/
+
+# База знаний агентов (Tools/rag)
+Tools/rag/.venv/
+Tools/rag/.index/
+__pycache__/
