@@ -1,6 +1,8 @@
 <!--
 Sync Impact Report
-- Version: 1.4.1 → 1.4.2 (PATCH: справочники по ECS перенесены в
+- Version: 1.4.2 → 1.4.3 (PATCH: удалён устаревший скилл unity-ecs-patterns
+  из источников знаний)
+- Предыдущее: 1.4.1 → 1.4.2 (PATCH: справочники по ECS перенесены в
   Docs/Tech/Reference/Unity и переписаны под 6.6; UnityPhysics удалён)
 - Предыдущее: 1.4.0 → 1.4.1 (PATCH: ссылки на документацию механик → Docs/GDD;
   убраны ссылки на удалённые документы старой концепции)
@@ -120,10 +122,7 @@ PR/коммите.
    - `/Docs/Tech/ArchitectureDecisions.md` — журнал архитектурных решений
    - `/Docs/GDD/README.md` — геймдизайн: видение, столпы, реестр фич
 
-2. **Скилл unity-ecs-patterns** — проверенные паттерны и практики
-   (расположен в `/.cursor/skills/unity-ecs-patterns/`)
-
-3. **Официальная документация Unity Entities 6.6**:
+2. **Официальная документация Unity Entities 6.6**:
    https://docs.unity3d.com/Packages/com.unity.entities@6.6/manual/index.html
 
 Ссылки внутри документов — переходить ТОЛЬКО при реальной
@@ -201,4 +200,4 @@ PR/коммите.
 принципов. Нарушения допускаются ТОЛЬКО с явным обоснованием и
 планом миграции.
 
-**Version**: 1.4.2 | **Ratified**: 2026-02-28 | **Last Amended**: 2026-09-27
+**Version**: 1.4.3 | **Ratified**: 2026-02-28 | **Last Amended**: 2026-09-27
