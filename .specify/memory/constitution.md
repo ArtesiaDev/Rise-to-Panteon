@@ -1,6 +1,8 @@
 <!--
 Sync Impact Report
-- Version: 1.3.0 → 1.4.0 (MINOR: переход на Unity 6.6 / Entities 6.6)
+- Version: 1.4.0 → 1.4.1 (PATCH: ссылки на документацию механик → Docs/GDD;
+  убраны ссылки на удалённые документы старой концепции)
+- Предыдущее: 1.3.0 → 1.4.0 (MINOR: переход на Unity 6.6 / Entities 6.6)
 - Принципы:
   - I. DOTS-First архитектура → версия Entities 1.4.x → 6.6 (core-пакет)
   - Технические ограничения → Unity 6.6 (6000.6.3f1), URP 17.6;
@@ -114,8 +116,7 @@ PR/коммите.
    - `/Docs/Unity Entities 101.md` — основы Unity Entities
    - `/Docs/UnityJobSystem.md` — Job System
    - `/Docs/UnityPhysics.md` — Unity Physics
-   - `/Docs/DOTS_Migration_Plan.md` — план миграции проекта
-   - `/Docs/RuntimeRoguelike_CurrentMechanics.md` — текущие механики
+   - `/Docs/GDD/README.md` — геймдизайн: видение, столпы, реестр фич
 
 2. **Скилл unity-ecs-patterns** — проверенные паттерны и практики
    (расположен в `/.cursor/skills/unity-ecs-patterns/`)
@@ -161,10 +162,10 @@ PR/коммите.
   (`RunState`, `InputState`, `DifficultyState` и др.)
 - **Документация механик** (NON-NEGOTIABLE): при любом изменении
   геймплейной механики ОБЯЗАТЕЛЬНО обновить документацию:
-  - Индекс: `Docs/RuntimeRoguelike_CurrentMechanics.md`
-  - Детали: `Docs/Mechanics/<НазваниеМеханики>.md`
-  - Новая механика → новый файл + строка в таблицу индекса
-  - Удалённая механика → удалить файл + строку из таблицы
+  - Источник истины: `Docs/GDD/` (индекс — `Docs/GDD/README.md`, реестр фич — `Docs/GDD/Features.md`)
+  - Детали фич: `Docs/GDD/Features/<ID>-<Name>.md`, тематические правила — `Docs/GDD/<Тема>.md`
+  - Новая механика → файл фичи + строка в реестр
+  - Удалённая механика → удалить файл + строку из реестра
 
 ## Известные отступления от принципов
 
@@ -198,4 +199,4 @@ PR/коммите.
 принципов. Нарушения допускаются ТОЛЬКО с явным обоснованием и
 планом миграции.
 
-**Version**: 1.4.0 | **Ratified**: 2026-02-28 | **Last Amended**: 2026-09-26
+**Version**: 1.4.1 | **Ratified**: 2026-02-28 | **Last Amended**: 2026-09-27

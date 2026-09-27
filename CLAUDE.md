@@ -94,9 +94,6 @@ Assets/_Project/Dots/
 
 ## Active Technologies
 - C# (.NET Standard 2.1) / Unity 6.6 (6000.6.3f1) + Unity.Entities 6.6 (core), Unity.Burst 2.0, Unity.Collections 6.6, Unity.Mathematics, URP 17.6 (unity6-upgrade)
-- BlobAssetReference<MapBlob> для данных карты, IComponentData для состояния (001-dots-audit-refactor)
-- BlobAssetReference<MapBlob> для карты, (002-map-generation-redesign)
 
 ## Recent Changes
 - unity6-upgrade: Unity 2022.3.62f2 → 6000.6.3f1, Entities 1.4.2 → 6.6.0 (core), URP 14 → 17.6, Addressables 1.22 → 2.11, TextMeshPro → uGUI 2.6
-- 001-dots-audit-refactor: Added C# (.NET Standard 2.1) / Unity 2022.3 LTS + Unity.Entities 1.4.x, Unity.Burst, Unity.Collections, Unity.Mathematics

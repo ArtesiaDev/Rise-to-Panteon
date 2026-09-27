@@ -37,7 +37,7 @@ Hybrid, Authoring, Baking)
 | IV | Burst | [BurstCompile] на всех системах (или комментарий с обоснованием) | ☐ |
 | V | Порядок систем | [UpdateInGroup], [UpdateAfter/Before], RequireForUpdate | ☐ |
 | VI | YAGNI | Нет абстракций «на будущее», минимальная сложность | ☐ |
-| — | Документация механик | Обновлены Docs/Mechanics/ и индекс (если затронута механика) | ☐ |
+| — | Документация механик | Обновлены Docs/GDD/ (файл фичи и реестр Features.md), если затронута механика | ☐ |
 
 ## Project Structure
 
@@ -75,7 +75,7 @@ Assets/_Project/Dots/
 │   └── Components/        — MonoBehaviour + Baker
 └── Baking/                — BakingSystem расширения
 
-Docs/Mechanics/            — документация механик (NON-NEGOTIABLE)
+Docs/GDD/                  — геймдизайн и файлы фич (NON-NEGOTIABLE)
 ```
 
 **Structure Decision**: 4-assembly DOTS-архитектура. Новые

@@ -28,7 +28,7 @@ description: "Task list template for feature implementation"
   - `Systems/Presentation/` — PresentationSystemGroup
 - **Hybrid**: `Assets/_Project/Dots/Hybrid/` — мосты (Input, UI, Rendering)
 - **Authoring**: `Assets/_Project/Dots/Authoring/` — Baker-компоненты
-- **Документация**: `Docs/Mechanics/` — описания механик (NON-NEGOTIABLE)
+- **Документация**: `Docs/GDD/` — геймдизайн и файлы фич (NON-NEGOTIABLE)
 - **Тесты**: `Assets/Tests/` — EditMode + PlayMode
 
 <!-- 
@@ -97,7 +97,7 @@ description: "Task list template for feature implementation"
 - [ ] T014 [US1] Добавить ordering: [UpdateInGroup], [UpdateAfter/Before]
 - [ ] T015 [US1] Создать Hybrid-мост (если нужен UI/визуал)
 - [ ] T016 [US1] Проверить Burst-компиляцию и ECB-дисциплину
-- [ ] T017 [US1] Обновить Docs/Mechanics/ (если затронута механика)
+- [ ] T017 [US1] Обновить Docs/GDD/ (если затронута механика)
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 
@@ -119,7 +119,7 @@ description: "Task list template for feature implementation"
 - [ ] T020 [P] [US2] Создать IComponentData в Runtime/Components/
 - [ ] T021 [US2] Создать ISystem с [BurstCompile] в Runtime/Systems/
 - [ ] T022 [US2] Создать Hybrid-мост (если нужен)
-- [ ] T023 [US2] Обновить Docs/Mechanics/ (если затронута механика)
+- [ ] T023 [US2] Обновить Docs/GDD/ (если затронута механика)
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 
@@ -157,8 +157,8 @@ description: "Task list template for feature implementation"
 - [ ] TXXX Burst-компиляция: проверить read_console на ошибки
 - [ ] TXXX Managed-типы: убедиться нет string/class в Runtime/
 - [ ] TXXX ECB: структурные изменения только через EntityCommandBuffer
-- [ ] TXXX [P] Обновить Docs/Mechanics/ для затронутых механик
-- [ ] TXXX [P] Обновить индекс Docs/RuntimeRoguelike_CurrentMechanics.md
+- [ ] TXXX [P] Обновить файлы фич в Docs/GDD/Features/ для затронутых механик
+- [ ] TXXX [P] Обновить реестр Docs/GDD/Features.md
 - [ ] TXXX Проверить ordering: [UpdateInGroup], [UpdateAfter/Before]
 - [ ] TXXX Запустить Play Mode и убедиться в работоспособности
 
