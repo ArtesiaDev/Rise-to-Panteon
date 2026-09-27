@@ -12,9 +12,11 @@
 ### Документация проекта
 
 Пути к документации по правильному использованию:
-1. `/Docs/Unity Entities 101.md` — основы Unity Entities
-2. `/Docs/UnityJobSystem.md` — Job System
-3. `/Docs/UnityPhysics.md` — Unity Physics
+1. `/Docs/Tech/Reference/Unity/Entities.md` — Unity Entities 6.6: что используем и как
+2. `/Docs/Tech/Reference/Unity/JobsAndBurst.md` — Job System, Burst, Collections
+
+Архитектурные решения проекта — `/Docs/Tech/ArchitectureDecisions.md`.
+`/Docs/Tech/Reference/WO_ProductionArchitecture.md` — чужой проект, только референс.
 
 Если в документах встречаются ссылки на другую документацию —
 переходи по ним только если действительно нужна информация.

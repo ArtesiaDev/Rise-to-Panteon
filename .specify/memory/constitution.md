@@ -1,6 +1,8 @@
 <!--
 Sync Impact Report
-- Version: 1.4.0 → 1.4.1 (PATCH: ссылки на документацию механик → Docs/GDD;
+- Version: 1.4.1 → 1.4.2 (PATCH: справочники по ECS перенесены в
+  Docs/Tech/Reference/Unity и переписаны под 6.6; UnityPhysics удалён)
+- Предыдущее: 1.4.0 → 1.4.1 (PATCH: ссылки на документацию механик → Docs/GDD;
   убраны ссылки на удалённые документы старой концепции)
 - Предыдущее: 1.3.0 → 1.4.0 (MINOR: переход на Unity 6.6 / Entities 6.6)
 - Принципы:
@@ -113,9 +115,9 @@ PR/коммите.
 При работе с ECS агент ДОЛЖЕН опираться на следующие источники:
 
 1. **Проектная документация** (приоритет — высший):
-   - `/Docs/Unity Entities 101.md` — основы Unity Entities
-   - `/Docs/UnityJobSystem.md` — Job System
-   - `/Docs/UnityPhysics.md` — Unity Physics
+   - `/Docs/Tech/Reference/Unity/Entities.md` — Unity Entities 6.6
+   - `/Docs/Tech/Reference/Unity/JobsAndBurst.md` — Job System, Burst, Collections
+   - `/Docs/Tech/ArchitectureDecisions.md` — журнал архитектурных решений
    - `/Docs/GDD/README.md` — геймдизайн: видение, столпы, реестр фич
 
 2. **Скилл unity-ecs-patterns** — проверенные паттерны и практики
@@ -199,4 +201,4 @@ PR/коммите.
 принципов. Нарушения допускаются ТОЛЬКО с явным обоснованием и
 планом миграции.
 
-**Version**: 1.4.1 | **Ratified**: 2026-02-28 | **Last Amended**: 2026-09-27
+**Version**: 1.4.2 | **Ratified**: 2026-02-28 | **Last Amended**: 2026-09-27
