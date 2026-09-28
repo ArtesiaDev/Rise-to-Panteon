@@ -103,8 +103,8 @@ CI конфиг-репозитория (GitHub Actions): `npm ci` → `fmt:check
 {
   "$schema": "../schemas/species.schema.json",
   "rows": [
-    { "id": "shurshun", "family": "chitin", "visual": "creature.shurshun.base", "hp": 40,
-      "speedTilesPerSec": 2.5, "fleeChance": 0.6, "note": "Т0, пасётся у точек кормёжки (B01)" }
+    { "id": "komok", "family": "earth", "visual": "creature.komok.base", "hp": 40,
+      "speedTilesPerSec": 2.5, "fleeChance": 0.6, "note": "Т0, пасётся у мерцающих трещин (B01)" }
   ]
 }
 ```
@@ -159,7 +159,7 @@ CI конфиг-репозитория (GitHub Actions): `npm ci` → `fmt:check
 - **Числа баланса обязательны** (`required`), `default` не используется: значение всегда видно в данных. Необязательны только `note` и ссылки, которые по смыслу могут отсутствовать.
 - **Enum** — строки `lower_snake`. Варианты — `oneOf` из `$ref`, в каждом `kind: { "const": "…" }`.
 - **Никаких выражений**: только готовые значения; кривые — явные массивы. Формулы GDD — только способ заполнить таблицы (позже — в админке); в игре формул нет.
-- **Текст для игрока в `data/` запрещён**: имя вида — строка `species.shurshun.name` в `strings/` (§8).
+- **Текст для игрока в `data/` запрещён**: имя вида — строка `species.komok.name` в `strings/` (§8).
 
 ### 3.4. Версия схемы и миграции
 
@@ -448,7 +448,7 @@ flowchart LR
   "objects": [{ "type": "feeding_point", "at": [7, 3] }],
   "spawns": [{ "kind": "lair_home", "at": [8, 2] }],
   "markers": [{ "id": "center", "at": [8, 2] }],
-  "decor": [{ "visual": "decor.abyss.bones_01", "at": [3, 1] }],
+  "decor": [{ "visual": "decor.abyss.slab_01", "at": [3, 1] }],
   "note": "Сокращено для примера; у логова сторона ≥ 14 (W02 §5)"
 }
 ```
@@ -498,7 +498,7 @@ flowchart LR
 ```
 
 - Файл = таблица строк Unity Localization: `ui`, `hints`, `barks`, `items`, `species`, `nicknames` (GDD M04 §5); Срез — `lore`, `dialogues`, `rumors`.
-- Ключ — `<файл>.<объект>.<поле>` (M04 §9), `^[a-z0-9_]+(\.[a-z0-9_]+)+$`, первый сегмент = имя файла. Текст строк таблиц `data/` — по соглашению `<table>.<rowId>.<field>` для полей из `localized`: `species.shurshun.name`; поля с ключом в данных нет.
+- Ключ — `<файл>.<объект>.<поле>` (M04 §9), `^[a-z0-9_]+(\.[a-z0-9_]+)+$`, первый сегмент = имя файла. Текст строк таблиц `data/` — по соглашению `<table>.<rowId>.<field>` для полей из `localized`: `species.komok.name`; поля с ключом в данных нет.
 - `note` обязателен: контекст для переводчика и агента (M04 §9).
 - Подстановки — только именованные (`{count}`, `{name}`), Smart Strings; склейка строк в коде запрещена (M04 R6). Строка с `{` импортируется как Smart.
 - Множественное число — форматтер `plural`; для русского три формы: 1 / 2–4 / 5+ (M04 R7). Порядок форм для `ru` в SmartFormat — «проверить на спайке».
@@ -523,7 +523,7 @@ flowchart LR
 ```text
 Assets/_Project/Art/
 ├── Rigs/<Template>/            шаблоны скелетов с общими точками крепления
-├── Creatures/<Family>/         Chitin, Discharge, Dust, Rot — общие части, Sprite Library, палитры; <Species>/ — своё у вида
+├── Creatures/<Family>/         Earth, Fire, Water, Wind, Light, Dark, Dust, Rot, Bone — общие части, Sprite Library, палитры; <Species>/ — своё у вида
 ├── Player/<Body>/              Spark, Clot … — тела стадий и полюсов (Scope → «Производство обликов»)
 ├── Weapons/<Archetype>/        6–8 архетипов оружия в руке
 ├── Environment/<Biome>/        Abyss, Catacombs …: Tileset/ (автотайлинг 3/4), Props/, Decor/, Traces/ (L05)
@@ -552,7 +552,7 @@ Assets/_Project/Art/
 | `Audio_Sfx` / `Audio_Stream` | Audio/Sfx / Audio/Music, Audio/Ambience | Decompress On Load, Vorbis, моно / Streaming, Vorbis |
 
 - **Атласы** — Sprite Atlas v2: один на биом (`atlas.env.abyss`), на семейство существ (виды семейства делят части и различаются цветом — Scope), на тело игрока, на иконки UI. До 2048², padding 4, без поворота; сжатие задаёт атлас: Android и iOS — ASTC 6×6, UI — ASTC 4×4. Атлас лежит в той же группе Addressables, что его спрайты; Addressables Analyze «Check Duplicate Bundle Dependencies» — без находок. «Проверить на спайке»: атлас v2 + Addressables и упаковка скиннованных спрайтов.
-- **Скелеты** — шаблон с общими точками крепления в `Rigs/`; PSB семейства ссылается на него; сменные части — Sprite Library, перекраска — шейдером по палитре (`Presentation.md` §5). Прототип — 4 скелета семейств, 6 палитр, ~42 анимации (Scope).
+- **Скелеты** — шаблон с общими точками крепления в `Rigs/`; PSB семейства ссылается на него; сменные части — Sprite Library, перекраска — шейдером по палитре (`Presentation.md` §5). Скелет — только у оформленных и более плотных тел, бесплотные — тела из частиц (Scope → «Производство обликов»); объём Прототипа — Scope → «Объём контента Прототипа».
 
 ### 9.3. Группы и метки
 
@@ -573,13 +573,13 @@ Assets/_Project/Art/
 
 ### 9.4. Visual id = адрес
 
-- Visual id — адрес Addressables: `<категория>.<объект>[.<вариант>]`, до четырёх сегментов: `creature.spark.base`, `creature.shurshun.base`, `tileset.abyss`, `decor.abyss.bones_01`, `vfx.absorb.burst`, `sfx.hit.chitin`, `icon.items.living_sap`.
+- Visual id — адрес Addressables: `<категория>.<объект>[.<вариант>]`, до четырёх сегментов: `creature.spark.base`, `creature.komok.base`, `tileset.abyss`, `decor.abyss.slab_01`, `vfx.absorb.burst`, `sfx.hit.physical`, `icon.items.living_sap`.
 - Категории: `creature`, `weapon`, `tileset`, `prop`, `decor`, `trace`, `vfx`, `sfx`, `music`, `amb`, `icon`, `ui`, `anim`, `palette`, `atlas`, `placeholder`. Новая категория — сначала правка этого списка.
-- Имя файла главного ассета = visual id (`creature.shurshun.base.prefab`); `AddressRules` ставит адрес = имя файла без расширения. Подадреса `[sub]` не используются.
+- Имя файла главного ассета = visual id (`creature.komok.base.prefab`); `AddressRules` ставит адрес = имя файла без расширения. Подадреса `[sub]` не используются.
 - Каталога «id → ассет» нет: секция `visuals` пака — только `ViewKey ↔ id` для компактного снимка.
 - Ассет по адресу самоописывающийся: префаб существа несёт риг, Sprite Library и набор клипов; конфиг хранит только id. ARCH-13 запрещает ссылки на ассеты в коде и конфигах; ссылки ассет → ассет — норма.
 
-Путь от конфига до картинки: `species.json` `visual: "creature.shurshun.base"` → сборщик: `SpeciesRow.View = ViewKey 17` → симуляция: `ViewState.ViewKey = 17` → `WorldPresenter`: `VisualTable.GetAddress(17)` = `"creature.shurshun.base"` → `IAssetProvider` грузит по адресу. UI идёт тем же путём: read-модель несёт `ViewKey` иконки; ключ имени UI строит из `ConfigIdList` (индекс → `shurshun` → `species.shurshun.name`). Таблиц конфигов UI и представление не читают: числа приходят в read-моделях.
+Путь от конфига до картинки: `species.json` `visual: "creature.komok.base"` → сборщик: `SpeciesRow.View = ViewKey 17` → симуляция: `ViewState.ViewKey = 17` → `WorldPresenter`: `VisualTable.GetAddress(17)` = `"creature.komok.base"` → `IAssetProvider` грузит по адресу. UI идёт тем же путём: read-модель несёт `ViewKey` иконки; ключ имени UI строит из `ConfigIdList` (индекс → `komok` → `species.komok.name`). Таблиц конфигов UI и представление не читают: числа приходят в read-моделях.
 
 Нет ассета по адресу: в редакторе и dev-сборке — `placeholder.<категория>` и предупреждение (Прототип идёт на заглушках, Scope); релизный пак с флагом `MissingVisuals` не собирается.
 

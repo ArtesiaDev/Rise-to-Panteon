@@ -44,6 +44,7 @@
 | [W13 Ловушки](GDD/Features/W13-Traps.md) | — | |
 | [W14 Лут в мире](GDD/Features/W14-WorldLoot.md) | — | |
 | [W16 Переходы между локациями](GDD/Features/W16-LocationTransitions.md) | — | |
+| [W17 Эффекты среды (огонь, яд, вода)](GDD/Features/W17-EnvironmentEffects.md) | — | |
 | [E01 Поглощение](GDD/Features/E01-Absorption.md) | — | |
 | [E02 Уровни и плотность](GDD/Features/E02-LevelsAndDensity.md) | — | |
 | [E03 Характеристики](GDD/Features/E03-Attributes.md) | — | |
@@ -93,7 +94,6 @@
 | [W09 Врата Резонанса: два ключа](GDD/Features/W09-ResonanceGates.md) | — | |
 | [W11 Биомы ярусов](GDD/Features/W11-TierBiomes.md) | — | |
 | [W15 Тайники и тайные ходы](GDD/Features/W15-SecretsAndPassages.md) | — | |
-| [W17 Эффекты среды (огонь, яд, вода)](GDD/Features/W17-EnvironmentEffects.md) | — | |
 | [E09 Гнёзда как места кокона](GDD/Features/E09-CocoonNests.md) | — | |
 | [E11 Перерастание черт](GDD/Features/E11-TraitOutgrowing.md) | — | |
 | [E12 Эволюционные услуги](GDD/Features/E12-EvolutionServices.md) | — | |
@@ -106,7 +106,6 @@
 | [L07 NPC в мире](GDD/Features/L07-WorldNPCs.md) | — | |
 | [L08 Преемники функций NPC](GDD/Features/L08-NPCFunctionSuccession.md) | — | |
 | [L09 Соперники](GDD/Features/L09-Rivals.md) | — | |
-| [L10 Фракции](GDD/Features/L10-Factions.md) | — | |
 | [L11 Подчинение](GDD/Features/L11-Subjugation.md) | — | |
 | [L12 Страховки](GDD/Features/L12-Guardrails.md) | — | |
 | [L13 Рычаги игрока](GDD/Features/L13-PlayerLevers.md) | — | |
@@ -138,6 +137,7 @@
 | [W19 Нестабильные измерения](GDD/Features/W19-UnstableDimensions.md) | — | |
 | [E10 Полюса и гибриды](GDD/Features/E10-PolesAndHybrids.md) | — | |
 | [C09 Призыв](GDD/Features/C09-Summoning.md) | — | |
+| [L10 Фракции](GDD/Features/L10-Factions.md) | — | |
 | [B06 Мегабосс Рубежа](GDD/Features/B06-FrontierMegaboss.md) | — | |
 | [D03 Наследие](GDD/Features/D03-Legacy.md) | — | |
 | [K06 Персонализация](GDD/Features/K06-CampPersonalization.md) | — | |

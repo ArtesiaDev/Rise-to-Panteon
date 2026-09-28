@@ -28,7 +28,7 @@
 | W14 | [Лут в мире](Features/W14-WorldLoot.md) | Прототип | ✅ |
 | W15 | [Тайники и тайные ходы](Features/W15-SecretsAndPassages.md) | Срез | ✅ |
 | W16 | [Переходы между локациями](Features/W16-LocationTransitions.md) | Прототип | ✅ |
-| W17 | [Эффекты среды (огонь, яд, вода)](Features/W17-EnvironmentEffects.md) | Срез | ✅ |
+| W17 | [Эффекты среды (огонь, яд, вода)](Features/W17-EnvironmentEffects.md) | Прототип (лужа Капели), Срез | ✅ |
 | W18 | [Рубеж](Features/W18-Frontier.md) | Гл1 | ✅ |
 | W19 | [Нестабильные измерения](Features/W19-UnstableDimensions.md) | Гл1 | ✅ |
 
@@ -88,8 +88,8 @@
 | L07 | [NPC в мире](Features/L07-WorldNPCs.md) | Срез | ✅ |
 | L08 | [Преемники функций NPC](Features/L08-NPCFunctionSuccession.md) | Срез | ✅ |
 | L09 | [Соперники](Features/L09-Rivals.md) | Срез | ✅|
-| L10 | [Фракции](Features/L10-Factions.md) | Срез | ✅|
-| L11 | [Подчинение](Features/L11-Subjugation.md) | Срез | ✅ |
+| L10 | [Фракции](Features/L10-Factions.md) | Гл1 | ✅|
+| L11 | [Подчинение](Features/L11-Subjugation.md) | Срез (звери), Гл1 (разумные) | ✅ |
 | L12 | [Страховки](Features/L12-Guardrails.md) | Срез | ✅ |
 | L13 | [Рычаги игрока](Features/L13-PlayerLevers.md) | Срез | ✅ |
 
