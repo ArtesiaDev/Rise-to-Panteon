@@ -20,6 +20,7 @@
 | Что делает игра | `Docs/GDD/` — README, документы систем, `Features/<ID>-<Name>.md` (правила `Rn`) |
 | Как устроен код, правила `ARCH`, `CODE`, `SIM`, `PRES`, `UI`, `CONT`, `SVC` | `Docs/Tech/Architecture/` — `README.md` первым |
 | Что делает конкретный код и почему | Заметка: `Features/<Срез>/README.md`, `Code/<Сборка>/[<Область>/]README.md` |
+| Как выглядит игра; картинки и звуки | `Docs/GDD/ArtStyle.md`; `Tools/art` — `Harness.md` §10; звуки — библиотека и `Tools/sfx`, §11 |
 | Что реализовано | `Docs/Roadmap.md` |
 | Как работают агенты, правила `DOC`, `WORK` | `Docs/Tech/Harness.md` |
 | API Entities, Jobs, Burst 6.6 | `Docs/Tech/Reference/Unity/` |

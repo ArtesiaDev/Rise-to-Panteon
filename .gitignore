@@ -87,3 +87,8 @@ crashlytics-build.properties
 Tools/rag/.venv/
 Tools/rag/.index/
 __pycache__/
+
+# Local style references: only the chosen style and approved sounds are tracked
+/Docs/References/Assets/*
+!/Docs/References/Assets/1 Chosen style/
+!/Docs/References/Assets/6 Sounds/
