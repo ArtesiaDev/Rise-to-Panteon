@@ -109,6 +109,7 @@
 | [L11 Подчинение](GDD/Features/L11-Subjugation.md) | — | |
 | [L12 Страховки](GDD/Features/L12-Guardrails.md) | — | |
 | [L13 Рычаги игрока](GDD/Features/L13-PlayerLevers.md) | — | |
+| [L14 Встречные восходящие](GDD/Features/L14-WanderingAscendants.md) | — | |
 | [K01 Локация Лагеря](GDD/Features/K01-CampLocation.md) | — | |
 | [K03 Приведение NPC](GDD/Features/K03-BringingNPCs.md) | — | |
 | [K04 Активности](GDD/Features/K04-CampActivities.md) | — | |

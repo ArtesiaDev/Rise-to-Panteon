@@ -92,6 +92,7 @@
 | L11 | [Подчинение](Features/L11-Subjugation.md) | Срез (звери), Гл1 (разумные) | ✅ |
 | L12 | [Страховки](Features/L12-Guardrails.md) | Срез | ✅ |
 | L13 | [Рычаги игрока](Features/L13-PlayerLevers.md) | Срез | ✅ |
+| L14 | [Встречные восходящие](Features/L14-WanderingAscendants.md) | Срез | ✅ |
 
 ## Смерть — [Death.md](Death.md)
 
