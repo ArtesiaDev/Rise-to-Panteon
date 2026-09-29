@@ -47,8 +47,11 @@ def png_info(path: Path) -> tuple[int, int, bool]:
     return width, height, head[25] in (4, 6)
 
 
-def build_prompt(description: str, size: str, transparent: bool) -> str:
-    parts = [f"Output size: exactly {size} pixels.", style_block(), f"Asset: {description.strip()}"]
+def build_prompt(description: str, size: str, transparent: bool, styled: bool = True) -> str:
+    block = style_block()
+    if not styled:
+        block = "\n".join(line for line in block.splitlines() if not line.startswith("Art style — match the attached"))
+    parts = [f"Output size: exactly {size} pixels.", block, f"Asset: {description.strip()}"]
     if transparent:
         parts.append("Transparent background (PNG with alpha channel): no ground, no shadow, no other objects.")
     return "\n\n".join(parts)
@@ -61,6 +64,7 @@ def main() -> None:
     parser.add_argument("--size", default="2048x2048", help="ширина x высота, кратные 16")
     parser.add_argument("--transparent", action="store_true", help="прозрачный фон")
     parser.add_argument("--ref", action="append", default=[], help="доп. референс сюжета (можно несколько)")
+    parser.add_argument("--style-ref", default="", help="эталон стиля вместо общего: путь к файлу или none")
     parser.add_argument("--feature", default="", help="ID фичи GDD, для которой ассет")
     parser.add_argument("--force", action="store_true", help="перезаписать существующий файл")
     parser.add_argument("--dry-run", action="store_true", help="только показать задание для Codex")
@@ -86,6 +90,7 @@ def main() -> None:
         "size": args.size,
         "transparent": args.transparent,
         "refs": [rel(Path(r)) for r in args.ref],
+        "style_ref": args.style_ref if args.style_ref in ("", "none") else rel(Path(args.style_ref)),
         "feature": args.feature,
         "force": args.force,
     }
@@ -122,19 +127,34 @@ def check_job(job: dict) -> None:
     out = absolute(job["out"])
     if out.exists() and not job["force"]:
         sys.exit(f"art: {out} уже есть — другое имя или --force")
-    for ref in [STYLE_REFERENCE, *map(absolute, job["refs"])]:
+    style = style_source(job)
+    for ref in ([style] if style else []) + list(map(absolute, job["refs"])):
         if not ref.is_file():
             sys.exit(f"art: нет файла {ref}")
 
 
-def make_task(job: dict) -> tuple[str, str]:
+def style_source(job: dict) -> Path | None:
+    style = job.get("style_ref", "")
+    if style == "none":
+        return None
+    return absolute(style) if style else STYLE_REFERENCE
+
+
+def inputs(job: dict) -> list[tuple[Path, str]]:
+    style = style_source(job)
     refs = [absolute(r) for r in job["refs"]]
-    names = ["style_reference.png"] + [f"subject_{i + 1}{r.suffix.lower()}" for i, r in enumerate(refs)]
+    pairs = [(style, f"style_reference{style.suffix.lower()}")] if style else []
+    return pairs + [(r, f"subject_{i + 1}{r.suffix.lower()}") for i, r in enumerate(refs)]
+
+
+def make_task(job: dict) -> tuple[str, str]:
+    styled = style_source(job) is not None
+    names = [name for _, name in inputs(job)]
     roles = "; ".join(
-        ["style_reference.png — STYLE REFERENCE only (overall art style, not content)"]
-        + [f"{n} — SUBJECT REFERENCE (keep this exact subject)" for n in names[1:]]
-    )
-    prompt = build_prompt(job["description"], job["size"].replace("x", "×"), job["transparent"])
+        ([f"{names[0]} — STYLE REFERENCE only (overall art style, not content)"] if styled else [])
+        + [f"{n} — SUBJECT REFERENCE (keep this exact subject)" for n in names if n.startswith("subject_")]
+    ) or "none"
+    prompt = build_prompt(job["description"], job["size"].replace("x", "×"), job["transparent"], styled)
     alpha = " Ask for a genuinely transparent background and preserve the alpha." if job["transparent"] else ""
     return prompt, TASK.format(roles=roles, alpha=alpha, result=RESULT_NAME, prompt=prompt)
 
@@ -143,15 +163,14 @@ def generate(job: dict) -> tuple[str, object]:
     if shutil.which("codex") is None:
         sys.exit("art: нет codex — npm i -g @openai/codex, затем codex login")
     prompt, task = make_task(job)
-    refs = [absolute(r) for r in job["refs"]]
-    names = ["style_reference.png"] + [f"subject_{i + 1}{r.suffix.lower()}" for i, r in enumerate(refs)]
+    pairs = inputs(job)
     out = absolute(job["out"])
     with tempfile.TemporaryDirectory(prefix="art-") as tmp:
         work = Path(tmp)
-        for src, name in zip([STYLE_REFERENCE, *refs], names):
+        for src, name in pairs:
             shutil.copy(src, work / name)
         cmd = ["codex", "exec", "--skip-git-repo-check", "-s", "workspace-write", "-C", str(work)]
-        for name in names:
+        for _, name in pairs:
             cmd += ["-i", name]
         cmd += ["-o", "report.txt", "-"]
         run = subprocess.run(cmd, input=task, text=True, capture_output=True, cwd=work, timeout=TIMEOUT_S)

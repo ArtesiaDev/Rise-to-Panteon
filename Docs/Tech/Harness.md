@@ -145,10 +145,12 @@ CODE-17. Состав и этапы фич `rag lint` сверяет с `Docs/GD
 - Рисует встроенный `image_gen` Codex CLI на подписке ChatGPT владельца; API-ключ не нужен. Нужны `codex`
   (`npm i -g @openai/codex`) и вход владельца `codex login`; скрипт — системный `python3`, без зависимостей.
 - Команда: `python3 Tools/art/art.py "<описание по-английски>" --out <путь.png> [--size 2048x2048] [--transparent]
-  [--ref <файл>]… [--feature <ID>] [--force] [--dry-run] [--queue]`; очередь — `--pending`, `--run-pending`.
+  [--ref <файл>]… [--style-ref <файл>|none] [--feature <ID>] [--force] [--dry-run] [--queue]`; очередь —
+  `--pending`, `--run-pending`.
 - Стилевой блок скрипт берёт из `ArtStyle.md` (раздел «Стилевой блок промпта») и прикладывает эталон
-  `Docs/References/Assets/1 Chosen style/1 style final.png`. `--ref` — референс сюжета: например, спрайт существа
-  для листа частей рига.
+  `Docs/References/Assets/1 Chosen style/1 style final.png`. `--style-ref` — другой эталон стиля вместо него;
+  `none` — без эталона, только для проб. `--ref` — референс сюжета: например,
+  спрайт существа для листа частей рига.
 - Один вызов — один ассет, 1,5–2,5 мин. С `--transparent` картинка ~1254×1254 при любом `--size`. Генерация тратит
   лимиты подписки в 3–5 раз быстрее текста.
 - Лимит подписки исчерпан — скрипт сам ставит задание в очередь `Tools/art/pending.jsonl` и выходит с кодом 3.
