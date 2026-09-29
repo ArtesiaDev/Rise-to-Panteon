@@ -26,11 +26,12 @@
 | W12 | [Замки и ключи](Features/W12-LocksAndKeys.md) | Прототип | ✅ |
 | W13 | [Ловушки](Features/W13-Traps.md) | Прототип | ✅ |
 | W14 | [Лут в мире](Features/W14-WorldLoot.md) | Прототип | ✅ |
-| W15 | [Тайники и тайные ходы](Features/W15-SecretsAndPassages.md) | Срез | ✅ |
-| W16 | [Переходы между локациями](Features/W16-LocationTransitions.md) | Прототип | ✅ |
+| W15 | [Скрытые места](Features/W15-SecretsAndPassages.md) | Срез | ✅ |
+| W16 | [Перевалы и переходы между этажами](Features/W16-LocationTransitions.md) | Прототип | ✅ |
 | W17 | [Эффекты среды (огонь, яд, вода)](Features/W17-EnvironmentEffects.md) | Прототип (лужа Капели), Срез | ✅ |
 | W18 | [Рубеж](Features/W18-Frontier.md) | Гл1 | ✅ |
 | W19 | [Нестабильные измерения](Features/W19-UnstableDimensions.md) | Гл1 | ✅ |
+| W20 | [Всплеск силы](Features/W20-PowerSurge.md) | Срез | ✅ |
 
 ## Персонаж и эволюция — [Evolution.md](Evolution.md)
 

@@ -43,7 +43,7 @@
 | [W12 Замки и ключи](GDD/Features/W12-LocksAndKeys.md) | — | |
 | [W13 Ловушки](GDD/Features/W13-Traps.md) | — | |
 | [W14 Лут в мире](GDD/Features/W14-WorldLoot.md) | — | |
-| [W16 Переходы между локациями](GDD/Features/W16-LocationTransitions.md) | — | |
+| [W16 Перевалы и переходы между этажами](GDD/Features/W16-LocationTransitions.md) | — | |
 | [W17 Эффекты среды (огонь, яд, вода)](GDD/Features/W17-EnvironmentEffects.md) | — | |
 | [E01 Поглощение](GDD/Features/E01-Absorption.md) | — | |
 | [E02 Уровни и плотность](GDD/Features/E02-LevelsAndDensity.md) | — | |
@@ -93,7 +93,8 @@
 | [W04 Ручные вставки в процедурный мир](GDD/Features/W04-HandcraftedInserts.md) | — | |
 | [W09 Врата Резонанса: два ключа](GDD/Features/W09-ResonanceGates.md) | — | |
 | [W11 Биомы ярусов](GDD/Features/W11-TierBiomes.md) | — | |
-| [W15 Тайники и тайные ходы](GDD/Features/W15-SecretsAndPassages.md) | — | |
+| [W15 Скрытые места](GDD/Features/W15-SecretsAndPassages.md) | — | |
+| [W20 Всплеск силы](GDD/Features/W20-PowerSurge.md) | — | |
 | [E09 Гнёзда как места кокона](GDD/Features/E09-CocoonNests.md) | — | |
 | [E11 Перерастание черт](GDD/Features/E11-TraitOutgrowing.md) | — | |
 | [E12 Эволюционные услуги](GDD/Features/E12-EvolutionServices.md) | — | |
