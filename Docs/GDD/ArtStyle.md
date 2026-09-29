@@ -14,28 +14,43 @@
 
 ## Эталоны стиля
 
-Файлы — в `Docs/References/Assets/`.
+Файлы — в `Docs/References/Assets/1 Chosen style/`.
 
 | Что | Файл | Роль |
 |---|---|---|
-| Итоговый эталон | `1 Chosen style/1 style final.png` | общая манера: окружение, предметы, иконки и UI — по листу V12, существа и облики — по листу V19 |
-| Светлая концепция | `2 Alternative style/light_V10.png` | тот же подход на светлом пергаменте; запасная, не применяется |
-| Исходные референсы | `3 Sources/` | гравюра со штриховкой (`Art Style 1`), тушь с пятнами акварели (`Art Style 2`) |
-| История подбора | `4 Iterations/Sheets/` | листы 1–19 |
-| Пробные ассеты | `5 Trials/` | стиль на отдельных ассетах: существо, Сгусток, текстура пола, предметы с состояниями, комната Катакомб, лист частей для рига |
+| Общий эталон | `1 style final.png` | общая манера: существа и облики, предметы, иконки и UI |
+| Эталоны этажей | `Floors/<этаж>.png` | окружение этажа: материал мест, фон, свет, палитра — раздел «Эталоны этажей» |
+| Эталонные планировки | `Layouts/<этаж>.png` | схемы этажей Среза — `W02` |
 
 Эталон задаёт манеру, а не облик конкретных ассетов: существа, предметы и иконки на нём — примеры стиля, не
-образцы для копирования. Существа на эталоне плотные, как жуки; телесность видов Среза задаёт раздел «Телесность в
-картинке». К генерации эталон прикладывается целиком; фрагменты из него не вырезаются.
+образцы для копирования. Существа на общем эталоне плотные, как жуки; телесность видов Среза задаёт раздел
+«Телесность в картинке». К генерации эталон прикладывается целиком; фрагменты из него не вырезаются.
+
+## Эталоны этажей
+
+Ассет окружения генерируется с эталоном своего этажа вместо общего (`--style-ref`, `Harness.md` §10). Облик мест,
+фон и свет каждого этажа — `W11` §9; эталон показывает их в картинке.
+
+| Этаж | Эталон |
+|---|---|
+| Бездна 1 | `Floors/abyss_f1.png` |
+| Бездна 2 | `Floors/abyss_f2.png` |
+| Бездна 3 | `Floors/abyss_f3.png` |
+| Катакомбы 1 | `Floors/catacombs_f1.png` |
+| Катакомбы 2 | `Floors/catacombs_f2.png` |
+| Катакомбы 3 | `Floors/catacombs_f3.png` |
+| Катакомбы 4 | `Floors/catacombs_f4.png` |
 
 ## Окружение
 
-- Тушь и плоская приглушённая акварель на тёмной дымчатой сине-серой бумаге; штриховки нет.
-- Пол — средне-тёмный сине-серый камень, не чёрный; трещин и мелких деталей мало.
-- Стены — простые крупные формы; лицевая грань северной стены темнее пола.
-- Декор мелкий и приглушённый и не спорит с существами; у стен — акценты тёмно-красных сгущений застывшей силы
-  (похожих на листву) и мелких бирюзовых кристаллов.
-- Пустота за стенами — акварельная дымка тёмной бирюзы, фиолета и ржавчины с едва видимыми руинами.
+- Тушь и плоская приглушённая акварель на тёмной дымчатой бумаге; штриховки нет.
+- Материал мест — по телесности этажа (раздел «Телесность в картинке») и его эталону; по этажам — `W11` R29, §9.
+- Пол без регулярной сетки плиток: сплошная субстанция или крупные неровные плиты; трещин и мелких деталей мало.
+- Сплошные стены — простые крупные формы с лицевой гранью темнее пола, только где есть архитектура (`W02` R7);
+  край угодья без стены тает в пустоте или уходит в туман.
+- Декор мелкий, редкий и приглушённый, не спорит с существами; акценты — тёмно-красные сгущения застывшей силы
+  (похожие на листву) и мелкие бирюзовые кристаллы.
+- Фон за краями у каждого этажа свой (`W11` §9) и не повторяет соседний.
 
 ## Существа и облики
 
@@ -52,7 +67,7 @@
 
 | Степень | Существа | Места и объекты | Фраза для описания |
 |---|---|---|---|
-| Бесплотные | светящееся ядро, частицы и мягкое свечение цвета стихии; контура нет, края тают | полуастрал: пепельная порода полупрозрачна, контуры растворяются в дымке, сквозь кладку просвечивает пустота; объекты — полупроявленные формы из застывшего света | `a bodiless being of pure elemental energy: a glowing core with drifting particles, no solid body, edges dissolving into light` |
+| Бесплотные | светящееся ядро, частицы и мягкое свечение цвета стихии; контура нет, края тают | полуастрал: полупрозрачная туманная субстанция застывшей силы, не камень; края тают в дымке, сквозь неё просвечивает пустота; объекты — полупроявленные формы из застывшего света | `a bodiless being of pure elemental energy: a glowing core with drifting particles, no solid body, edges dissolving into light` |
 | Оформленные | форма из застывшей силы: грани и конечности полупрозрачны и светятся изнутри; контур умбры | застывшие пласты силы принимают форму кладки, ниш, саркофагов | `a formed body of solidified energy: translucent limbs and plates glowing from within, no flesh` |
 | Полуплотные | матовые плотные части (кость, камень) с контуром и штриховкой; энергия просвечивает в стыках | первая плотная кладка, кость, воск, камень | `a half-solid body: dense bone or stone parts grown over a glowing energy frame` |
 | Плотные | плоть — по эталону существ | материальный мир — по эталону окружения | — |
@@ -68,7 +83,7 @@
 
 ## Эталонные замеры
 
-Итоговый эталон, 2560×1440. Яркость — средняя светлота, % (0 — чёрный, 100 — белый); насыщенность — %.
+Общий эталон, 2560×1440. Яркость — средняя светлота, % (0 — чёрный, 100 — белый); насыщенность — %.
 
 | Область | Яркость | Насыщенность |
 |---|---|---|
@@ -87,8 +102,8 @@
   альфа настоящая.
 - Бесшовная текстура — с оговоркой `no border lines or grout along the image edges`: иначе модель рисует шов по
   краю, и при повторе видна решётка.
-- Каждый ассет генерируется отдельно, с итоговым эталоном. Правка уже исправленной картинки запрещена: при каждой
-  перерисовке окружение теряет 50–70% мелких линий (замер листов 13–16 против 12).
+- Каждый ассет генерируется отдельно, с эталоном (раздел «Эталоны стиля»). Правка уже исправленной картинки
+  запрещена: при каждой перерисовке окружение теряет 50–70% мелких линий (замер при подборе стиля).
 - Промпт — стилевой блок, описание ассета с фразой его телесности и ракурс: для сцен `top-down 3/4 orthographic view, NOT isometric`,
   для существ и обликов `side view facing right`.
 - Новый ассет сверяется с эталоном своего типа по яркости, насыщенности, контрасту и резкости; яркость и
@@ -100,8 +115,8 @@
 
 ```text
 Art style — match the attached style reference image exactly in palette, line weight, brightness and level of detail. The reference shows the overall art style only: do not copy its objects, creatures or layout.
-Hand-drawn 2D game art: confident ink line art with flat, muted watercolor washes on dark, smoky, deep blue-grey paper.
-Environment: no hatching; simple big shapes; calm mid-dark blue-grey stone, never pure black; small muted decor that never competes with creatures; accents of deep red foliage and small teal crystals near walls; the void beyond walls is a watercolor haze of dark teal, violet and rust with faint distant ruins.
+Hand-drawn 2D game art: confident ink line art with flat, muted watercolor washes on dark, smoky paper.
+Environment: no hatching; simple big shapes; muted colors, never pure black; the ground material, walls and backdrop follow the attached reference and the asset description; no regular tile grid; small, sparse, quiet decor that never competes with creatures; accents of deep red clusters of solidified energy and small teal crystals.
 Living things: simplified shapes — only the big masses of the silhouette, few spikes and plates; muted colors from the same palette, slightly more saturated than the ground; a few coarse hatching lines in the shadows; a medium-weight dark umber outline about twice the environment line weight; a thin pale rim; small highlights on shells and eyes from a soft neutral light above.
 Life energy is the only vivid glowing color.
 If the subject description sets a degree of materiality, it overrides the living-things rules above: a bodiless being has no outline, no hatching and no shell highlights.
