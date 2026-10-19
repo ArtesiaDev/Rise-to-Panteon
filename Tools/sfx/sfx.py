@@ -52,6 +52,7 @@ def main() -> None:
     parser.add_argument("--reverb", type=float, default=0.0, help="отзвук 0–1")
     parser.add_argument("--lowpass", type=float, default=None, help="доп. срез верхов, Гц")
     parser.add_argument("--no-rebuild", action="store_true", help="без ресинтеза")
+    parser.add_argument("--loop", action="store_true", help="готовая петля (--input): без подрезки, фильтров, отзвука и затуханий")
     parser.add_argument("--force", action="store_true", help="перезаписать существующие файлы")
     parser.add_argument("--setup", action="store_true", help="установить движок")
     args = parser.parse_args()
@@ -80,7 +81,8 @@ def main() -> None:
         "seeds": [[base + v * 100 + c for c in range(candidates)] for v in range(count)],
         "kind": args.kind,
         "rebuild": not args.no_rebuild and not args.input,
-        "trim": bool(args.input),
+        "trim": bool(args.input) and not args.loop,
+        "loop": args.loop,
         "reverb": args.reverb,
         "lowpass": args.lowpass,
     }

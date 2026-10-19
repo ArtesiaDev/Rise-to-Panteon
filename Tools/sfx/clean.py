@@ -59,6 +59,19 @@ def reverb(y, sr, amount, seconds=0.9):
     return np.array(out)
 
 
+def shape(y, sr, job):
+    y = band(y, sr, "highpass", 30, 2)
+    y = band(y, sr, "lowpass", 14000, 4)
+    if job["lowpass"]:
+        y = band(y, sr, "lowpass", job["lowpass"], 4)
+    if job["reverb"]:
+        y = reverb(y, sr, job["reverb"])
+    fade_in, fade_out = int(0.005 * sr), min(int(0.12 * sr), y.shape[1] // 3)
+    y[:, :fade_in] *= np.linspace(0, 1, fade_in)
+    y[:, -fade_out:] *= np.linspace(1, 0, fade_out)
+    return y
+
+
 def pick(candidates, punches, single):
     if single:
         return max(candidates, key=lambda c: punches.get(c[0], 1.0))[1]
@@ -82,15 +95,8 @@ def main():
             y = trim_silence(y, sr)
         if job["rebuild"]:
             y = rebuild(y, sr, split)
-        y = band(y, sr, "highpass", 30, 2)
-        y = band(y, sr, "lowpass", 14000, 4)
-        if job["lowpass"]:
-            y = band(y, sr, "lowpass", job["lowpass"], 4)
-        if job["reverb"]:
-            y = reverb(y, sr, job["reverb"])
-        fade_in, fade_out = int(0.005 * sr), min(int(0.12 * sr), y.shape[1] // 3)
-        y[:, :fade_in] *= np.linspace(0, 1, fade_in)
-        y[:, -fade_out:] *= np.linspace(1, 0, fade_out)
+        if not job.get("loop"):
+            y = shape(y, sr, job)
         y = y / (np.abs(y).max() + 1e-9) * 0.89
         sf.write(dst / f"out_{variant}.wav", y.T, sr, subtype="PCM_16")
         report.append({"variant": int(variant), "seconds": round(y.shape[1] / sr, 2)})
