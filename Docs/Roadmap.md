@@ -48,17 +48,16 @@
 | [E01 Поглощение](GDD/Features/E01-Absorption.md) | — | |
 | [E02 Уровни и плотность](GDD/Features/E02-LevelsAndDensity.md) | — | |
 | [E03 Характеристики](GDD/Features/E03-Attributes.md) | — | |
-| [E04 Эссенции, семейства, состав](GDD/Features/E04-Essences.md) | — | |
-| [E05 Черты](GDD/Features/E05-Traits.md) | — | |
-| [E06 Линька и варианты](GDD/Features/E06-Molt.md) | — | |
 | [E07 Метаморфоза и стадии](GDD/Features/E07-Metamorphosis.md) | — | |
 | [E08 Кокон](GDD/Features/E08-Cocoon.md) | — | |
+| [E13 Тела и древо тел](GDD/Features/E13-Bodies.md) | — | |
+| [E14 Круг](GDD/Features/E14-Circle.md) | — | |
 | [C01 Модель боя](GDD/Features/C01-CombatModel.md) | — | |
 | [C02 Размер облика](GDD/Features/C02-FormSize.md) | — | |
 | [C03 Базовая атака](GDD/Features/C03-BaseAttack.md) | — | |
 | [C04 Передвижение и рывок](GDD/Features/C04-MovementAndDash.md) | — | |
-| [C05 Способности и слоты](GDD/Features/C05-Abilities.md) | — | |
-| [C06 Урон и статусы](GDD/Features/C06-DamageAndStatuses.md) | — | |
+| [C05 Приёмы и слоты](GDD/Features/C05-Abilities.md) | — | |
+| [C06 Урон, стихии и эффекты](GDD/Features/C06-DamageAndStatuses.md) | — | |
 | [C07 Лечение](GDD/Features/C07-Healing.md) | — | |
 | [C10 Камера](GDD/Features/C10-Camera.md) | — | |
 | [B01 Виды существ](GDD/Features/B01-Species.md) | — | |
@@ -70,11 +69,11 @@
 | [D01 Смерть и возрождение](GDD/Features/D01-DeathAndRespawn.md) | — | |
 | [D02 Эхо Души](GDD/Features/D02-SoulEcho.md) | — | |
 | [K02 Якоря](GDD/Features/K02-Anchors.md) | — | |
-| [I01 Обычные предметы и источники](GDD/Features/I01-Items.md) | — | |
+| [I01 Предметы и источники](GDD/Features/I01-Items.md) | — | |
 | [I03 Слоты: внутренние и внешние](GDD/Features/I03-ItemSlots.md) | — | |
 | [I05 Расходники](GDD/Features/I05-Consumables.md) | — | |
-| [I06 Видимость предметов](GDD/Features/I06-ItemVisibility.md) | — | |
-| [I07 Сила предмета и плотность](GDD/Features/I07-ItemPowerCap.md) | — | |
+| [I06 Видимость и архетипы оружия](GDD/Features/I06-ItemVisibility.md) | — | |
+| [I07 Плотность вещи](GDD/Features/I07-ItemPowerCap.md) | — | |
 | [N05 Реакции персонажа](GDD/Features/N05-CharacterReactions.md) | — | |
 | [U01 Управление, ориентация, бюджет кнопок](GDD/Features/U01-Controls.md) | — | |
 | [U02 Наведение](GDD/Features/U02-Aiming.md) | — | |
@@ -95,10 +94,12 @@
 | [W11 Биомы ярусов](GDD/Features/W11-TierBiomes.md) | — | |
 | [W15 Скрытые места](GDD/Features/W15-SecretsAndPassages.md) | — | |
 | [W20 Всплеск силы](GDD/Features/W20-PowerSurge.md) | — | |
-| [E09 Гнёзда как места кокона](GDD/Features/E09-CocoonNests.md) | — | |
-| [E11 Перерастание черт](GDD/Features/E11-TraitOutgrowing.md) | — | |
-| [E12 Эволюционные услуги](GDD/Features/E12-EvolutionServices.md) | — | |
+| [E12 Перевыбор](GDD/Features/E12-EvolutionServices.md) | — | |
+| [E15 Обеты и сплетения](GDD/Features/E15-VowsAndWeaves.md) | — | |
+| [E16 Ремёсла](GDD/Features/E16-Crafts.md) | — | |
 | [C08 Скрытность](GDD/Features/C08-Stealth.md) | — | |
+| [C09 Призыв](GDD/Features/C09-Summoning.md) | — | |
+| [C11 Свита](GDD/Features/C11-Retinue.md) | — | |
 | [B04 Изначальные Стражи](GDD/Features/B04-OriginalGuardians.md) | — | |
 | [B05 Преемники Стражей](GDD/Features/B05-GuardianSuccessors.md) | — | |
 | [L02 Симуляция вдали](GDD/Features/L02-FarSimulation.md) | — | |
@@ -121,7 +122,7 @@
 | [I08 Валюты](GDD/Features/I08-Currencies.md) | — | |
 | [I09 Материалы](GDD/Features/I09-Materials.md) | — | |
 | [I10 Стоки и защита от арбитража](GDD/Features/I10-SinksAndArbitrage.md) | — | |
-| [I11 Крафт и улучшение](GDD/Features/I11-CraftAndUpgrade.md) | — | |
+| [I11 Заточка, создание и переплавка](GDD/Features/I11-CraftAndUpgrade.md) | — | |
 | [N01 Фрагменты лора](GDD/Features/N01-LoreFragments.md) | — | |
 | [N02 Диалоги](GDD/Features/N02-Dialogues.md) | — | |
 | [N03 Просьбы](GDD/Features/N03-Requests.md) | — | |
@@ -137,8 +138,6 @@
 |---|---|---|
 | [W18 Рубеж](GDD/Features/W18-Frontier.md) | — | |
 | [W19 Нестабильные измерения](GDD/Features/W19-UnstableDimensions.md) | — | |
-| [E10 Полюса и гибриды](GDD/Features/E10-PolesAndHybrids.md) | — | |
-| [C09 Призыв](GDD/Features/C09-Summoning.md) | — | |
 | [L10 Фракции](GDD/Features/L10-Factions.md) | — | |
 | [B06 Мегабосс Рубежа](GDD/Features/B06-FrontierMegaboss.md) | — | |
 | [D03 Наследие](GDD/Features/D03-Legacy.md) | — | |

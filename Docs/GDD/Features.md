@@ -33,22 +33,20 @@
 | W19 | [Нестабильные измерения](Features/W19-UnstableDimensions.md) | Гл1 | ✅ |
 | W20 | [Всплеск силы](Features/W20-PowerSurge.md) | Срез | ✅ |
 
-## Персонаж и эволюция — [Evolution.md](Evolution.md)
+## Персонаж и развитие — [Evolution.md](Evolution.md)
 
 | ID | Фича | Этап | Статус |
 |----|------|------|--------|
 | E01 | [Поглощение](Features/E01-Absorption.md) | Прототип | ✅ |
 | E02 | [Уровни и плотность](Features/E02-LevelsAndDensity.md) | Прототип | ✅ кривая — баланс |
 | E03 | [Характеристики](Features/E03-Attributes.md) | Прототип | ✅ формулы — баланс |
-| E04 | [Эссенции, семейства, состав](Features/E04-Essences.md) | Прототип | 🟡 каталог |
-| E05 | [Черты](Features/E05-Traits.md) | Прототип | 🟡 каталог |
-| E06 | [Линька и варианты](Features/E06-Molt.md) | Прототип | ✅ |
-| E07 | [Метаморфоза и стадии](Features/E07-Metamorphosis.md) | Прототип | ✅ |
+| E07 | [Метаморфоза и стадии](Features/E07-Metamorphosis.md) | Прототип (Искра → Сгусток), Срез (Тень), Гл1 (Облик, Высший облик) | ✅ |
 | E08 | [Кокон](Features/E08-Cocoon.md) | Прототип | ✅ |
-| E09 | [Гнёзда как места кокона](Features/E09-CocoonNests.md) | Срез | ✅ |
-| E10 | [Полюса и гибриды](Features/E10-PolesAndHybrids.md) | Гл1 | ✅ |
-| E11 | [Перерастание черт](Features/E11-TraitOutgrowing.md) | Срез | ✅ |
-| E12 | [Эволюционные услуги](Features/E12-EvolutionServices.md) | Срез | ✅ |
+| E12 | [Перевыбор](Features/E12-EvolutionServices.md) | Срез | ✅ цены — баланс |
+| E13 | [Тела и древо тел](Features/E13-Bodies.md) | Прототип (Искра, Сгустки), Срез (Тени), Гл1 (Облики, Высшие облики); Полубоги и Боги — после Гл1 | ✅ прибавки — баланс, названия рабочие |
+| E14 | [Круг](Features/E14-Circle.md) | Прототип (8 осей: основы и порог 5), Срез (ось Власть, пороги 10–40, ключи к миру), Гл1 (ранги 51–100) | 🟡 каталог приёмов порогов; преграды под ключи к миру |
+| E15 | [Обеты и сплетения](Features/E15-VowsAndWeaves.md) | Срез (первый обет, сплетения на 30), Гл1 (2–3 обета, сплетения на 70) | 🟡 приёмы веток, сплетения на 70 |
+| E16 | [Ремёсла](Features/E16-Crafts.md) | Срез (16 ремёсел, ранги 1–5), Гл1 (ранги 6–10, Доспешное дело) | ✅ числа — баланс |
 
 ## Бой — [Combat.md](Combat.md)
 
@@ -58,12 +56,13 @@
 | C02 | [Размер облика](Features/C02-FormSize.md) | Прототип | ✅ множители — баланс |
 | C03 | [Базовая атака](Features/C03-BaseAttack.md) | Прототип | ✅ |
 | C04 | [Передвижение и рывок](Features/C04-MovementAndDash.md) | Прототип | ✅ |
-| C05 | [Способности и слоты](Features/C05-Abilities.md) | Прототип | ✅ |
-| C06 | [Урон и статусы](Features/C06-DamageAndStatuses.md) | Прототип | 🟡 список типов |
+| C05 | [Приёмы и слоты](Features/C05-Abilities.md) | Прототип | ✅ |
+| C06 | [Урон, стихии и эффекты](Features/C06-DamageAndStatuses.md) | Прототип (физический, чистая энергия, 6 стихий, горение, замедление, оглушение, страх), Срез (остальные эффекты) | ✅ числа — баланс |
 | C07 | [Лечение](Features/C07-Healing.md) | Прототип | ✅ |
 | C08 | [Скрытность](Features/C08-Stealth.md) | Срез | ✅ |
-| C09 | [Призыв](Features/C09-Summoning.md) | Гл1 | ✅ |
+| C09 | [Призыв](Features/C09-Summoning.md) | Срез (приёмы призыва до ранга 50), Гл1 (колосс) | ✅ |
 | C10 | [Камера](Features/C10-Camera.md) | Прототип | ✅ |
+| C11 | [Свита](Features/C11-Retinue.md) | Срез (звери, заготовки), Гл1 (разумные, мини-босс) | ✅ числа — баланс |
 
 ## Существа — [Creatures.md](Creatures.md)
 
@@ -119,17 +118,17 @@
 
 | ID | Фича | Этап | Статус |
 |----|------|------|--------|
-| I01 | [Обычные предметы и источники](Features/I01-Items.md) | Прототип | 🟡 |
+| I01 | [Предметы и источники](Features/I01-Items.md) | Прототип | 🟡 |
 | I02 | [Реликвии](Features/I02-Relics.md) | Срез | ✅|
 | I03 | [Слоты: внутренние и внешние](Features/I03-ItemSlots.md) | Прототип | ✅ |
 | I04 | [Свойства и редкость](Features/I04-ItemPropertiesAndRarity.md) | Срез | ✅ |
 | I05 | [Расходники](Features/I05-Consumables.md) | Прототип | ✅ |
-| I06 | [Видимость предметов](Features/I06-ItemVisibility.md) | Прототип | ✅ |
-| I07 | [Сила предмета и плотность](Features/I07-ItemPowerCap.md) | Прототип | ✅ |
+| I06 | [Видимость и архетипы оружия](Features/I06-ItemVisibility.md) | Прототип | ✅ |
+| I07 | [Плотность вещи](Features/I07-ItemPowerCap.md) | Прототип | ✅ |
 | I08 | [Валюты](Features/I08-Currencies.md) | Срез | ✅|
 | I09 | [Материалы](Features/I09-Materials.md) | Срез | ✅ |
 | I10 | [Стоки и защита от арбитража](Features/I10-SinksAndArbitrage.md) | Срез | ✅ |
-| I11 | [Крафт и улучшение](Features/I11-CraftAndUpgrade.md) | Срез | ✅ |
+| I11 | [Заточка, создание и переплавка](Features/I11-CraftAndUpgrade.md) | Срез (заточка, создание, разбор), Гл1 (переплавка, своя вещь) | ✅ |
 
 ## Нарратив — [Narrative.md](Narrative.md)
 
