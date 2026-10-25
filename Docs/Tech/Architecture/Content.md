@@ -32,11 +32,11 @@ Configs/
 ├── retired-ids.json         удалённые id по таблицам; повторно не выдаются
 ├── AGENTS.md                правила для агентов в этом репозитории
 ├── schemas/                 _common.schema.json ($defs), manifest, <table>, room, strings
-├── data/                    таблицы баланса: species.json, families.json, items.json …
+├── data/                    таблицы баланса: species.json, elements.json, bodies.json, items.json …
 ├── rooms/special/           заготовки особых угодий (GDD W02 R37)
 ├── rooms/insert/            ручные вставки (GDD W04, Срез)
 ├── rooms/camp/              лагерь: основа и зоны (GDD K01)
-├── strings/ru/              ui.json, hints.json, barks.json, items.json, species.json, nicknames.json
+├── strings/ru/              ui.json, hints.json, barks.json, items.json, species.json, nicknames.json, bodies.json …
 ├── migrations/              0001-<имя>.mjs … — только вперёд
 └── tools/                   Node ≥ 20: fmt, validate, pack-check, gen-cs, migrate; rules/<table>.mjs
 ```
@@ -92,7 +92,7 @@ CI конфиг-репозитория (GitHub Actions): `npm ci` → `fmt:check
 - Клон: `git clone --recurse-submodules`, в существующем клоне — `git submodule update --init`; рекомендуется `git config submodule.recurse true`.
 - После `update` сабмодуль в detached HEAD; перед правкой — `git -C Configs switch main`. Ветки — по `CodeStructure.md` §10.
 - **Порядок коммитов:** сначала коммит и push в конфиг-репозиторий, затем в игре отдельный коммит указателя: `git add Configs && git commit -m "configs: bump to <sha7> — <что>"`. Код, которому нужны новые конфиги, — в том же коммите или после.
-- **Варианты баланса** — ветки `balance/<имя>`: `git -C Configs switch balance/fast-molt`, редактор пересоберёт пак сам (§5); возврат — `git -C Configs switch main`. Указатель на коммит варианта в `main` игры не попадает.
+- **Варианты баланса** — ветки `balance/<имя>`: `git -C Configs switch balance/fast-circle`, редактор пересоберёт пак сам (§5); возврат — `git -C Configs switch main`. Указатель на коммит варианта в `main` игры не попадает.
 - **Билд падает**, если сабмодуль грязный, его HEAD не запушен (`git -C Configs branch -r --contains HEAD` пусто) или не равен указателю в коммите игры. Dev-сборка обходит это флагом `RTP_ALLOW_DIRTY_CONFIGS`; пак получает флаг `Dirty`, релиз с ним не собирается.
 
 ## 3. Схемы и соглашения данных
@@ -103,7 +103,7 @@ CI конфиг-репозитория (GitHub Actions): `npm ci` → `fmt:check
 {
   "$schema": "../schemas/species.schema.json",
   "rows": [
-    { "id": "komok", "family": "earth", "visual": "creature.komok.base", "hp": 40,
+    { "id": "komok", "element": "earth", "visual": "creature.komok.base", "hp": 40,
       "speedTilesPerSec": 2.5, "fleeChance": 0.6, "note": "Т0, пасётся у мерцающих трещин (B01)" }
   ]
 }
@@ -120,10 +120,10 @@ CI конфиг-репозитория (GitHub Actions): `npm ci` → `fmt:check
   "$defs": {
     "SpeciesRow": {
       "title": "SpeciesRow", "type": "object", "additionalProperties": false,
-      "required": ["id", "family", "visual", "hp", "speedTilesPerSec", "fleeChance"],
+      "required": ["id", "element", "visual", "hp", "speedTilesPerSec", "fleeChance"],
       "properties": {
         "id": { "$ref": "_common.schema.json#/$defs/Id" },
-        "family": { "$ref": "_common.schema.json#/$defs/Id", "x-ref": "families" },
+        "element": { "$ref": "_common.schema.json#/$defs/Id", "x-ref": "elements" },
         "visual": { "$ref": "_common.schema.json#/$defs/VisualId" },
         "hp": { "type": "integer", "minimum": 1, "x-unit": "hp" },
         "speedTilesPerSec": { "$ref": "_common.schema.json#/$defs/TilesPerSec" },
@@ -231,7 +231,7 @@ public sealed class SpeciesConfigConverter : IConfigTableConverter
             var src = file.Rows[i];
             rows[i] = new SpeciesRow
             {
-                Family = ctx.Ref("families", src.Family, src.Id),
+                Element = ctx.Ref("elements", src.Element, src.Id),
                 View = ctx.Visual(src.Visual),
                 Hp = (int)src.Hp,
                 SpeedTilesPerTick = ctx.PerTick(src.SpeedTilesPerSec),
@@ -258,7 +258,7 @@ public struct SpeciesTableBlob
 
 public struct SpeciesRow
 {
-    public int Family;
+    public int Element;
     public ViewKey View;
     public int Hp;
     public float SpeedTilesPerTick;
@@ -499,7 +499,7 @@ flowchart LR
 }
 ```
 
-- Файл = таблица строк Unity Localization: `ui`, `hints`, `barks`, `items`, `species`, `nicknames` (GDD M04 §5); Срез — `lore`, `dialogues`, `rumors`.
+- Файл = таблица строк Unity Localization: `ui`, `hints`, `barks`, `items`, `species`, `nicknames`, развитие — `bodies`, `axes`, `abilities` (GDD M04 §5); Срез — `lore`, `dialogues`, `rumors`, `crafts`. Почему развитие — три файла, а не одна таблица M04 §5: строки полей таблицы данных лежат в файле с её именем (ниже).
 - Ключ — `<файл>.<объект>.<поле>` (M04 §9), `^[a-z0-9_]+(\.[a-z0-9_]+)+$`, первый сегмент = имя файла. Текст строк таблиц `data/` — по соглашению `<table>.<rowId>.<field>` для полей из `localized`: `species.komok.name`; поля с ключом в данных нет.
 - `note` обязателен: контекст для переводчика и агента (M04 §9).
 - Подстановки — только именованные (`{count}`, `{name}`), Smart Strings; склейка строк в коде запрещена (M04 R6). Строка с `{` импортируется как Smart.
@@ -524,10 +524,10 @@ flowchart LR
 
 ```text
 Assets/_Project/Art/
-├── Rigs/<Template>/            шаблоны скелетов с общими точками крепления
-├── Creatures/<Family>/         Earth, Fire, Water, Wind, Light, Dark, Dust, Rot, Bone — общие части, Sprite Library, палитры; <Species>/ — своё у вида
-├── Player/<Body>/              Spark, Clot … — тела стадий и полюсов (Scope → «Производство обликов»)
-├── Weapons/<Archetype>/        6–8 архетипов оружия в руке
+├── Rigs/<Template>/            шаблоны скелетов с общими точками крепления: тел игрока и групп видов (B01 R16)
+├── Creatures/<Species>/        части, Sprite Library, палитра, клипы вида
+├── Player/<Family>/            четыре семейства тел (E13): общие части и Sprite Library семейства; <Body>/ — своё у тела; Player/Spark/ — Искра
+├── Weapons/<Archetype>/        8 архетипов оружия, Скол и Ком, щит и фокус (I06 §5)
 ├── Environment/<Biome>/        Abyss, Catacombs …: слои окружения (GDD W11 §9) — пол, края, грани стен, фон; Props/, Decor/, Traces/ (L05)
 ├── Camp/                       тайлсет и объекты лагеря (K01 §9)
 ├── Vfx/<Category>/  Shaders/   префабы Particle System, материалы; Shader Graph и HLSL
@@ -553,8 +553,8 @@ Assets/_Project/Art/
 | `Texture_Floor` | текстуры смешивания пола (`Presentation.md` §6.2) | Default, Repeat, мипмапы вкл., ASTC 6×6 |
 | `Audio_Sfx` / `Audio_Stream` | Audio/Sfx / Audio/Music, Audio/Ambience | Decompress On Load, Vorbis, моно / Streaming, Vorbis |
 
-- **Атласы** — Sprite Atlas v2: один на биом (`atlas.env.abyss`), на семейство существ (виды семейства делят части и различаются цветом — Scope), на тело игрока, на иконки UI. До 2048², padding 4, без поворота; сжатие задаёт атлас: Android и iOS — ASTC 6×6, UI — ASTC 4×4. Атлас лежит в той же группе Addressables, что его спрайты; Addressables Analyze «Check Duplicate Bundle Dependencies» — без находок. «Проверить на спайке»: атлас v2 + Addressables и упаковка скиннованных спрайтов.
-- **Скелеты** — шаблон с общими точками крепления в `Rigs/`; PSB семейства ссылается на него; сменные части — Sprite Library, перекраска — шейдером по палитре (`Presentation.md` §5). Скелет — только у оформленных и более плотных тел, бесплотные — тела из частиц (Scope → «Производство обликов»); объём Прототипа — Scope → «Объём контента Прототипа».
+- **Атласы** — Sprite Atlas v2: один на биом (`atlas.env.abyss`), на вид существ (части у вида свои — B01 R16), на семейство тел игрока (части семейства общие для его тел — E13 §9), на иконки UI. До 2048², padding 4, без поворота; сжатие задаёт атлас: Android и iOS — ASTC 6×6, UI — ASTC 4×4. Атлас лежит в той же группе Addressables, что его спрайты; Addressables Analyze «Check Duplicate Bundle Dependencies» — без находок. «Проверить на спайке»: атлас v2 + Addressables и упаковка скиннованных спрайтов.
+- **Скелеты** — шаблон с общими точками крепления в `Rigs/`; PSB вида или тела ссылается на него, кости запекаются в PSB («проверить на спайке»); сменные части — Sprite Library, перекраска — шейдером по палитре (`Presentation.md` §5). Скелет — только у оформленных и более плотных тел, бесплотные — тела из частиц (Scope → «Производство обликов»); объём Прототипа — Scope → «Объём контента Прототипа».
 
 ### 9.3. Группы и метки
 
@@ -565,13 +565,13 @@ Assets/_Project/Art/
 | `boot`, `ui` | шрифты, экран загрузки, заглушки; иконки и ресурсы экранов | `preload.boot` |
 | `player`, `vfx.common`, `audio.sfx`, `audio.music` | тела игрока, оружие; общие эффекты; звуки, музыка | `preload.game` |
 | `env.<biome>`, `vfx.<biome>` | окружение слоями, объекты, декор, следы, эмбиент, эффекты биома | `biome.<biome>` |
-| `creature.<family>` | скелет, части, палитры, клипы семейства | `family.<family>` |
+| `creature.<species>` | части, палитра, клипы вида | `species.<species>` |
 | `camp` | лагерь | `camp` |
 | Localization | таблицы строк — группы ведёт пакет | — |
 
-Группа на семейство, а не на вид: виды семейства делят части. Если у вида появятся крупные собственные ассеты — своя группа `creature.<species>` с меткой семейства. Адрес, группу и метки ставит `AddressRules` (Editor, ScriptableObject «папка → группа, метки»; меню `RiseToPanteon/Addressables/Apply Rules`); в окне Groups руками не правится.
+Группа на вид: части, палитра и атлас у вида свои, общий у видов только скелет (B01 R16), а он запечён в PSB. Адрес, группу и метки ставит `AddressRules` (Editor, ScriptableObject «папка → группа, метки»; меню `RiseToPanteon/Addressables/Apply Rules`); в окне Groups руками не правится.
 
-**Предзагрузка.** При загрузке — `preload.boot`, при входе в игру — `preload.game`. На переходе между этажами (≤ 1 с, ARCH-19) представление грузит метки из строки биома (`biomes.preloadLabels`, например `biome.abyss`) и `family.<family>` для семейств, живущих в локации (из read-модели раскладки). Предзагрузка соседней локации у перевала — README §7. Порядок и освобождение — `Presentation.md`, API — `Services.md`.
+**Предзагрузка.** При загрузке — `preload.boot`, при входе в игру — `preload.game`. На переходе между этажами (≤ 1 с, ARCH-19) представление грузит метки из строки биома (`biomes.preloadLabels`, например `biome.abyss`) и `species.<species>` для видов, живущих в локации (из read-модели раскладки), и видов свиты (C11 R25). Предзагрузка соседней локации у перевала — README §7. Порядок и освобождение — `Presentation.md`, API — `Services.md`.
 
 ### 9.4. Visual id = адрес
 

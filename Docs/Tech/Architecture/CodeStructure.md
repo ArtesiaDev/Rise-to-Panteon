@@ -258,7 +258,7 @@ Defines проекта: `UNITY_DISABLE_AUTOMATIC_SYSTEM_BOOTSTRAP_RUNTIME_WORLD`
 | Presentation | Вьюха (наследник `WorldView`) / логика над вьюхами / обработчик событий / пул | `*View` / `*Presenter` / `<Имя>EventHandler : ISimEventHandler` / `*Pool` | `SkeletalView`, `CocoonEventHandler` |
 | UI | Экран / вкладка / виджет HUD / триггер открытия (`UI.md` §11) | `<Имя>Screen.uxml`, `.uss` + `<Имя>ScreenController` / `<Имя>Tab` / `<Имя>Widget` / `<Имя>ScreenTrigger` | `CocoonScreenController`, `MinimapWidget` |
 | UI | View-модель / свой `VisualElement` | `<Имя>ViewModel` / существительное | `CocoonViewModel`, `ValueBar` |
-| Dev | Константы и payload dev-операций / их обработчик | `<Фича>DevOpTypes`, `*Op` / `<Фича>DevOpSystem` | `AbsorptionDevOpTypes.GRANT_ESSENCE` |
+| Dev | Константы и payload dev-операций / их обработчик | `<Фича>DevOpTypes`, `*Op` / `<Фича>DevOpSystem` | `AbsorptionDevOpTypes.GRANT_IMPRINT` |
 | Любой | Инсталлер VContainer | `<Фича><Контур>Installer` | `AbsorptionBridgeInstaller`, `CocoonUIInstaller` |
 | App или контур фичи | Узел графа загрузки / старта игры (интерфейсы — Core) | `*BootNode : IBootNode`, `*StartNode : IGameStartNode` | `ConfigPackBootNode` |
 | Editor | Окно / инспектор / валидатор / конвертер таблицы (DTO `<Таблица>File` генерирует `gen:cs`) | `*Window` / `*Inspector` / `*Validator` / `<Таблица>ConfigConverter : IConfigTableConverter` | `RoomEditorWindow`, `SpeciesConfigConverter` |
@@ -329,8 +329,8 @@ namespace RiseToPanteon.Presentation
    систем. Независимые данные — разные срезы.
 3. Имя среза — домен на английском в PascalCase, одно-два слова, без номера GDD (`Absorption`, `WorldStep`,
    `CreatureAI`). После создания среза имя не меняется.
-4. Если фича меняет чужой срез (E09 учит `CreatureAI` возвращаться к гнезду), правка делается в папке того среза,
-   а id записывается в `participates` заметок обоих срезов.
+4. Если фича меняет чужой срез (C08 учит `CreatureAI` не замечать незаметного игрока), правка делается в папке
+   того среза, а id записывается в `participates` заметок обоих срезов.
 5. Данные фичи на HUD показывает виджет в `Features/<Фича>/UI/`; `Hud` — компоновка и общие элементы (`UI.md`).
 6. Срез делится, когда в нём больше ~60 файлов или появились независимые данные. Новый срез получает новый блок;
    выданные id не меняются, и новый срез указывает унаследованный блок в `[FeatureIdBlock]` (§7.3).
@@ -422,13 +422,13 @@ block: 0x20
 ---
 # Absorption
 
-Поглощение убитых существ: опыт, эссенция, лечение; способ поглощения — сам или действием над телом.
+Поглощение убитых существ: опыт, лечение, энергия, отпечаток стихий; способ поглощения — сам или действием над телом.
 
 ## Simulation
 
 ### AbsorbSystem
-Решает способ поглощения в момент гибели (E01 R7, R9), начисляет опыт и эссенцию (E01 R1–R5).
-`LifecycleGroup`, после `DeathSystem`. Читает `Density`, `DeadTag`; пишет `Experience`, `EssencePool`; событие
+Решает способ поглощения в момент гибели (E01 R7, R9), начисляет опыт и отпечаток стихии вида (E01 R1–R5, R22).
+`LifecycleGroup`, после `DeathSystem`. Читает `Density`, `DeadTag`; пишет `Experience`, `ElementImprint`; событие
 `ABSORB_STARTED`.
 Нельзя: сравнивать с приглушённой плотностью — только с истинной (E01 R2).
 
@@ -527,11 +527,11 @@ N `0x90–0x9F`, U `0xA0–0xAF`, M `0xB0–0xBF`; `0xC0–0xEF` — резер�
 | 0x1C | UnstableDimensions | W19 | план |
 | 0x20 | Absorption | E01 | план |
 | 0x21 | Progression | E02, E03 | план |
-| 0x22 | Essences | E04, E10 | план |
-| 0x23 | Traits | E05, E11 | план |
-| 0x24 | Molt | E06 | план |
+| 0x22 | Bodies | E13 | план |
+| 0x23 | Circle | E14, E15 | план |
+| 0x24 | Crafts | E16 | план |
 | 0x25 | Metamorphosis | E07 | план |
-| 0x26 | Cocoon | E08, E09 | план |
+| 0x26 | Cocoon | E08 | план |
 | 0x27 | EvolutionServices | E12 | план |
 | 0x30 | Combat | C01, C02, C03, C06 | план |
 | 0x31 | Movement | C04 | план |
@@ -539,6 +539,7 @@ N `0x90–0x9F`, U `0xA0–0xAF`, M `0xB0–0xBF`; `0xC0–0xEF` — резер�
 | 0x33 | Healing | C07 | план |
 | 0x34 | Stealth | C08 | план |
 | 0x35 | Summoning | C09 | план |
+| 0x36 | Retinue | C11 | план |
 | 0x40 | Creatures | B01 | план |
 | 0x41 | CreatureAI | B02 | план |
 | 0x42 | MiniBosses | B03 | план |
@@ -559,7 +560,7 @@ N `0x90–0x9F`, U `0xA0–0xAF`, M `0xB0–0xBF`; `0xC0–0xEF` — резер�
 | 0x80 | Items | I01, I03, I04, I05, I06, I07 | план |
 | 0x81 | Relics | I02 | план |
 | 0x82 | Economy | I08, I09, I10 | план |
-| 0x83 | Crafting | I11 | план |
+| 0x83 | Smithing | I11 | план |
 | 0x90 | Reactions | N05 | план |
 | 0x91 | LoreFragments | N01 | план |
 | 0x92 | Dialogues | N02, N03 | план |
@@ -576,6 +577,11 @@ N `0x90–0x9F`, U `0xA0–0xAF`, M `0xB0–0xBF`; `0xC0–0xEF` — резер�
 | 0xB1 | Chapters | M03 | план |
 | 0xB2 | BetweenWorlds | M05 | план |
 <!-- id-blocks:end -->
+
+Почему E15 — в `Circle`: обеты и сплетения открываются рангами осей и их порядком по кругу (E15 R1, R9), это
+данные Круга. Почему `Retinue` — отдельный срез: свиту с одной вместимостью делят призыв (C09, `Summoning`)
+и подчинение (L11, `Factions`), поэтому её данные лежат ниже обоих (§6.5). Почему I11 — `Smithing`: рядом срез
+ремёсел `Crafts` (E16), имя `Crafting` с ним путается.
 
 ### 7.5. Проверка
 

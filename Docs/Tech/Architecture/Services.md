@@ -224,12 +224,12 @@ flowchart LR
 
 ### 3.3. Старт игры (GameScope)
 
-Главное меню вызывает `ISceneFlow.EnterGameAsync(GameStartRequest)`. Запрос — `NewWorld(seed, salt)` (seed случайный
-или из меню разработчика, соль — время создания: M02 R2, R10, R12) или `Continue(slot)` (последний совместимый мир).
+Главное меню вызывает `ISceneFlow.EnterGameAsync(GameStartRequest)`. Запрос — `NewWorld(seed)` (seed случайный
+или из меню разработчика: M02 R2, R12) или `Continue(slot)` (последний совместимый мир).
 
 ```mermaid
 flowchart TD
-    REQ["GameStartRequest<br/>NewWorld(seed, соль) или Continue(слот)"] --> SCN["SceneFlow: Game.unity additive<br/>EnqueueParent(ProjectScope) → GameScope"]
+    REQ["GameStartRequest<br/>NewWorld(seed) или Continue(слот)"] --> SCN["SceneFlow: Game.unity additive<br/>EnqueueParent(ProjectScope) → GameScope"]
     SCN --> WC["WorldCreateNode<br/>WorldHost создаёт мир, тик остановлен"]
     SCN --> SL["SnapshotLoadNode<br/>Continue: чтение и проверка файла в фоне"]
     WC --> CB["ConfigBindNode<br/>IConfigTableBinder × N → blob и синглтоны"]
@@ -406,7 +406,7 @@ public interface IWorldSaveSource
 | `SummaryLength`, `PayloadLength` | `u32` | Длины блоков |
 | `Checksum` | `u32` | CRC32 от сводки и payload, только против повреждения (M01 §10) |
 
-**Сводка** содержит всё, что нужно меню, без чтения мира: seed, соль, режим, строку версии сборки и версию
+**Сводка** содержит всё, что нужно меню, без чтения мира: seed, режим, строку версии сборки и версию
 генератора. Со Среза добавляются имя мира, время игры, стадия, ярус и этаж (M02 §6, §7). **Таблица секций** хранит
 `{ Id, Version, Offset, Length }`, **секция** — сериализованный корневой DTO.
 
@@ -503,7 +503,7 @@ U08 R17, R18) и язык (U08 R14). Срез добавляет флаги по
 | Часть `PlayerInputFrame` | Правило |
 |---|---|
 | Движение | Стик тача, если активен, иначе клавиатура или геймпад; длина ≤ 1. `SlowWalk` — отдельный бит, порог медленного шага решает симуляция (U01 R12) |
-| Прицел | Мышь → `IPointerProjector.TryScreenToWorld` (реализация — камера в Presentation) → точка в мире. Тач: автонаведение в симуляции и жесты кнопок способностей (U02) |
+| Прицел | Мышь → `IPointerProjector.TryScreenToWorld` (реализация — камера в Presentation) → точка в мире. Тач: автонаведение в симуляции и жесты кнопок приёмов (U02) |
 | Нажатия | Удержание — ИЛИ по всем источникам. Фронт нажатия ждёт первого тика, который заберёт его через `ConsumeFrame()`: в кадре без тиков он не теряется, в кадре с двумя тиками не срабатывает дважды |
 
 - **Мост.** `PlayerInputIntakeSystem` (`CommandIntakeGroup`) на каждом тике: `ConsumeFrame()` → синглтон `PlayerInput`.
@@ -664,7 +664,7 @@ public interface ILog
 
 | Инструмент | GDD | Где | Как |
 |---|---|---|---|
-| Меню разработчика: ввод seed; seed, соль и версия генератора | M02 R12, §7, §10 | Меню, игра | Dev-инсталлер Project; старт через `ISceneFlow` с seed |
+| Меню разработчика: ввод seed; seed и версия генератора | M02 R12, §7, §10 | Меню, игра | Dev-инсталлер Project; старт через `ISceneFlow` с seed |
 | Панель времени мира; «прогнать N ед. времени» | L01 §7, §9 | Игра, редактор | Dev read-модель часов; операция `DEV_ADVANCE_WORLD_TIME` |
 | Симулятор шагов мира | L03 §9 | Редактор, batchmode | Headless-мир, N шагов от seed, CSV популяций |
 | Наложение состояний ИИ; лог пищевой сети | B02 §9 | Игра | Dev read-модель по `StableId`; события → `ILog`, категория `FoodWeb` |
@@ -676,6 +676,7 @@ public interface ILog
 | Числа урона; лог боя | C01 §9; U03 R13; Combat.md | Игра | Оверлей представления в Dev по `SimEvent` удара; `ILog`, категория `Combat` |
 | Инжектор сбоев сохранения | M01 §9, §13 | Устройство | Завершение процесса в случайной точке записи |
 | [Срез] Запуск любой катсцены | N04 §9 | Игра | Dev-операция |
+| [Срез] Симулятор боя: свита на полной вместимости против бойца боевой оси того же ранга | C11 §9, §13 | Редактор, batchmode | Headless-мир, бой по сценарию с эталонным противником; время убийства → CSV |
 
 ## 12. Правила контура
 
@@ -714,7 +715,7 @@ public interface ILog
 | `BootEntryPoint`, `GameEntryPoint` / `DevEntryPoint` | App / Dev | `IAsyncStartable` | Единственные точки входа скоупов |
 | `AddressablesInitNode`, `ProfileLoadNode`, `ConfigPackNode`, `LocalizationNode`, `AudioInitNode`, `SaveIndexNode`, `MainMenuReadyNode` | App | `IBootNode`, Project | Узлы загрузки (3.2) |
 | `WorldCreateNode`, `SnapshotLoadNode`, `ConfigBindNode`, `WorldBuildNode`, `InitialSaveNode`, `LocationUnfoldNode`, `PresentationPreloadNode`, `GameReadyNode`; `DevSceneNode` | App; Dev | `IGameStartNode`, Game | Узлы старта игры (3.3); загрузка `Dev.unity` |
-| `GameStartRequest`, `ILoadingProgress` | Services | Project | `NewWorld(seed, salt)` или `Continue(slot)`; прогресс загрузки для UI |
+| `GameStartRequest`, `ILoadingProgress` | Services | Project | `NewWorld(seed)` или `Continue(slot)`; прогресс загрузки для UI |
 | `BridgeContainerExtensions`, `BridgeSystemDescriptor` | Bridge | static, `[CollectionContract]` | `RegisterBridgeSystem<T>()` и список систем для `WorldHost` |
 | `ISaveWriter`, `ISaveReader`, `IWorldSaveSource` | Services | интерфейсы | Запись и чтение секций, источник снимка мира |
 | `SaveReason`, `SaveTarget`, `SaveResult`, `SaveCommit`, `WorldSlotInfo`, `WorldLoadResult`, `SaveHeader` | Services | значения | Причины, результат, слоты, заголовок файла |
