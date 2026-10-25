@@ -94,6 +94,7 @@
 | [W11 Биомы ярусов](GDD/Features/W11-TierBiomes.md) | — | |
 | [W15 Скрытые места](GDD/Features/W15-SecretsAndPassages.md) | — | |
 | [W20 Всплеск силы](GDD/Features/W20-PowerSurge.md) | — | |
+| [W21 Преграды ключей к миру](GDD/Features/W21-WorldKeyObstacles.md) | — | |
 | [E12 Перевыбор](GDD/Features/E12-EvolutionServices.md) | — | |
 | [E15 Обеты и сплетения](GDD/Features/E15-VowsAndWeaves.md) | — | |
 | [E16 Ремёсла](GDD/Features/E16-Crafts.md) | — | |
