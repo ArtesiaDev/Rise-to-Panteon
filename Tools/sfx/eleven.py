@@ -73,6 +73,10 @@ def main() -> None:
         sys.exit("eleven: нужны описание и --out")
     if args.loop and (args.reverb or args.lowpass):
         sys.exit("eleven: петля не обрабатывается — --loop без --reverb и --lowpass")
+    if args.duration is not None and not 0.5 <= args.duration <= 30:
+        parser.error("--duration: от 0.5 до 30 секунд")
+    if not 0 <= args.influence <= 1 or not 0 <= args.reverb <= 1 or args.variants < 1:
+        parser.error("--influence и --reverb: от 0 до 1; --variants: положительное число")
     out = Path(args.out).resolve()
     count = max(args.variants, 1)
     targets = [out] if count == 1 else [out.with_name(f"{out.stem}_v{i}{out.suffix}") for i in range(1, count + 1)]
@@ -103,7 +107,7 @@ def main() -> None:
             seconds = json.loads(done.stdout)["results"][0]["seconds"]
             cost = {k.lower(): v for k, v in headers.items()}.get("character-cost", "0")
             results.append({"file": str(target), "seconds": seconds, "credits": int(cost)})
-    print(json.dumps({"prompt": body["text"], "results": results, "account": credits()}, ensure_ascii=False, indent=2))
+    print(json.dumps({"prompt": body["text"], "results": results}, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":

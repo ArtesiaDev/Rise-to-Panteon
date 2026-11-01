@@ -1,0 +1,38 @@
+{
+  "description": "Rise to Panteon: общий харнесс Claude и Codex, без запуска Unity",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"/Users/malashenko_ivan/ProjectsUnity/Rise to Panteon/Tools/rag/.venv/bin/python\" -B \"/Users/malashenko_ivan/ProjectsUnity/Rise to Panteon/.codex/hooks/harness.py\" session-start",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"/Users/malashenko_ivan/ProjectsUnity/Rise to Panteon/Tools/rag/.venv/bin/python\" -B \"/Users/malashenko_ivan/ProjectsUnity/Rise to Panteon/.codex/hooks/harness.py\" note-hint",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"/Users/malashenko_ivan/ProjectsUnity/Rise to Panteon/Tools/rag/.venv/bin/python\" -B \"/Users/malashenko_ivan/ProjectsUnity/Rise to Panteon/.codex/hooks/harness.py\" stop",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}

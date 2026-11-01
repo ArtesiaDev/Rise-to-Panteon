@@ -1,0 +1,32 @@
+# Конфигурация только Rise to Panteon. Общие настройки пользователя не заменяются.
+[features]
+hooks = true
+
+[mcp_servers.rag]
+command = "/Users/malashenko_ivan/ProjectsUnity/Rise to Panteon/Tools/rag/.venv/bin/python"
+args = ["-B", "-m", "rag.server"]
+cwd = "/Users/malashenko_ivan/ProjectsUnity/Rise to Panteon/Tools/rag"
+enabled = true
+startup_timeout_sec = 30
+tool_timeout_sec = 180
+
+[mcp_servers.rag.env]
+PYTHONDONTWRITEBYTECODE = "1"
+HF_HUB_OFFLINE = "1"
+TRANSFORMERS_OFFLINE = "1"
+TOKENIZERS_PARALLELISM = "false"
+
+[mcp_servers.rag.tools.get]
+approval_mode = "approve"
+
+[mcp_servers.rag.tools.search]
+approval_mode = "approve"
+
+[mcp_servers.rag.tools.context_for_paths]
+approval_mode = "approve"
+
+[mcp_servers.rag.tools.related]
+approval_mode = "approve"
+
+[mcp_servers.rag.tools.lint]
+approval_mode = "approve"

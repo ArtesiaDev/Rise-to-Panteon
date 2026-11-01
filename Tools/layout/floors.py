@@ -2,6 +2,7 @@ import math
 import random
 import sys
 import time
+from pathlib import Path
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
@@ -533,7 +534,8 @@ def sheet(img, title, counts, attempts, walk_cells):
 
 
 def main():
-    outdir = sys.argv[1]
+    outdir = Path(sys.argv[1])
+    outdir.mkdir(parents=True, exist_ok=True)
     seed = int(sys.argv[2]) if len(sys.argv) > 2 else 5
     for key in FLOORS:
         f = generate(key, seed)

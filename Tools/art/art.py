@@ -41,7 +41,7 @@ def style_block() -> str:
 def png_info(path: Path) -> tuple[int, int, bool]:
     with path.open("rb") as f:
         head = f.read(26)
-    if head[:8] != b"\x89PNG\r\n\x1a\n":
+    if len(head) < 26 or head[:8] != b"\x89PNG\r\n\x1a\n" or head[12:16] != b"IHDR":
         return 0, 0, False
     width, height = struct.unpack(">II", head[16:24])
     return width, height, head[25] in (4, 6)
@@ -67,10 +67,12 @@ def main() -> None:
     parser.add_argument("--style-ref", default="", help="эталон стиля вместо общего: путь к файлу или none")
     parser.add_argument("--feature", default="", help="ID фичи GDD, для которой ассет")
     parser.add_argument("--force", action="store_true", help="перезаписать существующий файл")
-    parser.add_argument("--dry-run", action="store_true", help="только показать задание для Codex")
-    parser.add_argument("--queue", action="store_true", help="не генерировать, а поставить задание в очередь")
-    parser.add_argument("--pending", action="store_true", help="показать очередь")
-    parser.add_argument("--run-pending", action="store_true", help="сгенерировать задания из очереди")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--dry-run", action="store_true", help="только показать задание для Codex")
+    mode.add_argument("--request-json", action="store_true", help="промпт и абсолютные пути референсов для встроенного image_gen; без генерации")
+    mode.add_argument("--queue", action="store_true", help="не генерировать, а поставить задание в очередь")
+    mode.add_argument("--pending", action="store_true", help="показать очередь")
+    mode.add_argument("--run-pending", action="store_true", help="сгенерировать задания из очереди")
     args = parser.parse_args()
 
     if args.pending:
@@ -84,6 +86,8 @@ def main() -> None:
         sys.exit("art: нужны описание и --out")
     if not re.fullmatch(r"\d+x\d+", args.size):
         sys.exit("art: --size в формате 2048x2048")
+    if any(n <= 0 or n % 16 for n in map(int, args.size.split("x"))):
+        sys.exit("art: стороны --size должны быть положительными и кратными 16")
     job = {
         "description": args.description.strip(),
         "out": rel(Path(args.out)),
@@ -95,6 +99,12 @@ def main() -> None:
         "force": args.force,
     }
     check_job(job)
+    if args.request_json:
+        print(json.dumps({"prompt": make_task(job)[0], "transparent_background": job["transparent"],
+                          "references": [{"path": str(src), "role": "style" if name.startswith("style_") else "subject"}
+                                         for src, name in inputs(job)],
+                          "out": str(absolute(job["out"])), "feature": job["feature"]}, ensure_ascii=False, indent=2))
+        return
     if args.dry_run:
         print(make_task(job)[1])
         return
@@ -160,6 +170,7 @@ def make_task(job: dict) -> tuple[str, str]:
 
 
 def generate(job: dict) -> tuple[str, object]:
+    check_job(job)
     if shutil.which("codex") is None:
         sys.exit("art: нет codex — npm i -g @openai/codex, затем codex login")
     prompt, task = make_task(job)
@@ -173,13 +184,19 @@ def generate(job: dict) -> tuple[str, object]:
         for _, name in pairs:
             cmd += ["-i", name]
         cmd += ["-o", "report.txt", "-"]
-        run = subprocess.run(cmd, input=task, text=True, capture_output=True, cwd=work, timeout=TIMEOUT_S)
+        try:
+            run = subprocess.run(cmd, input=task, text=True, capture_output=True, cwd=work, timeout=TIMEOUT_S)
+        except subprocess.TimeoutExpired:
+            return "error", f"art: Codex не завершился за {TIMEOUT_S} с; результат не опубликован\n"
         result = work / RESULT_NAME
         report_file = work / "report.txt"
         report = report_file.read_text(encoding="utf-8").strip() if report_file.is_file() else ""
         if run.returncode != 0 or not result.is_file():
             log = run.stdout[-3000:] + run.stderr[-3000:] + report
             return ("limit" if LIMIT_RE.search(log) else "error"), log
+        width, height, has_alpha = png_info(result)
+        if not width or not height or (job["transparent"] and not has_alpha):
+            return "error", "art: результат не PNG с ненулевым размером или отсутствует запрошенный альфа-канал\n"
         out.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(result, out)
     width, height, has_alpha = png_info(out)

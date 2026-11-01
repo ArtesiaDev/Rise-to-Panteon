@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import json
+import os
 import random
 import shutil
 import subprocess
@@ -11,7 +12,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ENGINE = Path.home() / ".cache/stable-audio-3"
 ENGINE_REPO = "https://github.com/Stability-AI/stable-audio-3.git"
-PROCESS_DEPS = ["numpy", "scipy", "soundfile"]
+PROCESS_DEPS = ["numpy==2.5.3", "scipy==1.18.1", "soundfile==0.14.0"]
 MIN_RATE, MIN_KBPS_PER_CHANNEL = 44100, 56
 
 
@@ -55,8 +56,19 @@ def main() -> None:
     parser.add_argument("--loop", action="store_true", help="готовая петля (--input): без подрезки, фильтров, отзвука и затуханий")
     parser.add_argument("--force", action="store_true", help="перезаписать существующие файлы")
     parser.add_argument("--setup", action="store_true", help="установить движок")
+    parser.add_argument("--offline", action="store_true", help="использовать только локальный кэш Python, зависимостей и моделей")
+    parser.add_argument("--processing-python", default=os.environ.get("RTP_SFX_PYTHON"),
+                        help="готовый Python с numpy/scipy/soundfile, обработка без uv и установки пакетов (также RTP_SFX_PYTHON)")
     args = parser.parse_args()
 
+    if args.offline:
+        if args.setup:
+            parser.error("--setup несовместим с --offline")
+        os.environ.update(UV_OFFLINE="1", UV_PYTHON_DOWNLOADS="never", HF_HUB_OFFLINE="1", TRANSFORMERS_OFFLINE="1")
+    if args.loop and (not args.input or args.reverb or args.lowpass):
+        parser.error("--loop требует --input и несовместим с --reverb и --lowpass")
+    if args.duration <= 0 or args.variants < 1 or (args.candidates is not None and args.candidates < 1):
+        parser.error("длительность, число вариантов и кандидатов должны быть положительными")
     if args.setup:
         setup()
         return
@@ -97,15 +109,19 @@ def main() -> None:
             subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-ar", "44100", "-ac", "2",
                             str(work / "raw_1_1.wav")], check=True)
         else:
-            gen = subprocess.run(["uv", "run", "--project", str(ENGINE), "python", str(HERE / "generate.py"),
+            gen = subprocess.run(["uv", "run", "--no-sync", "--project", str(ENGINE), "python", str(HERE / "generate.py"),
                                   str(work / "job.json"), str(work)], capture_output=True, text=True)
             if gen.returncode != 0:
                 sys.stderr.write(gen.stderr[-3000:])
                 sys.exit("sfx: генерация не удалась")
-        cmd = ["uv", "run", "--quiet", "--no-project", "--python", "3.12"]
-        for dep in PROCESS_DEPS:
-            cmd += ["--with", dep]
-        proc = subprocess.run(cmd + ["python", str(HERE / "clean.py"), str(work / "job.json"), str(work), str(work)],
+        if args.processing_python:
+            cmd = [args.processing_python]
+        else:
+            cmd = ["uv", "run", "--quiet", "--no-project", "--python", "3.12"]
+            for dep in PROCESS_DEPS:
+                cmd += ["--with", dep]
+            cmd.append("python")
+        proc = subprocess.run(cmd + [str(HERE / "clean.py"), str(work / "job.json"), str(work), str(work)],
                               capture_output=True, text=True)
         if proc.returncode != 0:
             sys.stderr.write(proc.stderr[-3000:])

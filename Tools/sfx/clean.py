@@ -38,9 +38,12 @@ def rebuild(y, sr, split):
 
 
 def trim_silence(y, sr, hop=256):
+    if not y.size or not np.isfinite(y).all() or not np.any(y):
+        raise ValueError("sfx: пустой, нечисловой или полностью беззвучный исходник")
     m = np.abs(y).mean(0)
-    n = len(m) // hop
-    r = np.sqrt((m[: n * hop].reshape(n, hop) ** 2).mean(1))
+    hop = min(hop, len(m))
+    n = (len(m) + hop - 1) // hop
+    r = np.sqrt((np.pad(m, (0, n * hop - len(m))).reshape(n, hop) ** 2).mean(1))
     loud = np.nonzero(r > 0.03 * r.max())[0]
     start, end = max(loud[0] - 2, 0), min(loud[-1] + 4, n)
     return y[:, start * hop : end * hop]
@@ -66,7 +69,7 @@ def shape(y, sr, job):
         y = band(y, sr, "lowpass", job["lowpass"], 4)
     if job["reverb"]:
         y = reverb(y, sr, job["reverb"])
-    fade_in, fade_out = int(0.005 * sr), min(int(0.12 * sr), y.shape[1] // 3)
+    fade_in, fade_out = min(int(0.005 * sr), y.shape[1]), max(1, min(int(0.12 * sr), y.shape[1] // 3))
     y[:, :fade_in] *= np.linspace(0, 1, fade_in)
     y[:, -fade_out:] *= np.linspace(1, 0, fade_out)
     return y
@@ -91,6 +94,8 @@ def main():
     report = []
     for variant in sorted(groups, key=int):
         y, sr = pick(groups[variant], punches, job["single"])
+        if y.shape[1] < 64 or not np.isfinite(y).all() or not np.any(y):
+            raise ValueError("sfx: исходник должен содержать звук, конечные сэмплы и хотя бы 64 сэмпла")
         if job.get("trim"):
             y = trim_silence(y, sr)
         if job["rebuild"]:

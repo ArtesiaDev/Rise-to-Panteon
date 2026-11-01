@@ -8,6 +8,8 @@ from .common import ROOT, corpus_files, feature_docs, glob_regex, parse_doc, rel
 
 ALLOWED_MD = [glob_regex(p) for p in [
     "CLAUDE.md",
+    "AGENTS.md",
+    ".agents/skills/*/SKILL.md",
     ".claude/agents/*.md",
     "Docs/Roadmap.md",
     "Docs/GDD/*.md",
@@ -20,7 +22,7 @@ ALLOWED_MD = [glob_regex(p) for p in [
     "Assets/_Project/Features/**/README.md",
     "Configs/**/*.md",
 ]]
-LINK_CHECKED = ["CLAUDE.md", ".claude/agents/*.md"]
+LINK_CHECKED = ["CLAUDE.md", "AGENTS.md", ".claude/agents/*.md", ".agents/skills/*/SKILL.md"]
 DIRECTIVE = re.compile(r"^//\s*ReSharper\s+(disable|restore)\b")
 ISYSTEM = re.compile(r"\bstruct\s+(\w+)\s*:\s*[^{]*\bISystem\b")
 NOTE_KEYS = {"gdd", "participates", "depends", "block"}
@@ -43,7 +45,9 @@ class Issue:
 
 def git(*args):
     r = subprocess.run(["git", "-c", "core.quotePath=false", *args], cwd=ROOT, capture_output=True, text=True)
-    return r.stdout if r.returncode == 0 else ""
+    if r.returncode != 0:
+        raise RuntimeError(f"git {' '.join(args)}: {r.stderr.strip()}")
+    return r.stdout
 
 
 def changed_files(base: str = None):

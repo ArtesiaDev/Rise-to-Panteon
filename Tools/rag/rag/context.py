@@ -225,6 +225,15 @@ def context_for_paths(paths, include_rules: bool = True) -> str:
         path = rel(raw)
         place = notes.classify(path)
         out.append(f"## {path}")
+        if path in {"AGENTS.md", "CLAUDE.md", ".mcp.json"} or path.startswith((".codex/", ".claude/", ".agents/", "Tools/")):
+            want(["DOC", "WORK"])
+            out.append("Харнесс и инструменты: Docs/Tech/Harness.md; конфигурации агентов раздельны, правила общие.")
+            section = next((section for prefix, section in [("Tools/art/", "10"), ("Tools/sfx/", "11"),
+                           ("Tools/layout/", "12"), ("Tools/rag/", "9")] if path.startswith(prefix)), "13")
+            out.append(f"Процесс и проверки: Docs/Tech/Harness.md §{section}.")
+            if path.startswith(("Tools/art/", "Tools/sfx/", "Tools/layout/")):
+                out.append("Ассеты: Docs/GDD/ArtStyle.md; Docs/Tech/Architecture/Content.md §9; правила фичи через get.")
+            continue
         if place.kind == "legacy":
             out.append("Прототип старой концепции: не менять, не ссылаться, не брать за образец (CODE-01).")
             continue
